@@ -1,0 +1,30 @@
+services:
+  client:
+    build:
+      context: .
+      args:
+        # Inject the Public IP into React Build
+        VITE_PUBLIC_IP: ${PUBLIC_IP}
+    container_name: bill_generator_client
+    restart: unless-stopped
+    # No ports needed, Caddy talks to it internally
+
+  caddy:
+    image: caddy:latest
+    container_name: bill_generator_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Pass Env Vars to Caddyfile
+      - SITE_ADDRESS=${SITE_ADDRESS}
+      - APP_TIER_IP=${APP_TIER_IP}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    depends_on:
+      - client
+
+volumes:
+  caddy_data:

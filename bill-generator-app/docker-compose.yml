@@ -1,0 +1,38 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: keycloak
+    command: start-dev
+    restart: unless-stopped
+    environment:
+      # Database Connection (Using Env Vars)
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://${DB_HOST}:5432/keycloak
+      KC_DB_USERNAME: ${DB_POSTGRES_USER}
+      KC_DB_PASSWORD: ${DB_POSTGRES_PASS}
+      
+      # Admin Credentials
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASS}
+      
+      # Network / Proxy Settings
+      KC_HOSTNAME: ${PUBLIC_DOMAIN}
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT_HTTPS: "true"
+    ports:
+      - "8080:8080"
+
+  server:
+    build: ./server
+    container_name: bill_generator_server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Database Connection
+      - MONGO_URI=mongodb://${DB_MONGO_USER}:${DB_MONGO_PASS}@${DB_HOST}:27017/bill-generator?authSource=admin
+      - PORT=5000
+      # Auth Connection
+      - KEYCLOAK_URL=https://${PUBLIC_DOMAIN}
+    depends_on:
+      - keycloak
