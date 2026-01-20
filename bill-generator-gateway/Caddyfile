@@ -1,0 +1,20 @@
+{$SITE_ADDRESS} {
+    
+    # Proxy API to App Tier (Instance 2)
+    handle /api/* {
+        reverse_proxy {$APP_TIER_IP}:5000
+    }
+
+    # Proxy Keycloak to App Tier (Instance 2)
+    handle /realms/* { reverse_proxy {$APP_TIER_IP}:8080 }
+    handle /resources/* { reverse_proxy {$APP_TIER_IP}:8080 }
+    handle /admin/* { reverse_proxy {$APP_TIER_IP}:8080 }
+    handle /js/* { reverse_proxy {$APP_TIER_IP}:8080 }
+    handle /welcome/* { reverse_proxy {$APP_TIER_IP}:8080 }
+    handle /robots.txt { reverse_proxy {$APP_TIER_IP}:8080 }
+
+    # Serve Frontend Locally
+    handle {
+        reverse_proxy client:80
+    }
+}

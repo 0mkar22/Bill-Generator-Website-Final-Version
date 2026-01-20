@@ -1,0 +1,17 @@
+# --- Setup Node.js Server ---
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 1. Install Dependencies
+COPY package*.json ./
+RUN npm install --production
+
+# 2. Copy Source Code
+COPY . .
+
+# 3. Expose Port 5000 (Internal Docker Network)
+EXPOSE 5000
+
+# 4. Start the Server
+CMD ["node", "index.js"]
