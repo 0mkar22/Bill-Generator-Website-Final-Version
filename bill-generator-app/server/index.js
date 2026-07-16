@@ -1,28 +1,37 @@
-const express = require("express");
 const dotenv = require("dotenv");
+// 1. Initialize dotenv BEFORE requiring any files that rely on environment variables
+dotenv.config();
+
+const express = require("express");
 const cors = require("cors");
-const connectDB = require("./config/db");
 const session = require('express-session');
 const Keycloak = require('keycloak-connect');
 
-dotenv.config();
-connectDB();
+// 2. Require the database AFTER dotenv is loaded. 
+// We assign it to 'supabase' rather than 'connectDB' for clarity, 
+// and we no longer need to invoke it as a function.
+const supabase = require("./config/db");
 
 const app = express();
 
-app.use(cors());
+// 3. Consolidate CORS configuration into a single middleware call
+app.use(cors({
+    origin: 'https://bill-generator-gateway.vercel.app', 
+    credentials: true 
+}));
+
 app.use(express.json());
 
-// 1. Session Setup
+// Session Setup
 const memoryStore = new session.MemoryStore();
 app.use(session({
-  secret: 'some-secret',
+  secret: process.env.SESSION_SECRET || 'some-secret', // Recommended: move this to .env
   resave: false,
   saveUninitialized: true,
   store: memoryStore
 }));
 
-// 2. Keycloak Config
+// Keycloak Config
 const keycloak = new Keycloak({ store: memoryStore }, {
   "realm": "BillGeneratorRealm",
   "auth-server-url": process.env.KEYCLOAK_URL, 
@@ -32,14 +41,9 @@ const keycloak = new Keycloak({ store: memoryStore }, {
   "confidential-port": 0
 });
 
-app.use(cors({
-    origin: 'https://bill-generator-gateway.vercel.app', 
-    credentials: true 
-}));
-
 app.use(keycloak.middleware());
 
-// 3. Protect Routes
+// Protect Routes
 app.use("/api/workOrders", keycloak.protect(), require("./routes/workOrders"));
 app.use("/api/invoices", keycloak.protect(), require("./routes/invoices"));
 
