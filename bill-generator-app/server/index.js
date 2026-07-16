@@ -32,6 +32,11 @@ const keycloak = new Keycloak({ store: memoryStore }, {
   "confidential-port": 0
 });
 
+app.use(cors({
+    origin: 'https://bill-generator-gateway.vercel.app', 
+    credentials: true 
+}));
+
 app.use(keycloak.middleware());
 
 // 3. Protect Routes
