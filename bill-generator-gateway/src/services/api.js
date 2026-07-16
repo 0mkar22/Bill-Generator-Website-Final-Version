@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { supabase } from '../supabase';
 
-const API = axios.create({ baseURL: '/api' });
+const API = axios.create({ 
+  baseURL: import.meta.env.VITE_API_URL || '/api' 
+});
 
 // Add Interceptor to attach Supabase Token
 API.interceptors.request.use(async (config) => {
