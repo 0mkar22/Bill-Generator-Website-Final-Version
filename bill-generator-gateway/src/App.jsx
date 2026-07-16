@@ -14,6 +14,10 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // New state variables for Sign Up flow
+  const [isSignUp, setIsSignUp] = useState(false); 
+  const [message, setMessage] = useState(''); 
 
   useEffect(() => {
     // Check active session on load
@@ -32,10 +36,23 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = async (e) => {
+  const handleAuth = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message);
+    setMessage(''); // Clear any previous messages
+    
+    if (isSignUp) {
+      // Handle Account Creation
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        alert(error.message);
+      } else {
+        setMessage('Account created! Please check your email to verify.');
+      }
+    } else {
+      // Handle Login
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+    }
   };
 
   if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
@@ -43,8 +60,11 @@ function App() {
   if (!session) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10vh' }}>
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '300px' }}>
-          <h2>Login</h2>
+        <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '320px' }}>
+          <h2 style={{ textAlign: 'center' }}>{isSignUp ? 'Create Account' : 'Login'}</h2>
+          
+          {message && <p style={{ color: 'green', fontSize: '0.9rem', textAlign: 'center' }}>{message}</p>}
+          
           <input 
             type="email" 
             placeholder="Email" 
@@ -59,7 +79,24 @@ function App() {
             onChange={(e) => setPassword(e.target.value)} 
             required 
           />
-          <button type="submit">Sign In</button>
+          <button type="submit" style={{ padding: '10px', marginTop: '5px' }}>
+            {isSignUp ? 'Sign Up' : 'Sign In'}
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={() => { setIsSignUp(!isSignUp); setMessage(''); }}
+            style={{ 
+              background: 'none', 
+              color: '#396cd8', 
+              border: 'none', 
+              cursor: 'pointer', 
+              marginTop: '10px',
+              textDecoration: 'underline'
+            }}
+          >
+            {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+          </button>
         </form>
       </div>
     );
