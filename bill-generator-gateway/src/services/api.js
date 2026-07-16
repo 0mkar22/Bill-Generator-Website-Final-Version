@@ -1,12 +1,14 @@
 import axios from 'axios';
-import keycloak from '../keycloak';
+import { supabase } from '../supabase';
 
 const API = axios.create({ baseURL: '/api' });
 
-// Add Interceptor to attach Token
-API.interceptors.request.use((config) => {
-  if (keycloak.token) {
-    config.headers.Authorization = `Bearer ${keycloak.token}`;
+// Add Interceptor to attach Supabase Token
+API.interceptors.request.use(async (config) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`;
   }
   return config;
 });
