@@ -20,9 +20,8 @@ const InvoiceGenerator = () => {
       const response = await getWorkOrders();
       const allItems = (response.data.data || []).flatMap(order =>
          order.workItems.map((item, index) => {
-             // Supabase JSONB does not auto-generate IDs like MongoDB did.
-             // We create a deterministic ID using the parent order's ID and the item's index.
-             const uniqueId = item.id || item._id || `${order.id || order._id}-${index}`;
+             // BULLETPROOF ID: Fallback to the physical entry number if DB IDs are acting up
+             const uniqueId = item.id || item._id || `entry-${order.entryNumber}-item-${index}`;
              return { ...item, id: uniqueId, parent: order };
          })
       );
@@ -35,7 +34,19 @@ const InvoiceGenerator = () => {
   const fetchSavedInvoices = async () => {
       try {
           const response = await API.get('/invoices');
-          setSavedInvoices(response.data.data || []);
+          const invoices = response.data.data || [];
+          
+          // Force parse workItems to ensure they are always valid arrays
+          const normalized = invoices.map(inv => {
+              let parsedItems = [];
+              if (Array.isArray(inv.workItems)) {
+                  parsedItems = inv.workItems;
+              } else if (typeof inv.workItems === 'string') {
+                  try { parsedItems = JSON.parse(inv.workItems); } catch(e) {}
+              }
+              return { ...inv, workItems: parsedItems };
+          });
+          setSavedInvoices(normalized);
       } catch (error) {
           console.error("Failed to fetch saved invoices", error);
       }
@@ -49,7 +60,8 @@ const InvoiceGenerator = () => {
   const invoiceStatusMap = useMemo(() => {
     const statusMap = {};
     for (const invoice of savedInvoices) {
-      for (const workItemId of invoice.workItems) {
+      const items = Array.isArray(invoice.workItems) ? invoice.workItems : [];
+      for (const workItemId of items) {
         if (!statusMap[workItemId]) { statusMap[workItemId] = {}; }
         statusMap[workItemId][invoice.invoiceType] = true;
       }
@@ -76,11 +88,14 @@ const InvoiceGenerator = () => {
   };
 
   const handleViewSavedInvoice = (savedInvoice, type) => {
-    const itemsForInvoice = workItems.filter(item => savedInvoice.workItems.includes(item.id));
+    const invItems = Array.isArray(savedInvoice.workItems) ? savedInvoice.workItems : [];
+    const itemsForInvoice = workItems.filter(item => invItems.includes(item.id));
+    
     if (itemsForInvoice.length === 0) {
-        alert("The original work items for this saved invoice could not be found.");
+        alert(`Corrupted Invoice Data.\n\nThis invoice was saved with a broken reference before the database was fixed. Please generate a new invoice.`);
         return;
     }
+    
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
     navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, invoiceNumber: savedInvoice.invoiceNumber } });
   };
@@ -225,14 +240,15 @@ const InvoiceGenerator = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredSavedInvoices.map(invoice => {
-                            const eventNames = workItems.filter(item => invoice.workItems.includes(item.id)).map(item => item.eventName);
+                        {filteredSavedInvoices.map((invoice, i) => {
+                            const invItems = Array.isArray(invoice.workItems) ? invoice.workItems : [];
+                            const eventNames = workItems.filter(item => invItems.includes(item.id)).map(item => item.eventName);
                             const uniqueEventNames = [...new Set(eventNames)];
                             const displayEventName = uniqueEventNames.join(' and ') || 'N/A';
-                            const displayPoNpo = workItems.find(item => invoice.workItems.includes(item.id))?.poNpo || 'N/A';
+                            const displayPoNpo = workItems.find(item => invItems.includes(item.id))?.poNpo || 'N/A';
                             
                             return (
-                              <TableRow key={invoice.invoiceNumber || invoice.id || invoice._id}>
+                              <TableRow key={invoice.invoiceNumber || invoice.id || invoice._id || i}>
                                   <TableCell>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
                                   <TableCell>{invoice.invoiceNumber}</TableCell>
                                   <TableCell>{displayEventName}</TableCell>
