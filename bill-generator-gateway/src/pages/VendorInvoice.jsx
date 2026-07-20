@@ -18,10 +18,12 @@ const pricing = {
   "Live_Telecast": { "Mumbai_Upto_4_Hrs": 7000, "Mumbai_Above_4_and_upto_8_Hrs": 9000, "Panvel_Upto_4_Hrs": 7000, "Panvel_Above_4_and_upto_8_Hrs": 9000, "Uran_Upto_4_Hrs": 7000, "Uran_Above_4_and_upto_8_Hrs": 9000, "Nhava_Upto_4_Hrs": 7000, "Nhava_Above_4_and_upto_8_Hrs": 9000, "Outstation_Upto_4_Hrs": 9000, "Outstation_Above_4_and_upto_8_Hrs": 10000 },
   "32_GB_Pendrive": 550, "Others": {}
 };
+
 const calculateItemAmount = (item) => {
     if (item.workMain === '32_GB_Pendrive') { return (pricing[item.workMain] || 0) * (item.quantity || 1); }
     return pricing[item.workMain]?.[item.workSub] || 0;
 };
+
 function numberToWords(num) {
     const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -35,6 +37,7 @@ function numberToWords(num) {
     str += (n[5] !== '00') ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + '  ' + a[n[5][1]]) : '';
     return str.trim() + ' Rupees Only';
 }
+
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
 const boldRightAlignedCellStyle = { ...boldHeaderCellStyle, textAlign: 'right' };
@@ -95,15 +98,24 @@ function VendorInvoice() {
         const invoicePayload = {
             invoiceNumber,
             invoiceType: invoiceType || 'Vendor',
-            workItems: selectedItems.map(item => item._id),
-            parentOrderInfo: { entryNumber: selectedItems[0].parent.entryNumber, vendor: selectedItems[0].parent.vendor }
+            // FIXED: Ensure we capture the Supabase ID format
+            workItems: selectedItems.map(item => item.id || item._id),
+            parentOrderInfo: { 
+                entryNumber: selectedItems[0]?.parent?.entryNumber, 
+                vendor: selectedItems[0]?.parent?.vendor 
+            }
         };
         await API.post('/invoices', invoicePayload);
-        setSaveSuccess(true); // This will now trigger the new buttons to show
+        setSaveSuccess(true); 
     } catch (error) {
         console.error("Failed to save invoice:", error);
-        if (error.response?.data?.error) {
-            alert(`Could not save the invoice: ${error.response.data.error}`);
+        
+        // FIXED: Improved error handling 
+        const serverError = error.response?.data?.error;
+        if (Array.isArray(serverError)) {
+            alert(`Could not save the invoice:\n- ${serverError.join('\n- ')}`);
+        } else if (typeof serverError === 'string') {
+            alert(`Could not save the invoice: ${serverError}`);
         } else {
             alert("Could not save the invoice. Please try again.");
         }
@@ -113,7 +125,6 @@ function VendorInvoice() {
   };
 
   const handleGenerateWorkOrderInvoice = () => {
-      // Navigate to the other invoice page, passing the same items
       navigate('/workorder-invoice', { state: { items: selectedItems, invoiceType: 'WorkOrder' } });
   };
 
@@ -131,7 +142,8 @@ function VendorInvoice() {
   const sgst = amountBeforeTax * 0.09;
   const total = amountBeforeTax + cgst + sgst;
   const rounded = Math.round(total);
-  const parentOrder = selectedItems[0].parent;
+  // Safely fallback if parent is missing
+  const parentOrder = selectedItems[0]?.parent || {};
 
   return (
     <Container>
@@ -180,7 +192,7 @@ function VendorInvoice() {
                 <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
               </Box>
               <Box sx={{ textAlign: 'right', fontSize: '1.2rem' }}>
-                <Typography variant="body2">{parentOrder.vendor}</Typography>
+                <Typography variant="body2">{parentOrder.vendor || 'Vendor'}</Typography>
                 <Typography variant="body2">21, Nilkanth Aprtment, Samata Nagar,</Typography>
                 <Typography variant="body2">Pokharan Road No. 1, Thane (W) 400 606</Typography>
                 <Typography variant="body2">E-mail : bhogtevijay@gmail.com</Typography>
@@ -250,14 +262,14 @@ function VendorInvoice() {
               const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
               const quantity = item.quantity || 1;
               return (
-                <TableRow key={item._id} sx={{ borderBottom: '1px solid #000' }}>
+                <TableRow key={item.id || item._id || idx} sx={{ borderBottom: '1px solid #000' }}>
                   <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
                   <TableCell sx={tableCellStyle}>
                     <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>
-                      <span style={{ fontWeight: 'bold' }}>Event Date:</span> {new Date(item.parent.eventDate).toLocaleDateString('en-GB')}<br />
+                      <span style={{ fontWeight: 'bold' }}>Event Date:</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
                       <span style={{ fontWeight: 'bold' }}>Event Name:</span> {item.eventName}<br />
                       <span style={{ fontWeight: 'bold' }}>Venue:</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
-                      <span style={{ fontWeight: 'bold' }}>Work Type:</span> {item.workMain.replaceAll('_', ' ')}<br />
+                      <span style={{ fontWeight: 'bold' }}>Work Type:</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
                       {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>Location and Duration:</span>} {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
                     </Typography>
                   </TableCell>
@@ -309,7 +321,7 @@ function VendorInvoice() {
                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
               </Box>
               <Box sx={{ flex: 1, ml: 2, textAlign: 'center', height: '100%', py: '8px', ...flexEndColumnStyle }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
                 <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
                 </Box>
