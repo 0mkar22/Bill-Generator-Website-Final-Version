@@ -175,7 +175,7 @@ const WorkOrderInvoice = () => {
             To,<br />M/s. {parentOrder.vendor}<br />21, Nilkanth Apartment, Samata Nagar, <br />Pokharan Road No. 1, Thane (W) 400 606
           </Typography>
           <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
-          <Typography variant="body2" sx={{ mb: 1 }} fontSize="1.1rem">
+          <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
             The Following Photography Assignment Is Assigned To Your Agency.
           </Typography>
         </Box>
