@@ -17,6 +17,7 @@ const pricing = {
   "Live_Telecast": { "Mumbai_Upto_4_Hrs": 7000, "Mumbai_Above_4_and_upto_8_Hrs": 9000, "Panvel_Upto_4_Hrs": 7000, "Panvel_Above_4_and_upto_8_Hrs": 9000, "Uran_Upto_4_Hrs": 7000, "Uran_Above_4_and_upto_8_Hrs": 9000, "Nhava_Upto_4_Hrs": 7000, "Nhava_Above_4_and_upto_8_Hrs": 9000, "Outstation_Upto_4_Hrs": 9000, "Outstation_Above_4_and_upto_8_Hrs": 10000 },
   "32_GB_Pendrive": 550, "Others": {}
 };
+
 function numberToWords(num) {
     const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -30,6 +31,7 @@ function numberToWords(num) {
     str += (n[5] !== '00') ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
     return str.trim();
 }
+
 const calculateItemAmount = (item) => {
     if (item.workMain === '32_GB_Pendrive') { return (pricing[item.workMain] || 0) * (item.quantity || 1); }
     return pricing[item.workMain]?.[item.workSub] || 0;
@@ -48,7 +50,7 @@ const WorkOrderInvoice = () => {
   const [saveSuccess, setSaveSuccess] = useState(savedInvoice || false);
 
   useEffect(() => {
-    setInvoiceNumber(passedInvoiceNumber || selectedItems[0]?.parent.entryNumber || '');
+    setInvoiceNumber(passedInvoiceNumber || selectedItems[0]?.parent?.entryNumber || '');
   }, [passedInvoiceNumber, selectedItems]);
 
   const handleDownload = async () => {
@@ -68,19 +70,21 @@ const WorkOrderInvoice = () => {
         const invoicePayload = {
             invoiceNumber,
             invoiceType: invoiceType || 'WorkOrder',
-            workItems: selectedItems.map(item => item._id),
+            workItems: selectedItems.map(item => item.id || item._id),
             parentOrderInfo: {
-                entryNumber: selectedItems[0].parent.entryNumber,
-                vendor: selectedItems[0].parent.vendor
+                entryNumber: selectedItems[0]?.parent?.entryNumber,
+                vendor: selectedItems[0]?.parent?.vendor
             }
         };
         await API.post('/invoices', invoicePayload);
         setSaveSuccess(true);
     } catch (error) {
         console.error("Failed to save invoice:", error);
-        // --- THIS IS THE UPDATED PART ---
-        if (error.response && error.response.data && error.response.data.error) {
-            alert(`Could not save the invoice: ${error.response.data.error}`);
+        const serverError = error.response?.data?.error;
+        if (Array.isArray(serverError)) {
+            alert(`Could not save the invoice:\n- ${serverError.join('\n- ')}`);
+        } else if (typeof serverError === 'string') {
+            alert(`Could not save the invoice: ${serverError}`);
         } else {
             alert("Could not save the invoice. Please try again.");
         }
@@ -98,18 +102,18 @@ const WorkOrderInvoice = () => {
     );
   }
 
-  const parentOrder = selectedItems[0].parent;
+  const parentOrder = selectedItems[0]?.parent || {};
   const totalAmount = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
   const totalWithGst = totalAmount * 1.18;
   const roundedTotal = Math.round(totalWithGst);
 
   // --- CORRECTED LOGIC for unique event/date pairs ---
   const uniqueEvents = selectedItems.reduce((acc, item) => {
-      const key = `${item.eventName}-${item.parent.eventDate}`;
+      const key = `${item.eventName}-${item.parent?.eventDate}`;
       if (!acc.has(key)) {
           acc.set(key, {
               name: `For ${item.eventName} at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`,
-              date: new Date(item.parent.eventDate).toLocaleDateString('en-GB')
+              date: item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''
           });
       }
       return acc;
@@ -171,7 +175,7 @@ const WorkOrderInvoice = () => {
             To,<br />M/s. {parentOrder.vendor}<br />21, Nilkanth Apartment, Samata Nagar, <br />Pokharan Road No. 1, Thane (W) 400 606
           </Typography>
           <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
-          <Typography variant="body2" sx={{ mb: 1 }} fontsize ="2rem">
+          <Typography variant="body2" sx={{ mb: 1 }} fontSize="2rem">
             The Following Photography Assignment Is Assigned To Your Agency.
           </Typography>
         </Box>
@@ -192,13 +196,13 @@ const WorkOrderInvoice = () => {
                 const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
                 const quantity = item.quantity || 1;
                 return (
-                  <TableRow key={item._id}>
+                  <TableRow key={item.id || item._id || idx}>
                     <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{idx + 1}</TableCell>
                     <TableCell sx={{ border: '1px solid #000' }}>
                       <Typography variant="body2" component="div">{`${item.workMain.replaceAll('_',' ')}`}</Typography>
                       {( <>
                           <Typography variant="body2" component="div">{item.workSub && `Duration : ${item.workSub.replaceAll('_', ' ')}`}</Typography>
-                          <Typography variant="body2" component="div">{`dt. ${new Date(item.parent.eventDate).toLocaleDateString('en-GB')}`}</Typography>
+                          <Typography variant="body2" component="div">{`dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
                           <Typography variant="body2" component="div">{`For ${item.eventName}`}</Typography>
                           <Typography variant="body2" component="div">{`at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
                       </>)}
@@ -271,6 +275,3 @@ const WorkOrderInvoice = () => {
 };
 
 export default WorkOrderInvoice;
-
-
-
