@@ -5,22 +5,26 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getWorkOrders } from '../services/api';
-import API from '../services/api'; 
+import API from '../services/api';
 
 const InvoiceGenerator = () => {
   const [workItems, setWorkItems] = useState([]);
   const [selected, setSelected] = useState({});
   const [savedInvoices, setSavedInvoices] = useState([]);
   const navigate = useNavigate();
-
-  const [viewingInvoiceType, setViewingInvoiceType] = useState('All'); // Default to 'All'
+  const [viewingInvoiceType, setViewingInvoiceType] = useState('All'); 
   const [vendorFilter, setVendorFilter] = useState('All Vendors');
 
   const fetchWorkItems = async () => {
     try {
       const response = await getWorkOrders();
-      const allItems = (response.data.data || []).flatMap(order => 
-        order.workItems.map(item => ({ ...item, parent: order }))
+      const allItems = (response.data.data || []).flatMap(order =>
+         order.workItems.map((item, index) => {
+             // Supabase JSONB does not auto-generate IDs like MongoDB did.
+             // We create a deterministic ID using the parent order's ID and the item's index.
+             const uniqueId = item.id || item._id || `${order.id || order._id}-${index}`;
+             return { ...item, id: uniqueId, parent: order };
+         })
       );
       setWorkItems(allItems);
     } catch (error) {
@@ -56,9 +60,9 @@ const InvoiceGenerator = () => {
   const handleSelect = (itemId) => {
     setSelected(prev => ({ ...prev, [itemId]: !prev[itemId] }));
   };
-  
+
   const getSelectedItems = () => {
-      return workItems.filter(item => selected[item._id]);
+      return workItems.filter(item => selected[item.id]);
   };
 
   const handleGenerate = async (type) => {
@@ -72,7 +76,7 @@ const InvoiceGenerator = () => {
   };
 
   const handleViewSavedInvoice = (savedInvoice, type) => {
-    const itemsForInvoice = workItems.filter(item => savedInvoice.workItems.includes(item._id));
+    const itemsForInvoice = workItems.filter(item => savedInvoice.workItems.includes(item.id));
     if (itemsForInvoice.length === 0) {
         alert("The original work items for this saved invoice could not be found.");
         return;
@@ -83,11 +87,9 @@ const InvoiceGenerator = () => {
 
   const filteredSavedInvoices = useMemo(() => {
       let invoices = savedInvoices;
-
       if (viewingInvoiceType !== 'All') {
           invoices = invoices.filter(invoice => invoice.invoiceType === viewingInvoiceType);
       }
-
       if (vendorFilter !== 'All Vendors') {
           invoices = invoices.filter(invoice => invoice.parentOrderInfo?.vendor === vendorFilter);
       }
@@ -102,7 +104,6 @@ const InvoiceGenerator = () => {
           });
           return Array.from(groupedInvoices.values());
       }
-
       return invoices;
   }, [savedInvoices, viewingInvoiceType, vendorFilter]);
 
@@ -132,14 +133,14 @@ const InvoiceGenerator = () => {
             </TableHead>
             <TableBody>
               {workItems.map((item) => {
-                const hasVendorInvoice = invoiceStatusMap[item._id]?.Vendor || false;
-                const hasWorkOrderInvoice = invoiceStatusMap[item._id]?.WorkOrder || false;
+                const hasVendorInvoice = invoiceStatusMap[item.id]?.Vendor || false;
+                const hasWorkOrderInvoice = invoiceStatusMap[item.id]?.WorkOrder || false;
                 return (
-                    <TableRow key={item._id} hover >
+                    <TableRow key={item.id} hover >
                       <TableCell padding="checkbox">
                         <Checkbox 
-                            checked={!!selected[item._id]}
-                            onChange={() => handleSelect(item._id)}
+                            checked={!!selected[item.id]}
+                            onChange={() => handleSelect(item.id)}
                         />
                       </TableCell>
                       <TableCell>{item.parent.entryNumber}</TableCell>
@@ -151,15 +152,14 @@ const InvoiceGenerator = () => {
                       </TableCell>
                       <TableCell>{item.eventName}</TableCell>
                       <TableCell>{item.poNpo}</TableCell>
-                      <TableCell>{new Date(item.parent.eventDate).toLocaleDateString()}</TableCell>
-                      <TableCell>{item.workMain.replaceAll('_', ' ')}</TableCell>
+                      <TableCell>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
                     </TableRow>
                 )
               })}
             </TableBody>
           </Table>
         </TableContainer>
-
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
           <Button 
             variant="contained" 
@@ -186,7 +186,6 @@ const InvoiceGenerator = () => {
           <Typography variant="h4" gutterBottom align="center">
               Saved Invoices
           </Typography>
-
           <Grid container spacing={2} sx={{ mb: 3 }} alignItems="center" justifyContent="center">
               <Grid item>
                 <ButtonGroup>
@@ -212,7 +211,6 @@ const InvoiceGenerator = () => {
               </Grid>
           </Grid>
           <Divider sx={{ mb: 3 }} />
-
           {filteredSavedInvoices.length > 0 ? (
             <TableContainer>
                 <Table>
@@ -228,13 +226,13 @@ const InvoiceGenerator = () => {
                     </TableHead>
                     <TableBody>
                         {filteredSavedInvoices.map(invoice => {
-                            const eventNames = workItems.filter(item => invoice.workItems.includes(item._id)).map(item => item.eventName);
+                            const eventNames = workItems.filter(item => invoice.workItems.includes(item.id)).map(item => item.eventName);
                             const uniqueEventNames = [...new Set(eventNames)];
                             const displayEventName = uniqueEventNames.join(' and ') || 'N/A';
-                            const displayPoNpo = workItems.find(item => invoice.workItems.includes(item._id))?.poNpo || 'N/A';
+                            const displayPoNpo = workItems.find(item => invoice.workItems.includes(item.id))?.poNpo || 'N/A';
                             
                             return (
-                              <TableRow key={invoice.invoiceNumber || invoice._id}>
+                              <TableRow key={invoice.invoiceNumber || invoice.id || invoice._id}>
                                   <TableCell>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
                                   <TableCell>{invoice.invoiceNumber}</TableCell>
                                   <TableCell>{displayEventName}</TableCell>
@@ -265,4 +263,5 @@ const InvoiceGenerator = () => {
     </Container>
   );
 };
+
 export default InvoiceGenerator;
