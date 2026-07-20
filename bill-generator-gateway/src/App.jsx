@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { supabase } from './supabase';
 
+// MUI Imports for styling
+import { Container, Paper, Typography, TextField, Button, Box, CircularProgress } from '@mui/material';
+
 import Layout from './components/Layout';
 import WorkOrder from './pages/WorkOrder';
 import Reports from './pages/Reports';
@@ -14,8 +17,9 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false); // Added for button loading state
   
-  // New state variables for Sign Up flow
+  // State variables for Sign Up flow
   const [isSignUp, setIsSignUp] = useState(false); 
   const [message, setMessage] = useState(''); 
 
@@ -39,6 +43,7 @@ function App() {
   const handleAuth = async (e) => {
     e.preventDefault();
     setMessage(''); // Clear any previous messages
+    setAuthLoading(true);
     
     if (isSignUp) {
       // Handle Account Creation
@@ -53,52 +58,79 @@ function App() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) alert(error.message);
     }
+    setAuthLoading(false);
   };
 
-  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+  // Styled centered loading spinner for initial load
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
+  // MUI Styled Login / Sign Up UI
   if (!session) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10vh' }}>
-        <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '320px' }}>
-          <h2 style={{ textAlign: 'center' }}>{isSignUp ? 'Create Account' : 'Login'}</h2>
+      <Container maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '80vh' }}>
+        <Paper elevation={4} sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 2 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <img src="/ONGC logo.png" alt="Logo" style={{ height: '80px', marginBottom: '16px' }} />
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              {isSignUp ? 'Create Account' : 'Login'}
+            </Typography>
+          </Box>
           
-          {message && <p style={{ color: 'green', fontSize: '0.9rem', textAlign: 'center' }}>{message}</p>}
+          {message && (
+            <Typography variant="body2" color="success.main" align="center" sx={{ bgcolor: '#e8f5e9', p: 1, borderRadius: 1 }}>
+              {message}
+            </Typography>
+          )}
           
-          <input 
-            type="email" 
-            placeholder="Email" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            required 
-          />
-          <input 
-            type="password" 
-            placeholder="Password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-          />
-          <button type="submit" style={{ padding: '10px', marginTop: '5px' }}>
-            {isSignUp ? 'Sign Up' : 'Sign In'}
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={() => { setIsSignUp(!isSignUp); setMessage(''); }}
-            style={{ 
-              background: 'none', 
-              color: '#396cd8', 
-              border: 'none', 
-              cursor: 'pointer', 
-              marginTop: '10px',
-              textDecoration: 'underline'
-            }}
-          >
-            {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
-          </button>
-        </form>
-      </div>
+          <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <TextField 
+              label="Email Address" 
+              type="email" 
+              variant="outlined" 
+              fullWidth 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+            />
+            <TextField 
+              label="Password" 
+              type="password" 
+              variant="outlined" 
+              fullWidth 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+            />
+            
+            <Button 
+              type="submit" 
+              variant="contained" 
+              color="primary" 
+              size="large" 
+              fullWidth 
+              sx={{ mt: 1, py: 1.5, fontWeight: 'bold' }}
+              disabled={authLoading}
+            >
+              {authLoading ? <CircularProgress size={24} color="inherit" /> : (isSignUp ? 'Sign Up' : 'Sign In')}
+            </Button>
+            
+            <Button 
+              variant="text" 
+              onClick={() => { setIsSignUp(!isSignUp); setMessage(''); }}
+              fullWidth
+              sx={{ textTransform: 'none', mt: 1 }}
+            >
+              {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+            </Button>
+          </form>
+        </Paper>
+      </Container>
     );
   }
 
