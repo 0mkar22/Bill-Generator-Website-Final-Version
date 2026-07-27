@@ -2,48 +2,19 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Button, Container, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Typography, TextField, Select, MenuItem, FormControl,
-  InputLabel, Pagination, CircularProgress, Alert, Grid,
+  InputLabel, Pagination, CircularProgress, Alert, Grid, Dialog, DialogTitle,
+  DialogContent, DialogActions, Snackbar
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon,
-  Search as SearchIcon, Edit as EditIcon, Close as CloseIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import API from '../services/api';
-
-// --- DATA CONSTANTS ---
-const pricing = {
-  "Still_Photography": { "Mumbai_Upto_4_Hrs": 2950, "Mumbai_Above_4_and_upto_8_Hrs": 4150, "Panvel_Upto_4_Hrs": 3200, "Panvel_Above_4_and_upto_8_Hrs": 4150, "Uran_Upto_4_Hrs": 4000, "Uran_Above_4_and_upto_8_Hrs": 5200, "Nhava_Upto_4_Hrs": 4000, "Nhava_Above_4_and_upto_8_Hrs": 5200, "Outstation_Upto_4_Hrs": 4490, "Outstation_Above_4_and_upto_8_Hrs": 6300 },
-  "Videography": { "Mumbai_Upto_4_Hrs": 4300, "Mumbai_Above_4_and_upto_8_Hrs": 6000, "Panvel_Upto_4_Hrs": 4300, "Panvel_Above_4_and_upto_8_Hrs": 6000, "Uran_Upto_4_Hrs": 4500, "Uran_Above_4_and_upto_8_Hrs": 6000, "Nhava_Upto_4_Hrs": 4500, "Nhava_Above_4_and_upto_8_Hrs": 6000, "Outstation_Upto_4_Hrs": 5800, "Outstation_Above_4_and_upto_8_Hrs": 7500 },
-  "Two_Camera_Setup": { "Mumbai_Upto_4_Hrs": 23650, "Mumbai_Above_4_and_upto_8_Hrs": 37000, "Panvel_Upto_4_Hrs": 25500, "Panvel_Above_4_and_upto_8_Hrs": 37000, "Uran_Upto_4_Hrs": 26500, "Uran_Above_4_and_upto_8_Hrs": 38000, "Nhava_Upto_4_Hrs": 26500, "Nhava_Above_4_and_upto_8_Hrs": 38000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 41000 },
-  "Three_Camera_Setup": { "Mumbai_Upto_4_Hrs": 31000, "Mumbai_Above_4_and_upto_8_Hrs": 40000, "Panvel_Upto_4_Hrs": 31000, "Panvel_Above_4_and_upto_8_Hrs": 40000, "Uran_Upto_4_Hrs": 31000, "Uran_Above_4_and_upto_8_Hrs": 40000, "Nhava_Upto_4_Hrs": 31000, "Nhava_Above_4_and_upto_8_Hrs": 40000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 43000 },
-  "Live_Telecast": { "Mumbai_Upto_4_Hrs": 7000, "Mumbai_Above_4_and_upto_8_Hrs": 9000, "Panvel_Upto_4_Hrs": 7000, "Panvel_Above_4_and_upto_8_Hrs": 9000, "Uran_Upto_4_Hrs": 7000, "Uran_Above_4_and_upto_8_Hrs": 9000, "Nhava_Upto_4_Hrs": 7000, "Nhava_Above_4_and_upto_8_Hrs": 9000, "Outstation_Upto_4_Hrs": 9000, "Outstation_Above_4_and_upto_8_Hrs": 10000 },
-  "32_GB_Pendrive": 550,
-  "Others": {}
-};
-
-const subWorks = {
-  "Still_Photography": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Videography": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Two_Camera_Setup": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Three_Camera_Setup": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Live_Telecast": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Others": []
-};
-
-const venues = [ 'NBP Green Heights, BKC, Bandra (East), Mumbai - 400051', 'Vasudhara Bhavan, Western Express Highway, Bandra (East), Mumbai – 400051', '11 High, Sion-Bandra Link Rd, Sion West, Mumbai - 400017', 'Helibase, Airport area, Juhu, Mumbai - 400049', "Maker Tower 'E', Chamundeshwari Nagar, Cuffe Parade, Mumbai - 400005", 'Phase-I, Panvel, Navi Mumbai – 410221', 'Phase-II, Panvel, Navi Mumbai – 410221', 'Uran Plant, Dronagiri Bhavan, Uran, Distt Raigad 400702', 'Nhava Supply Base, Navi Mumbai - 410206', 'Others'];
-
-const formatDateToYYYYMMDD = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { pricing, subWorks, venues, vendors } from '../constants/data';
+import { calculateItemAmount, formatDateToYYYYMMDD } from '../utils/helpers';
 
 const Reports = () => {
     const navigate = useNavigate();
@@ -54,15 +25,15 @@ const Reports = () => {
     const [vendorFilter, setVendorFilter] = useState('');
     const [workTypeFilter, setWorkTypeFilter] = useState('');
     const [poNpoFilter, setPoNpoFilter] = useState('');
-    const [vendors, setVendors] = useState([]);
+    const [dynamicVendors, setDynamicVendors] = useState([]);
     const [workTypes, setWorkTypes] = useState([]);
     const [page, setPage] = useState(1);
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const itemsPerPage = 10;
     const [monthFilter, setMonthFilter] = useState('');
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState(null);
     const [editedItemData, setEditedItemData] = useState(null);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     const fetchWorkOrders = async () => {
         try {
@@ -72,7 +43,7 @@ const Reports = () => {
             const allWorkItems = (response.data.data || []).flatMap(order =>
                 order.workItems.map(item => ({
                     ...item,
-                    parentWorkOrderId: order._id,
+                    parentWorkOrderId: order.id,
                     entryNumber: order.entryNumber,
                     date: order.eventDate,
                     vendor: order.vendor
@@ -81,16 +52,16 @@ const Reports = () => {
             setWorkItems(allWorkItems);
             const uniqueVendors = [...new Set(allWorkItems.map(item => item.vendor))];
             const uniqueWorkTypes = [...new Set(allWorkItems.map(item => item.workMain))];
-            setVendors(uniqueVendors);
+            setDynamicVendors(uniqueVendors);
             setWorkTypes(uniqueWorkTypes);
-        } catch (error) {
-            console.error('Error fetching work items:', error);
+        } catch (err) {
+            console.error('Error fetching work items:', err);
             setError('Failed to fetch work orders. Please try again.');
         } finally {
             setLoading(false);
         }
     };
-    
+
     useEffect(() => {
         fetchWorkOrders();
     }, []);
@@ -135,11 +106,13 @@ const Reports = () => {
         return sortedItems;
     };
 
-    const calculateItemAmount = (item) => {
+    const getWorkTypeDisplay = (item) => {
         if (item.workMain === '32_GB_Pendrive') {
-            return (pricing[item.workMain] || 0) * (item.quantity || 1);
+            return `${item.workMain.replaceAll('_', ' ')} (Qty: ${item.quantity || 1})`;
         }
-        return pricing[item.workMain]?.[item.workSub] || 0;
+        const mainDisplay = item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A';
+        const subDisplay = item.workSub ? item.workSub.replaceAll('_', ' ') : '';
+        return subDisplay ? `${mainDisplay} - ${subDisplay}` : mainDisplay;
     };
 
     const handleExportToExcel = () => {
@@ -150,7 +123,7 @@ const Reports = () => {
             'Entry Number': item.entryNumber, 'Sr. No': idx + 1, 'Event Date': new Date(item.date).toLocaleDateString('en-GB'),
             'Vendor': item.vendor, 'Event Name': item.eventName, 'Event Venue': item.eventVenue, 'Event Time': item.eventTime,
             'PO/NPO': item.poNpo,
-            'Work Type': item.workMain === '32_GB_Pendrive' ? `${item.workMain.replaceAll('_', ' ')} (Qty: ${item.quantity || 1})` : `${item.workMain.replaceAll('_', ' ')}${item.workSub ? ' - ' + item.workSub.replaceAll('_', ' ') : ''}`,
+            'Work Type': getWorkTypeDisplay(item),
             'Contact Person': item.contactPerson, 'Contact Number': item.contactNumber,
             'Amount': calculateItemAmount(item), 'Amount with GST': calculateItemAmount(item) * 1.18
         }));
@@ -176,9 +149,9 @@ const Reports = () => {
             const rowData = [
                 item.entryNumber, idx + 1, new Date(item.date).toLocaleDateString('en-GB'),
                 item.vendor, item.eventName, item.eventVenue, item.eventTime, item.poNpo,
-                item.workMain === '32_GB_Pendrive' ? `${item.workMain.replaceAll('_', ' ')} (Qty: ${item.quantity || 1})` : `${item.workMain.replaceAll('_', ' ')} - ${item.workSub.replaceAll('_', ' ')}`,
+                getWorkTypeDisplay(item),
                 item.contactPerson, item.contactNumber,
-                `₹${amount.toLocaleString('en-IN')}`, `₹${(amount * 1.18).toLocaleString('en-IN')}`
+                `Rs.${amount.toLocaleString('en-IN')}`, `Rs.${(amount * 1.18).toLocaleString('en-IN')}`
             ];
             tableRows.push(rowData);
         });
@@ -193,20 +166,18 @@ const Reports = () => {
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text('Total Amount:', 200, finalY + 10);
-        doc.text(`₹${totalAmount.toLocaleString('en-IN')}`, 240, finalY + 10);
-        doc.text(`₹${totalAmountWithGst.toLocaleString('en-IN')}`, 270, finalY + 10);
+        doc.text(`Rs.${totalAmount.toLocaleString('en-IN')}`, 240, finalY + 10);
+        doc.text(`Rs.${totalAmountWithGst.toLocaleString('en-IN')}`, 270, finalY + 10);
         doc.save('work_orders_report.pdf');
     };
-    
+
     const handleEditWorkItem = (item) => {
-        setEditingItem(item);
         setEditedItemData({ ...item, date: formatDateToYYYYMMDD(item.date) });
         setEditModalOpen(true);
     };
 
     const handleCloseEditModal = () => {
         setEditModalOpen(false);
-        setEditingItem(null);
         setEditedItemData(null);
     };
 
@@ -216,11 +187,11 @@ const Reports = () => {
     };
 
     const handleSaveChanges = async () => {
-        if (!editedItemData?._id || !editedItemData?.parentWorkOrderId) return;
+        if (!editedItemData?.id || !editedItemData?.parentWorkOrderId) return;
         try {
             const parentWorkOrderResponse = await API.get(`/workOrders/${editedItemData.parentWorkOrderId}`);
-            const parentWorkOrder = parentWorkOrderResponse.data;
-            const itemIndex = parentWorkOrder.workItems.findIndex(item => item._id === editedItemData._id);
+            const parentWorkOrder = parentWorkOrderResponse.data.data;
+            const itemIndex = parentWorkOrder.workItems.findIndex(item => item.id === editedItemData.id);
             if (itemIndex === -1) return;
             const updatedWorkItems = [...parentWorkOrder.workItems];
             updatedWorkItems[itemIndex] = { ...updatedWorkItems[itemIndex], ...editedItemData };
@@ -230,13 +201,13 @@ const Reports = () => {
                 eventDate: editedItemData.date || parentWorkOrder.eventDate,
                 vendor: editedItemData.vendor || parentWorkOrder.vendor
             };
-            await API.put(`/workOrders/${updatedParentWorkOrder._id}`, updatedParentWorkOrder);   
-            alert('Work item updated successfully!');
+            await API.put(`/workOrders/${updatedParentWorkOrder.id}`, updatedParentWorkOrder);
+            setSnackbar({ open: true, message: 'Work item updated successfully!', severity: 'success' });
             handleCloseEditModal();
             fetchWorkOrders();
-        } catch (error) {
-            console.error('Error updating work item:', error);
-            alert('Failed to update work item.');
+        } catch (err) {
+            console.error('Error updating work item:', err);
+            setSnackbar({ open: true, message: 'Failed to update work item.', severity: 'error' });
         }
     };
 
@@ -266,7 +237,7 @@ const Reports = () => {
                         {paginatedItems.map((item) => {
                             const amount = calculateItemAmount(item);
                             return (
-                                <TableRow key={item._id}>
+                                <TableRow key={item.id}>
                                     <TableCell>{item.entryNumber}</TableCell>
                                     <TableCell>{new Date(item.date).toLocaleDateString('en-GB')}</TableCell>
                                     <TableCell>{item.vendor}</TableCell>
@@ -274,19 +245,19 @@ const Reports = () => {
                                     <TableCell>{item.eventVenue}</TableCell>
                                     <TableCell>{item.eventTime}</TableCell>
                                     <TableCell>{item.poNpo}</TableCell>
-                                    <TableCell>{item.workMain === '32_GB_Pendrive' ? `${item.workMain.replaceAll('_', ' ')} (Qty: ${item.quantity || 1})` : `${item.workMain.replaceAll('_', ' ')} - ${item.workSub.replaceAll('_', ' ')}`}</TableCell>
+                                    <TableCell>{getWorkTypeDisplay(item)}</TableCell>
                                     <TableCell>{item.contactPerson}</TableCell>
                                     <TableCell>{item.contactNumber}</TableCell>
-                                    <TableCell>₹{amount.toLocaleString('en-IN')}</TableCell>
-                                    <TableCell>₹{(amount * 1.18).toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>Rs.{amount.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>Rs.{(amount * 1.18).toLocaleString('en-IN')}</TableCell>
                                     <TableCell><Button variant="contained" size="small" onClick={() => handleEditWorkItem(item)}>Edit</Button></TableCell>
                                 </TableRow>
                             );
                         })}
                         <TableRow sx={{ '& > *': { fontWeight: 'bold', fontSize: '1.1rem' } }}>
                             <TableCell colSpan={10} align="right">Total:</TableCell>
-                            <TableCell>₹{totalAmount.toLocaleString('en-IN')}</TableCell>
-                            <TableCell>₹{totalAmountWithGst.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>Rs.{totalAmount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell>Rs.{totalAmountWithGst.toLocaleString('en-IN')}</TableCell>
                             <TableCell />
                         </TableRow>
                     </TableBody>
@@ -308,7 +279,7 @@ const Reports = () => {
                 <Grid container spacing={2} sx={{ mb: 3 }}>
                     <Grid item xs={12} sm={3}><TextField fullWidth label="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></Grid>
                     <Grid item xs={12} sm={2}><TextField fullWidth label="Month" type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} InputLabelProps={{ shrink: true }} /></Grid>
-                    <Grid item xs={12} sm={2}><FormControl fullWidth><InputLabel>Vendor</InputLabel><Select value={vendorFilter} label="Vendor" onChange={(e) => setVendorFilter(e.target.value)}><MenuItem value="">All</MenuItem>{vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                    <Grid item xs={12} sm={2}><FormControl fullWidth><InputLabel>Vendor</InputLabel><Select value={vendorFilter} label="Vendor" onChange={(e) => setVendorFilter(e.target.value)}><MenuItem value="">All</MenuItem>{dynamicVendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
                     <Grid item xs={12} sm={3}><FormControl fullWidth><InputLabel>Work Type</InputLabel><Select value={workTypeFilter} label="Work Type" onChange={(e) => setWorkTypeFilter(e.target.value)}><MenuItem value="">All</MenuItem>{workTypes.map(t => <MenuItem key={t} value={t}>{t.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl></Grid>
                     <Grid item xs={12} sm={2}>
                         <FormControl fullWidth>
@@ -327,13 +298,14 @@ const Reports = () => {
                 </Box>
                 {loading ? <CircularProgress /> : error ? <Alert severity="error">{error}</Alert> : renderTable()}
             </Paper>
-            {editModalOpen && (
-                <Box sx={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', bgcolor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1300 }}>
-                    <Paper sx={{ p: 3, width: '90%', maxWidth: 800, maxHeight: '90vh', overflowY: 'auto' }}>
-                        <Typography variant="h6">Edit Work Item</Typography>
+
+            <Dialog open={editModalOpen} onClose={handleCloseEditModal} maxWidth="md" fullWidth>
+                <DialogTitle>Edit Work Item</DialogTitle>
+                <DialogContent>
+                    {editedItemData && (
                         <Grid container spacing={2} sx={{ mt: 1 }}>
                             <Grid item xs={12} sm={6}><TextField fullWidth label="Entry Number" name="entryNumber" value={editedItemData.entryNumber || ''} onChange={handleEditInputChange} /></Grid>
-                            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>Vendor</InputLabel><Select label="Vendor" name="vendor" value={editedItemData.vendor || ''} onChange={handleEditInputChange}>{vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>Vendor</InputLabel><Select label="Vendor" name="vendor" value={editedItemData.vendor || ''} onChange={handleEditInputChange}>{dynamicVendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
                             <Grid item xs={12} sm={6}><TextField fullWidth label="Event Name" name="eventName" value={editedItemData.eventName || ''} onChange={handleEditInputChange} /></Grid>
                             <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>PO/NPO</InputLabel><Select label="PO/NPO" name="poNpo" value={editedItemData.poNpo || 'PO'} onChange={handleEditInputChange}><MenuItem value="PO">PO</MenuItem><MenuItem value="NPO">NPO</MenuItem></Select></FormControl></Grid>
                             <Grid item xs={12} sm={6}><TextField fullWidth label="Event Time" type="time" name="eventTime" value={editedItemData.eventTime || ''} onChange={handleEditInputChange} InputLabelProps={{ shrink: true }} /></Grid>
@@ -366,13 +338,19 @@ const Reports = () => {
                             )}
                             <Grid item xs={12} sm={6}><TextField fullWidth label="Event Date" type="date" name="date" value={editedItemData.date || ''} onChange={handleEditInputChange} InputLabelProps={{ shrink: true }} /></Grid>
                         </Grid>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-                            <Button variant="outlined" onClick={handleCloseEditModal} sx={{ mr: 1 }}>Cancel</Button>
-                            <Button variant="contained" onClick={handleSaveChanges}>Save Changes</Button>
-                        </Box>
-                    </Paper>
-                </Box>
-            )}
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseEditModal}>Cancel</Button>
+                    <Button variant="contained" onClick={handleSaveChanges}>Save Changes</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+                <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 };

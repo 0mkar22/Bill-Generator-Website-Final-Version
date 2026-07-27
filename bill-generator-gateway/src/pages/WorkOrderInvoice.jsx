@@ -1,53 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Container, CircularProgress, Alert, TextField
+  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Button, Container, CircularProgress, Alert, TextField, Snackbar
 } from '@mui/material';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import './WorkOrderInvoice.css';
 import API from '../services/api';
-
-// --- DATA & HELPER FUNCTIONS ---
-const pricing = {
-  "Still_Photography": { "Mumbai_Upto_4_Hrs": 2950, "Mumbai_Above_4_and_upto_8_Hrs": 4150, "Panvel_Upto_4_Hrs": 3200, "Panvel_Above_4_and_upto_8_Hrs": 4150, "Uran_Upto_4_Hrs": 4000, "Uran_Above_4_and_upto_8_Hrs": 5200, "Nhava_Upto_4_Hrs": 4000, "Nhava_Above_4_and_upto_8_Hrs": 5200, "Outstation_Upto_4_Hrs": 4490, "Outstation_Above_4_and_upto_8_Hrs": 6300 },
-  "Videography": { "Mumbai_Upto_4_Hrs": 4300, "Mumbai_Above_4_and_upto_8_Hrs": 6000, "Panvel_Upto_4_Hrs": 4300, "Panvel_Above_4_and_upto_8_Hrs": 6000, "Uran_Upto_4_Hrs": 4500, "Uran_Above_4_and_upto_8_Hrs": 6000, "Nhava_Upto_4_Hrs": 4500, "Nhava_Above_4_and_upto_8_Hrs": 6000, "Outstation_Upto_4_Hrs": 5800, "Outstation_Above_4_and_upto_8_Hrs": 7500 },
-  "Two_Camera_Setup": { "Mumbai_Upto_4_Hrs": 23650, "Mumbai_Above_4_and_upto_8_Hrs": 37000, "Panvel_Upto_4_Hrs": 25500, "Panvel_Above_4_and_upto_8_Hrs": 37000, "Uran_Upto_4_Hrs": 26500, "Uran_Above_4_and_upto_8_Hrs": 38000, "Nhava_Upto_4_Hrs": 26500, "Nhava_Above_4_and_upto_8_Hrs": 38000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 41000 },
-  "Three_Camera_Setup": { "Mumbai_Upto_4_Hrs": 31000, "Mumbai_Above_4_and_upto_8_Hrs": 40000, "Panvel_Upto_4_Hrs": 31000, "Panvel_Above_4_and_upto_8_Hrs": 40000, "Uran_Upto_4_Hrs": 31000, "Uran_Above_4_and_upto_8_Hrs": 40000, "Nhava_Upto_4_Hrs": 31000, "Nhava_Above_4_and_upto_8_Hrs": 40000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 43000 },
-  "Live_Telecast": { "Mumbai_Upto_4_Hrs": 7000, "Mumbai_Above_4_and_upto_8_Hrs": 9000, "Panvel_Upto_4_Hrs": 7000, "Panvel_Above_4_and_upto_8_Hrs": 9000, "Uran_Upto_4_Hrs": 7000, "Uran_Above_4_and_upto_8_Hrs": 9000, "Nhava_Upto_4_Hrs": 7000, "Nhava_Above_4_and_upto_8_Hrs": 9000, "Outstation_Upto_4_Hrs": 9000, "Outstation_Above_4_and_upto_8_Hrs": 10000 },
-  "32_GB_Pendrive": 550, "Others": {}
-};
-
-function numberToWords(num) {
-    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    if ((num = Math.round(num).toString()).length > 9) return 'Overflow';
-    let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-    if (!n) return ''; let str = '';
-    str += (n[1] !== '00') ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + ' Crore ' : '';
-    str += (n[2] !== '00') ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + ' Lakh ' : '';
-    str += (n[3] !== '00') ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + ' Thousand ' : '';
-    str += (n[4] !== '0') ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + ' Hundred ' : '';
-    str += (n[5] !== '00') ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
-    return str.trim();
-}
-
-const calculateItemAmount = (item) => {
-    if (item.workMain === '32_GB_Pendrive') { return (pricing[item.workMain] || 0) * (item.quantity || 1); }
-    return pricing[item.workMain]?.[item.workSub] || 0;
-};
+import { pricing } from '../constants/data';
+import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
 const WorkOrderInvoice = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const invoiceRef = useRef();
-  
-  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber } = location.state || { items: [] };
-  
+
+  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
+
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(savedInvoice || false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const displayDate = passedInvoiceDate
+    ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
+    : new Date().toLocaleDateString('en-GB');
 
   useEffect(() => {
     setInvoiceNumber(passedInvoiceNumber || selectedItems[0]?.parent?.entryNumber || '');
@@ -70,7 +49,7 @@ const WorkOrderInvoice = () => {
         const invoicePayload = {
             invoiceNumber,
             invoiceType: invoiceType || 'WorkOrder',
-            workItems: selectedItems.map(item => item.id || item._id),
+            workItems: selectedItems.map(item => item.id),
             parentOrderInfo: {
                 entryNumber: selectedItems[0]?.parent?.entryNumber,
                 vendor: selectedItems[0]?.parent?.vendor
@@ -78,16 +57,12 @@ const WorkOrderInvoice = () => {
         };
         await API.post('/invoices', invoicePayload);
         setSaveSuccess(true);
+        setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
     } catch (error) {
         console.error("Failed to save invoice:", error);
         const serverError = error.response?.data?.error;
-        if (Array.isArray(serverError)) {
-            alert(`Could not save the invoice:\n- ${serverError.join('\n- ')}`);
-        } else if (typeof serverError === 'string') {
-            alert(`Could not save the invoice: ${serverError}`);
-        } else {
-            alert("Could not save the invoice. Please try again.");
-        }
+        const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
+        setSnackbar({ open: true, message: msg, severity: 'error' });
     } finally {
         setIsSaving(false);
     }
@@ -107,7 +82,6 @@ const WorkOrderInvoice = () => {
   const totalWithGst = totalAmount * 1.18;
   const roundedTotal = Math.round(totalWithGst);
 
-  // --- CORRECTED LOGIC for unique event/date pairs ---
   const uniqueEvents = selectedItems.reduce((acc, item) => {
       const key = `${item.eventName}-${item.parent?.eventDate}`;
       if (!acc.has(key)) {
@@ -138,7 +112,7 @@ const WorkOrderInvoice = () => {
         </Box>
       </Box>
       {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>Invoice saved successfully!</Alert>}
-      
+
       <Paper ref={invoiceRef} id="generated-invoice" sx={{ p: 0, border: '2px solid #000', fontFamily: 'Arial, sans-serif' }}>
         <Box sx={{ textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
           <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
@@ -152,7 +126,7 @@ const WorkOrderInvoice = () => {
              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 सं. प.अ.क्षे.का./नि.सं./
                 {editingInvoiceNumber ? (
-                    <TextField 
+                    <TextField
                         value={invoiceNumber}
                         onChange={(e) => setInvoiceNumber(e.target.value)}
                         onBlur={() => setEditingInvoiceNumber(false)}
@@ -164,11 +138,11 @@ const WorkOrderInvoice = () => {
                     />
                 ) : (
                     <Box component="span" onClick={() => !saveSuccess && setEditingInvoiceNumber(true)} sx={{ cursor: saveSuccess ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}>
-                        {invoiceNumber}
+                        {invoiceNumber || 'Click to set'}
                     </Box>
                 )}
              </Typography>
-             <Typography variant="body2">DT: {new Date().toLocaleDateString('en-GB')}</Typography>
+             <Typography variant="body2">DT: {displayDate}</Typography>
         </Box>
         <Box sx={{ p: 2, pb: 0 }}>
           <Typography variant="body2" sx={{ mb: 1 }}>
@@ -196,16 +170,16 @@ const WorkOrderInvoice = () => {
                 const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
                 const quantity = item.quantity || 1;
                 return (
-                  <TableRow key={item.id || item._id || idx}>
+                  <TableRow key={item.id || idx}>
                     <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{idx + 1}</TableCell>
                     <TableCell sx={{ border: '1px solid #000' }}>
-                      <Typography variant="body2" component="div">{`${item.workMain.replaceAll('_',' ')}`}</Typography>
-                      {( <>
+                      <Typography variant="body2" component="div">{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
+                      <>
                           <Typography variant="body2" component="div">{item.workSub && `Duration : ${item.workSub.replaceAll('_', ' ')}`}</Typography>
                           <Typography variant="body2" component="div">{`dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
                           <Typography variant="body2" component="div">{`For ${item.eventName}`}</Typography>
                           <Typography variant="body2" component="div">{`at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
-                      </>)}
+                      </>
                     </TableCell>
                     <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{quantity}</TableCell>
                     <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{rate.toLocaleString('en-IN')}</TableCell>
@@ -270,6 +244,12 @@ const WorkOrderInvoice = () => {
           </Typography>
         </Box>
       </Paper>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

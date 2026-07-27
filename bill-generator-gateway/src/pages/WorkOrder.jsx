@@ -1,38 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Divider
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { getWorkOrders, createWorkOrder } from '../services/api';
-
-// --- DATA CONSTANTS ---
-const subWorks = {
-  "Still_Photography": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Videography": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Two_Camera_Setup": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Three_Camera_Setup": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Live_Telecast": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
-  "Others": []
-};
-
-const venues = [
-  'NBP Green Heights, BKC, Bandra (East), Mumbai - 400051',
-  'Vasudhara Bhavan, Western Express Highway, Bandra (East), Mumbai – 400051',
-  '11 High, Sion-Bandra Link Rd, Sion West, Mumbai - 400017',
-  'Helibase, Airport area, Juhu, Mumbai - 400049',
-  "Maker Tower 'E', Chamundeshwari Nagar, Cuffe Parade, Mumbai - 400005",
-  'Phase-I, Panvel, Navi Mumbai – 410221',
-  'Phase-II, Panvel, Navi Mumbai – 410221',
-  'Uran Plant, Dronagiri Bhavan, Uran, Distt Raigad 400702',
-  'Nhava Supply Base, Navi Mumbai - 410206',
-  'Hotel Novotel, Juhu Beach, Mumbai - 400 049',
-  'JW Marriott,  Juhu, Mumbai - 400 049',
-  'Hotel Taj Lands End, Bandstand, Bandra (w) Mumbai 400050',
-  'Aurika Hotel, Near T2 Terminal, Mumbai',
-  'Others'
-];
+import { subWorks, venues, vendors } from '../constants/data';
 
 const WorkOrder = () => {
   const [formData, setFormData] = useState({
@@ -44,14 +18,16 @@ const WorkOrder = () => {
     ]
   });
   const [latestEntry, setLatestEntry] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchLatestEntry = async () => {
     try {
         const response = await getWorkOrders();
         const workOrders = response.data.data || [];
         if (workOrders.length > 0) {
-            const latest = workOrders.reduce((max, order) => 
-                parseInt(order.entryNumber, 10) > parseInt(max.entryNumber, 10) ? order : max, 
+            const latest = workOrders.reduce((max, order) =>
+                parseInt(order.entryNumber, 10) > parseInt(max.entryNumber, 10) ? order : max,
                 { entryNumber: '0' }
             );
             setLatestEntry(latest.entryNumber);
@@ -75,7 +51,6 @@ const WorkOrder = () => {
     const newWorkItems = [...formData.workItems];
     newWorkItems[index][name] = value;
 
-    // If the main item's details change, propagate them to all other items
     if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue'].includes(name)) {
         for (let i = 1; i < newWorkItems.length; i++) {
             newWorkItems[i][name] = value;
@@ -96,7 +71,6 @@ const WorkOrder = () => {
       workItems: [
           ...prev.workItems,
           {
-              // Inherit all details from the first item
               eventName: firstItem.eventName,
               poNpo: firstItem.poNpo,
               eventTime: firstItem.eventTime,
@@ -104,7 +78,6 @@ const WorkOrder = () => {
               contactPerson: firstItem.contactPerson,
               contactNumber: firstItem.contactNumber,
               customVenue: firstItem.customVenue,
-              // Clear only the fields for the new item's specific work
               workMain: '',
               workSub: '',
               quantity: 1,
@@ -121,9 +94,10 @@ const WorkOrder = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await createWorkOrder(formData);
-      alert('Work Order created successfully!');
+      setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
       setFormData({
         entryNumber: '', eventDate: '', vendor: '',
         workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }]
@@ -131,11 +105,11 @@ const WorkOrder = () => {
       fetchLatestEntry();
     } catch (error) {
       console.error('Failed to create work order:', error);
-      if (error.response?.data?.error) {
-        alert(`Failed to create work order:\n- ${error.response.data.error.join('\n- ')}`);
-      } else {
-        alert('Failed to create work order. Please ensure all required fields are filled correctly.');
-      }
+      const serverError = error.response?.data?.error;
+      const msg = Array.isArray(serverError) ? serverError.join(', ') : (serverError || 'Failed to create work order. Please ensure all required fields are filled correctly.');
+      setSnackbar({ open: true, message: msg, severity: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -154,9 +128,7 @@ const WorkOrder = () => {
             <FormControl fullWidth required>
               <InputLabel>Vendor</InputLabel>
               <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
-                <MenuItem value="ICOMP SYSTEMS">ICOMP SYSTEMS</MenuItem>
-                <MenuItem value="STUDIO VISION">STUDIO VISION</MenuItem>
-                <MenuItem value="WAGHSONS PHOTO VISION">WAGHSONS PHOTO VISION</MenuItem>
+                {vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
               </Select>
             </FormControl>
           </Grid>
@@ -173,7 +145,6 @@ const WorkOrder = () => {
               )}
             </Box>
 
-            {/* --- THIS IS THE NEW CONDITIONAL RENDERING LOGIC --- */}
             {index === 0 && (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label="Event Name" required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
@@ -186,7 +157,7 @@ const WorkOrder = () => {
                     <Grid item xs={12}><Divider>Work Details</Divider></Grid>
                 </Grid>
             )}
-            
+
             <Grid container spacing={2} sx={{ mt: index === 0 ? 1 : 0 }}>
                 <Grid item xs={12} sm={6}>
                     <FormControl fullWidth required>
@@ -230,10 +201,16 @@ const WorkOrder = () => {
           Add Another Item
         </Button>
 
-        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 3 }}>
-          Save The Data
+        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 3 }} disabled={submitting}>
+          {submitting ? <CircularProgress size={24} color="inherit" /> : 'Save The Data'}
         </Button>
       </Box>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

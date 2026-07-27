@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container, Paper, Typography, Box, Button, Checkbox,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ButtonGroup, Divider, FormControl, InputLabel, Select, MenuItem, Grid
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ButtonGroup,
+  Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getWorkOrders } from '../services/api';
@@ -12,16 +13,16 @@ const InvoiceGenerator = () => {
   const [selected, setSelected] = useState({});
   const [savedInvoices, setSavedInvoices] = useState([]);
   const navigate = useNavigate();
-  const [viewingInvoiceType, setViewingInvoiceType] = useState('All'); 
+  const [viewingInvoiceType, setViewingInvoiceType] = useState('All');
   const [vendorFilter, setVendorFilter] = useState('All Vendors');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
 
   const fetchWorkItems = async () => {
     try {
       const response = await getWorkOrders();
       const allItems = (response.data.data || []).flatMap(order =>
          order.workItems.map((item, index) => {
-             // BULLETPROOF ID: Fallback to the physical entry number if DB IDs are acting up
-             const uniqueId = item.id || item._id || `entry-${order.entryNumber}-item-${index}`;
+             const uniqueId = item.id || `entry-${order.entryNumber}-item-${index}`;
              return { ...item, id: uniqueId, parent: order };
          })
       );
@@ -35,8 +36,7 @@ const InvoiceGenerator = () => {
       try {
           const response = await API.get('/invoices');
           const invoices = response.data.data || [];
-          
-          // Force parse workItems to ensure they are always valid arrays
+
           const normalized = invoices.map(inv => {
               let parsedItems = [];
               if (Array.isArray(inv.workItems)) {
@@ -80,7 +80,7 @@ const InvoiceGenerator = () => {
   const handleGenerate = async (type) => {
     const selectedItems = getSelectedItems();
     if (selectedItems.length === 0) {
-      alert('Please select at least one work item.');
+      setSnackbar({ open: true, message: 'Please select at least one work item.', severity: 'warning' });
       return;
     }
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
@@ -90,15 +90,23 @@ const InvoiceGenerator = () => {
   const handleViewSavedInvoice = (savedInvoice, type) => {
     const invItems = Array.isArray(savedInvoice.workItems) ? savedInvoice.workItems : [];
     const itemsForInvoice = workItems.filter(item => invItems.includes(item.id));
-    
+
     if (itemsForInvoice.length === 0) {
-        alert(`Corrupted Invoice Data.\n\nThis invoice was saved with a broken reference before the database was fixed. Please generate a new invoice.`);
+        setSnackbar({ open: true, message: 'Corrupted Invoice Data. This invoice was saved with a broken reference. Please generate a new invoice.', severity: 'error' });
         return;
     }
-    
+
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
-    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, invoiceNumber: savedInvoice.invoiceNumber } });
+    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, invoiceNumber: savedInvoice.invoiceNumber, invoiceDate: savedInvoice.createdAt } });
   };
+
+  const uniqueVendors = useMemo(() => {
+    const vendors = new Set();
+    savedInvoices.forEach(inv => {
+      if (inv.parentOrderInfo?.vendor) vendors.add(inv.parentOrderInfo.vendor);
+    });
+    return Array.from(vendors);
+  }, [savedInvoices]);
 
   const filteredSavedInvoices = useMemo(() => {
       let invoices = savedInvoices;
@@ -108,7 +116,7 @@ const InvoiceGenerator = () => {
       if (vendorFilter !== 'All Vendors') {
           invoices = invoices.filter(invoice => invoice.parentOrderInfo?.vendor === vendorFilter);
       }
-      
+
       if (viewingInvoiceType === 'All') {
           const groupedInvoices = new Map();
           invoices.forEach(invoice => {
@@ -131,7 +139,7 @@ const InvoiceGenerator = () => {
         <Typography variant="body1" align="center" sx={{ mb: 3 }}>
           Select the work items you want to include in the invoice.
         </Typography>
-        
+
         <TableContainer>
           <Table>
             <TableHead>
@@ -153,7 +161,7 @@ const InvoiceGenerator = () => {
                 return (
                     <TableRow key={item.id} hover >
                       <TableCell padding="checkbox">
-                        <Checkbox 
+                        <Checkbox
                             checked={!!selected[item.id]}
                             onChange={() => handleSelect(item.id)}
                         />
@@ -176,19 +184,19 @@ const InvoiceGenerator = () => {
           </Table>
         </TableContainer>
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
-          <Button 
-            variant="contained" 
-            color="secondary" 
-            size="large" 
+          <Button
+            variant="contained"
+            color="secondary"
+            size="large"
             onClick={() => handleGenerate('Vendor')}
             sx={{ minWidth: '200px' }}
           >
             Preview Vendor Invoice
           </Button>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            size="large" 
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
             onClick={() => handleGenerate('WorkOrder')}
             sx={{ minWidth: '200px' }}
           >
@@ -218,9 +226,9 @@ const InvoiceGenerator = () => {
                           onChange={(e) => setVendorFilter(e.target.value)}
                       >
                           <MenuItem value="All Vendors">All Vendors</MenuItem>
-                          <MenuItem value="ICOMP SYSTEMS">ICOMP SYSTEMS</MenuItem>
-                          <MenuItem value="STUDIO VISION">STUDIO VISION</MenuItem>
-                          <MenuItem value="WAGHSONS PHOTO VISION">WAGHSONS PHOTO VISION</MenuItem>
+                          {uniqueVendors.map(v => (
+                            <MenuItem key={v} value={v}>{v}</MenuItem>
+                          ))}
                       </Select>
                   </FormControl>
               </Grid>
@@ -246,9 +254,9 @@ const InvoiceGenerator = () => {
                             const uniqueEventNames = [...new Set(eventNames)];
                             const displayEventName = uniqueEventNames.join(' and ') || 'N/A';
                             const displayPoNpo = workItems.find(item => invItems.includes(item.id))?.poNpo || 'N/A';
-                            
+
                             return (
-                              <TableRow key={invoice.invoiceNumber || invoice.id || invoice._id || i}>
+                              <TableRow key={invoice.invoiceNumber || invoice.id || i}>
                                   <TableCell>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
                                   <TableCell>{invoice.invoiceNumber}</TableCell>
                                   <TableCell>{displayEventName}</TableCell>
@@ -276,6 +284,12 @@ const InvoiceGenerator = () => {
               </Typography>
           )}
       </Paper>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
