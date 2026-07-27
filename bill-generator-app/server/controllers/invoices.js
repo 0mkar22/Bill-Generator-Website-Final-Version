@@ -1,18 +1,13 @@
 const supabase = require('../config/db');
 
-// @desc    Get all saved invoices
-exports.getInvoices = async (req, res, next) => {
+exports.getInvoices = async (req, res) => {
   try {
-    // Supabase returns { data, error } instead of throwing by default
     const { data: invoices, error } = await supabase
       .from('invoices')
       .select('*')
-      .order('createdAt', { ascending: false }); 
-      // Note: If you used Postgres's default 'created_at', update the string above accordingly.
+      .order('createdAt', { ascending: false });
 
-    if (error) {
-        throw error;
-    }
+    if (error) throw error;
 
     res.status(200).json({ success: true, data: invoices });
   } catch (err) {
@@ -21,23 +16,18 @@ exports.getInvoices = async (req, res, next) => {
   }
 };
 
-// @desc    Save a new invoice
-exports.createInvoice = async (req, res, next) => {
+exports.createInvoice = async (req, res) => {
   try {
     let invoiceNumberToSave = req.body.invoiceNumber;
 
-    // If no invoice number is provided by the client, generate a new one
     if (!invoiceNumberToSave) {
-        // Fetch the most recent invoice to get the last invoiceNumber
         const { data: lastInvoices, error: fetchError } = await supabase
             .from('invoices')
             .select('invoiceNumber')
             .order('createdAt', { ascending: false })
             .limit(1);
 
-        if (fetchError) {
-            throw fetchError;
-        }
+        if (fetchError) throw fetchError;
 
         const lastInvoice = lastInvoices && lastInvoices.length > 0 ? lastInvoices[0] : null;
         let newInvoiceNumber = 1;
@@ -51,20 +41,16 @@ exports.createInvoice = async (req, res, next) => {
         invoiceNumberToSave = String(newInvoiceNumber).padStart(4, '0');
     }
 
-    // Insert the new invoice
     const { data: invoice, error: insertError } = await supabase
         .from('invoices')
-        .insert([{ 
-            ...req.body, 
-            invoiceNumber: invoiceNumberToSave 
+        .insert([{
+            ...req.body,
+            invoiceNumber: invoiceNumberToSave
         }])
-        .select(); // .select() ensures the inserted row is returned
+        .select();
 
-    if (insertError) {
-        throw insertError;
-    }
+    if (insertError) throw insertError;
 
-    // Supabase insert with .select() returns an array, so we return the first item
     res.status(201).json({ success: true, data: invoice[0] });
   } catch (err) {
     console.error(err);

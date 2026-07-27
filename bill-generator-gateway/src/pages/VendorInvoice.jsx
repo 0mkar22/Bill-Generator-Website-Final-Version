@@ -1,42 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Button, TextField, Container, CircularProgress, Alert
+  Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
+  Button, TextField, Container, CircularProgress, Alert, Snackbar
 } from '@mui/material';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import './VendorInvoice.css';
 import API from '../services/api';
-
-// --- DATA & HELPER FUNCTIONS ---
-const pricing = {
-  "Still_Photography": { "Mumbai_Upto_4_Hrs": 2950, "Mumbai_Above_4_and_upto_8_Hrs": 4150, "Panvel_Upto_4_Hrs": 3200, "Panvel_Above_4_and_upto_8_Hrs": 4150, "Uran_Upto_4_Hrs": 4000, "Uran_Above_4_and_upto_8_Hrs": 5200, "Nhava_Upto_4_Hrs": 4000, "Nhava_Above_4_and_upto_8_Hrs": 5200, "Outstation_Upto_4_Hrs": 4490, "Outstation_Above_4_and_upto_8_Hrs": 6300 },
-  "Videography": { "Mumbai_Upto_4_Hrs": 4300, "Mumbai_Above_4_and_upto_8_Hrs": 6000, "Panvel_Upto_4_Hrs": 4300, "Panvel_Above_4_and_upto_8_Hrs": 6000, "Uran_Upto_4_Hrs": 4500, "Uran_Above_4_and_upto_8_Hrs": 6000, "Nhava_Upto_4_Hrs": 4500, "Nhava_Above_4_and_upto_8_Hrs": 6000, "Outstation_Upto_4_Hrs": 5800, "Outstation_Above_4_and_upto_8_Hrs": 7500 },
-  "Two_Camera_Setup": { "Mumbai_Upto_4_Hrs": 23650, "Mumbai_Above_4_and_upto_8_Hrs": 37000, "Panvel_Upto_4_Hrs": 25500, "Panvel_Above_4_and_upto_8_Hrs": 37000, "Uran_Upto_4_Hrs": 26500, "Uran_Above_4_and_upto_8_Hrs": 38000, "Nhava_Upto_4_Hrs": 26500, "Nhava_Above_4_and_upto_8_Hrs": 38000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 41000 },
-  "Three_Camera_Setup": { "Mumbai_Upto_4_Hrs": 31000, "Mumbai_Above_4_and_upto_8_Hrs": 40000, "Panvel_Upto_4_Hrs": 31000, "Panvel_Above_4_and_upto_8_Hrs": 40000, "Uran_Upto_4_Hrs": 31000, "Uran_Above_4_and_upto_8_Hrs": 40000, "Nhava_Upto_4_Hrs": 31000, "Nhava_Above_4_and_upto_8_Hrs": 40000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 43000 },
-  "Live_Telecast": { "Mumbai_Upto_4_Hrs": 7000, "Mumbai_Above_4_and_upto_8_Hrs": 9000, "Panvel_Upto_4_Hrs": 7000, "Panvel_Above_4_and_upto_8_Hrs": 9000, "Uran_Upto_4_Hrs": 7000, "Uran_Above_4_and_upto_8_Hrs": 9000, "Nhava_Upto_4_Hrs": 7000, "Nhava_Above_4_and_upto_8_Hrs": 9000, "Outstation_Upto_4_Hrs": 9000, "Outstation_Above_4_and_upto_8_Hrs": 10000 },
-  "32_GB_Pendrive": 550, "Others": {}
-};
-
-const calculateItemAmount = (item) => {
-    if (item.workMain === '32_GB_Pendrive') { return (pricing[item.workMain] || 0) * (item.quantity || 1); }
-    return pricing[item.workMain]?.[item.workSub] || 0;
-};
-
-function numberToWords(num) {
-    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    if ((num = Math.round(num).toString()).length > 9) return 'Overflow';
-    let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-    if (!n) return ''; let str = '';
-    str += (n[1] !== '00') ? (a[Number(n[1])] || b[n[1][0]] + '  ' + a[n[1][1]]) + ' Crore ' : '';
-    str += (n[2] !== '00') ? (a[Number(n[2])] || b[n[2][0]] + '  ' + a[n[2][1]]) + ' Lakh ' : '';
-    str += (n[3] !== '00') ? (a[Number(n[3])] || b[n[3][0]] + '  ' + a[n[3][1]]) + ' Thousand ' : '';
-    str += (n[4] !== '0') ? (a[Number(n[4])] || b[n[4][0]] + '  ' + a[n[4][1]]) + ' Hundred ' : '';
-    str += (n[5] !== '00') ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + '  ' + a[n[5][1]]) : '';
-    return str.trim() + ' Rupees Only';
-}
+import { pricing } from '../constants/data';
+import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
@@ -48,10 +21,11 @@ const borderRightStyle = { borderRight: '1px solid #000' };
 function VendorInvoice() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber } = location.state || { items: [] };
+  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(savedInvoice || false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const [recipient, setRecipient] = useState(`OIL & NATURAL GAS CORPORATION LTD.\nCorporate Communication,\nN.B.P. Green Heights,\nBKC, Bandra (E),\nMumbai 400 051`);
   const [editingRecipient, setEditingRecipient] = useState(false);
@@ -69,9 +43,13 @@ function VendorInvoice() {
   const [editingPoDate, setEditingPoDate] = useState(false);
   const [serviceDescription, setServiceDescription] = useState('Photography, Videography');
   const [editingServiceDescription, setEditingServiceDescription] = useState(false);
-  
+
+  const displayDate = passedInvoiceDate
+    ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
+    : new Date().toLocaleDateString('en-GB');
+
   useEffect(() => {
-    setInvoiceNumber(passedInvoiceNumber || '248/2025');
+    setInvoiceNumber(passedInvoiceNumber || '');
   }, [passedInvoiceNumber]);
 
   const handleDownloadBill = () => {
@@ -86,7 +64,7 @@ function VendorInvoice() {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`VendorInvoice_${invoiceNumber}.pdf`);
+            pdf.save(`VendorInvoice_${invoiceNumber || 'preview'}.pdf`);
             billElement.classList.remove('pdf-bill-large');
         });
     }, 100);
@@ -98,27 +76,20 @@ function VendorInvoice() {
         const invoicePayload = {
             invoiceNumber,
             invoiceType: invoiceType || 'Vendor',
-            // FIXED: Ensure we capture the Supabase ID format
-            workItems: selectedItems.map(item => item.id || item._id),
-            parentOrderInfo: { 
-                entryNumber: selectedItems[0]?.parent?.entryNumber, 
-                vendor: selectedItems[0]?.parent?.vendor 
+            workItems: selectedItems.map(item => item.id),
+            parentOrderInfo: {
+                entryNumber: selectedItems[0]?.parent?.entryNumber,
+                vendor: selectedItems[0]?.parent?.vendor
             }
         };
         await API.post('/invoices', invoicePayload);
-        setSaveSuccess(true); 
+        setSaveSuccess(true);
+        setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
     } catch (error) {
         console.error("Failed to save invoice:", error);
-        
-        // FIXED: Improved error handling 
         const serverError = error.response?.data?.error;
-        if (Array.isArray(serverError)) {
-            alert(`Could not save the invoice:\n- ${serverError.join('\n- ')}`);
-        } else if (typeof serverError === 'string') {
-            alert(`Could not save the invoice: ${serverError}`);
-        } else {
-            alert("Could not save the invoice. Please try again.");
-        }
+        const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
+        setSnackbar({ open: true, message: msg, severity: 'error' });
     } finally {
         setIsSaving(false);
     }
@@ -142,7 +113,6 @@ function VendorInvoice() {
   const sgst = amountBeforeTax * 0.09;
   const total = amountBeforeTax + cgst + sgst;
   const rounded = Math.round(total);
-  // Safely fallback if parent is missing
   const parentOrder = selectedItems[0]?.parent || {};
 
   return (
@@ -223,12 +193,12 @@ function VendorInvoice() {
                 {editingInvoiceNumber ? (
                   <TextField value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} onBlur={() => setEditingInvoiceNumber(false)} autoFocus size="small" sx={{ width: 100, background: '#fafafa', ml: '8px' }} InputProps={{ style: { fontSize: '1.2rem' } }} disabled={saveSuccess} />
                 ) : (
-                  <Box component="span" onClick={() => !saveSuccess && setEditingInvoiceNumber(true)} sx={{ cursor: saveSuccess ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{invoiceNumber}</Typography></Box>
+                  <Box component="span" onClick={() => !saveSuccess && setEditingInvoiceNumber(true)} sx={{ cursor: saveSuccess ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{invoiceNumber || 'Click to set'}</Typography></Box>
                 )}
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', pl: 2, flex: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Date :</Typography>
-                <Typography variant="body2" sx={{ ml: 1, fontWeight: 'bold', fontSize: '1.1rem' }}>{new Date().toLocaleDateString('en-GB')}</Typography>
+                <Typography variant="body2" sx={{ ml: 1, fontWeight: 'bold', fontSize: '1.1rem' }}>{displayDate}</Typography>
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, mt: 0.5 }}>
@@ -262,7 +232,7 @@ function VendorInvoice() {
               const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
               const quantity = item.quantity || 1;
               return (
-                <TableRow key={item.id || item._id || idx} sx={{ borderBottom: '1px solid #000' }}>
+                <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000' }}>
                   <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
                   <TableCell sx={tableCellStyle}>
                     <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>
@@ -331,6 +301,12 @@ function VendorInvoice() {
           </Box>
         </Box>
       </Paper>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Drawer,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Toolbar,
@@ -10,27 +10,58 @@ import {
   CssBaseline,
   AppBar,
   Box,
-  Button
+  Button,
+  IconButton,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { supabase } from '../supabase'; // Import the Supabase client
+import MenuIcon from '@mui/icons-material/Menu';
+import { supabase } from '../supabase';
 
 const drawerWidth = 240;
 
 const Layout = ({ children }) => {
-  
-  // Handle the logout process
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
         console.error("Error logging out:", error.message);
     }
-    // Note: App.jsx is listening for auth changes, so it will automatically kick the user back to the login screen!
   };
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const drawerContent = (
+    <>
+      <Toolbar />
+      <Box sx={{ overflow: 'auto' }}>
+        <List>
+          <ListItemButton component={Link} to="/" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><WorkIcon /></ListItemIcon>
+            <ListItemText primary="Event Data Entry" />
+          </ListItemButton>
+          <ListItemButton component={Link} to="/invoices" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><DescriptionIcon /></ListItemIcon>
+            <ListItemText primary="Invoices" />
+          </ListItemButton>
+          <ListItemButton component={Link} to="/reports" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><AssessmentIcon /></ListItemIcon>
+            <ListItemText primary="Reports" />
+          </ListItemButton>
+        </List>
+      </Box>
+    </>
+  );
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -40,49 +71,52 @@ const Layout = ({ children }) => {
         sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
         <Toolbar>
+          {isMobile && (
+            <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
+              <MenuIcon />
+            </IconButton>
+          )}
           <img src="/ONGC logo.png" alt="logo" className="app-bar-logo" />
-          
-          {/* Added flexGrow to push the logout button to the far right */}
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Bill Generator
           </Typography>
-
-          {/* New Logout Button */}
-          <Button 
-            color="inherit" 
-            onClick={handleLogout} 
+          <Button
+            color="inherit"
+            onClick={handleLogout}
             startIcon={<LogoutIcon />}
           >
             Logout
           </Button>
         </Toolbar>
       </AppBar>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
-        }}
-      >
-        <Toolbar />
-        <Box sx={{ overflow: 'auto' }}>
-          <List>
-            <ListItem button component={Link} to="/">
-              <ListItemIcon><WorkIcon /></ListItemIcon>
-              <ListItemText primary="Event Data Entry" />
-            </ListItem>
-            <ListItem button component={Link} to="/invoices">
-              <ListItemIcon><DescriptionIcon /></ListItemIcon>
-              <ListItemText primary="Invoices" />
-            </ListItem>
-            <ListItem button component={Link} to="/reports">
-              <ListItemIcon><AssessmentIcon /></ListItemIcon>
-              <ListItemText primary="Reports" />
-            </ListItem>
-          </List>
-        </Box>
-      </Drawer>
+
+      {isMobile ? (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            width: drawerWidth,
+            flexShrink: 0,
+            [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      ) : (
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: drawerWidth,
+            flexShrink: 0,
+            [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      )}
+
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         {children}

@@ -3,21 +3,22 @@ const {
   getWorkOrders,
   createWorkOrder,
   deleteWorkOrder,
-  getWorkOrder,      // Import new function
-  updateWorkOrder    // Import new function
+  getWorkOrder,
+  updateWorkOrder
 } = require('../controllers/workOrders');
+const { validateWorkOrder } = require('../middleware/validate');
 
 const router = express.Router();
 
 router
   .route('/')
   .get(getWorkOrders)
-  .post(createWorkOrder);
+  .post(validateWorkOrder, createWorkOrder);
 
 router
   .route('/:id')
-  .get(getWorkOrder)       // Add GET by ID route
-  .put(updateWorkOrder)      // Add PUT route
+  .get(getWorkOrder)
+  .put(validateWorkOrder, updateWorkOrder)
   .delete(deleteWorkOrder);
 
 module.exports = router;
