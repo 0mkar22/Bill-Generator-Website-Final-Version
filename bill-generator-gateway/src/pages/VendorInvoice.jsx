@@ -53,13 +53,13 @@ function VendorInvoice() {
   }, [passedInvoiceNumber]);
 
   useEffect(() => {
-    if (passedRecipient) setRecipient(passedRecipient);
-    if (passedDealingOfficer) setDealingOfficer(passedDealingOfficer);
-    if (passedEmailId) setEmailId(passedEmailId);
-    if (passedVendorCode) setVendorCode(passedVendorCode);
-    if (passedPoNumber) setPoNumber(passedPoNumber);
-    if (passedPoDate) setPoDate(passedPoDate);
-    if (passedServiceDescription) setServiceDescription(passedServiceDescription);
+    if (passedRecipient !== undefined) setRecipient(passedRecipient);
+    if (passedDealingOfficer !== undefined) setDealingOfficer(passedDealingOfficer);
+    if (passedEmailId !== undefined) setEmailId(passedEmailId);
+    if (passedVendorCode !== undefined) setVendorCode(passedVendorCode);
+    if (passedPoNumber !== undefined) setPoNumber(passedPoNumber);
+    if (passedPoDate !== undefined) setPoDate(passedPoDate);
+    if (passedServiceDescription !== undefined) setServiceDescription(passedServiceDescription);
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription]);
 
   const handleDownloadBill = () => {
