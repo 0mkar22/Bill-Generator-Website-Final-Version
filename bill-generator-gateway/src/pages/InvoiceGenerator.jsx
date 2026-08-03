@@ -20,8 +20,8 @@ const InvoiceGenerator = () => {
   const fetchWorkItems = async () => {
     try {
       const response = await getWorkOrders();
-      const allItems = (response.data.data || []).flatMap(order =>
-         order.workItems.map((item, index) => {
+const allItems = (response.data.data || []).flatMap(order =>
+             (order.workItems || []).map((item, index) => {
              const uniqueId = item.id || `entry-${order.entryNumber}-item-${index}`;
              return { ...item, id: uniqueId, parent: order };
          })
