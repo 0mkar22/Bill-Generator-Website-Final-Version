@@ -87,7 +87,7 @@ const allItems = (response.data.data || []).flatMap(order =>
     navigate(route, { state: { items: selectedItems, invoiceType: type } });
   };
 
-  const handleViewSavedInvoice = (savedInvoice, type) => {
+  const handleViewSavedInvoice = (savedInvoice, type, isEditing = false) => {
     const invItems = Array.isArray(savedInvoice.workItems) ? savedInvoice.workItems : [];
     const itemsForInvoice = workItems.filter(item => invItems.includes(item.id));
 
@@ -97,7 +97,7 @@ const allItems = (response.data.data || []).flatMap(order =>
     }
 
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
-    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, invoiceNumber: savedInvoice.invoiceNumber, invoiceDate: savedInvoice.createdAt, recipient: savedInvoice.recipient, dealingOfficer: savedInvoice.dealingOfficer, emailId: savedInvoice.emailId, vendorCode: savedInvoice.vendorCode, poNumber: savedInvoice.poNumber, poDate: savedInvoice.poDate, serviceDescription: savedInvoice.serviceDescription } });
+    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, isEditing, invoiceId: savedInvoice.id, invoiceNumber: savedInvoice.invoiceNumber, invoiceDate: savedInvoice.createdAt, recipient: savedInvoice.recipient, dealingOfficer: savedInvoice.dealingOfficer, emailId: savedInvoice.emailId, vendorCode: savedInvoice.vendorCode, poNumber: savedInvoice.poNumber, poDate: savedInvoice.poDate, serviceDescription: savedInvoice.serviceDescription } });
   };
 
   const uniqueVendors = useMemo(() => {
@@ -265,10 +265,16 @@ const allItems = (response.data.data || []).flatMap(order =>
                                   <TableCell>
                                       <ButtonGroup variant="outlined" size="small">
                                           { (viewingInvoiceType === 'All' ? invoice.types.has('Vendor') : true) && viewingInvoiceType !== 'WorkOrder' &&
-                                              <Button onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}>Vendor Invoice</Button>
+                                              <>
+                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}>Vendor Invoice</Button>
+                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'Vendor', true)} color="secondary">Edit Vendor</Button>
+                                              </>
                                           }
                                           { (viewingInvoiceType === 'All' ? invoice.types.has('WorkOrder') : true) && viewingInvoiceType !== 'Vendor' &&
-                                              <Button onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}>Work Order Invoice</Button>
+                                              <>
+                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}>Work Order Invoice</Button>
+                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder', true)} color="secondary">Edit Work Order</Button>
+                                              </>
                                           }
                                       </ButtonGroup>
                                   </TableCell>

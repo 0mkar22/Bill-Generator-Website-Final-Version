@@ -1,5 +1,5 @@
 const express = require('express');
-const { getInvoices, createInvoice } = require('../controllers/invoices');
+const { getInvoices, createInvoice, updateInvoice } = require('../controllers/invoices');
 const { validateInvoice } = require('../middleware/validate');
 
 const router = express.Router();
@@ -8,5 +8,9 @@ router
   .route('/')
   .get(getInvoices)
   .post(validateInvoice, createInvoice);
+
+router
+  .route('/:id')
+  .put(validateInvoice, updateInvoice);
 
 module.exports = router;
