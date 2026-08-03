@@ -41,10 +41,25 @@ exports.createInvoice = async (req, res) => {
         invoiceNumberToSave = String(newInvoiceNumber).padStart(4, '0');
     }
 
+    const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription } = req.body;
+
+    const invoiceData = {
+        invoiceType,
+        workItems,
+        parentOrderInfo,
+        recipient,
+        dealingOfficer,
+        emailId,
+        vendorCode,
+        poNumber,
+        poDate,
+        serviceDescription
+    };
+
     const { data: invoice, error: insertError } = await supabase
         .from('invoices')
         .insert([{
-            ...req.body,
+            ...invoiceData,
             invoiceNumber: invoiceNumberToSave
         }])
         .select();
