@@ -72,3 +72,41 @@ exports.createInvoice = async (req, res) => {
     res.status(400).json({ success: false, error: err.message });
   }
 };
+
+exports.updateInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription } = req.body;
+
+    const invoiceData = {
+        invoiceNumber,
+        invoiceType,
+        workItems,
+        parentOrderInfo,
+        recipient,
+        dealingOfficer,
+        emailId,
+        vendorCode,
+        poNumber,
+        poDate,
+        serviceDescription
+    };
+
+    const { data: invoice, error: updateError } = await supabase
+        .from('invoices')
+        .update(invoiceData)
+        .eq('id', id)
+        .select();
+
+    if (updateError) throw updateError;
+
+    if (!invoice || invoice.length === 0) {
+        return res.status(404).json({ success: false, error: 'Invoice not found' });
+    }
+
+    res.status(200).json({ success: true, data: invoice[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+};

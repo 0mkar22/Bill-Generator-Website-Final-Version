@@ -21,10 +21,10 @@ const borderRightStyle = { borderRight: '1px solid #000' };
 function VendorInvoice() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription } = location.state || { items: [] };
+  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription } = location.state || { items: [] };
 
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(savedInvoice || false);
+  const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const [recipient, setRecipient] = useState(`OIL & NATURAL GAS CORPORATION LTD.\nCorporate Communication,\nN.B.P. Green Heights,\nBKC, Bandra (E),\nMumbai 400 051`);
@@ -80,37 +80,42 @@ function VendorInvoice() {
     }, 100);
   };
 
-const handleSaveToDatabase = async () => {
-    setIsSaving(true);
-    try {
-        const invoicePayload = {
-            invoiceNumber,
-            invoiceType: invoiceType || 'Vendor',
-            workItems: selectedItems.map(item => item.id),
-            parentOrderInfo: {
-                entryNumber: selectedItems[0]?.parent?.entryNumber,
-                vendor: selectedItems[0]?.parent?.vendor
-            },
-            recipient,
-            dealingOfficer,
-            emailId,
-            vendorCode,
-            poNumber,
-            poDate,
-            serviceDescription
-        };
-        await API.post('/invoices', invoicePayload);
-        setSaveSuccess(true);
-        setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
-    } catch (error) {
-        console.error("Failed to save invoice:", error);
-        const serverError = error.response?.data?.error;
-        const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
-        setSnackbar({ open: true, message: msg, severity: 'error' });
-    } finally {
-        setIsSaving(false);
-    }
-};
+  const handleSaveToDatabase = async () => {
+      setIsSaving(true);
+      try {
+          const invoicePayload = {
+              invoiceNumber,
+              invoiceType: invoiceType || 'Vendor',
+              workItems: selectedItems.map(item => item.id),
+              parentOrderInfo: {
+                  entryNumber: selectedItems[0]?.parent?.entryNumber,
+                  vendor: selectedItems[0]?.parent?.vendor
+              },
+              recipient,
+              dealingOfficer,
+              emailId,
+              vendorCode,
+              poNumber,
+              poDate,
+              serviceDescription
+          };
+          if (isEditing && invoiceId) {
+              await API.put(`/invoices/${invoiceId}`, invoicePayload);
+              setSnackbar({ open: true, message: 'Invoice updated successfully!', severity: 'success' });
+          } else {
+              await API.post('/invoices', invoicePayload);
+              setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
+          }
+          setSaveSuccess(true);
+      } catch (error) {
+          console.error("Failed to save invoice:", error);
+          const serverError = error.response?.data?.error;
+          const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
+          setSnackbar({ open: true, message: msg, severity: 'error' });
+      } finally {
+          setIsSaving(false);
+      }
+  };
 
   const handleGenerateWorkOrderInvoice = () => {
       navigate('/workorder-invoice', { state: { items: selectedItems, invoiceType: 'WorkOrder' } });
@@ -135,20 +140,20 @@ const handleSaveToDatabase = async () => {
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-            {!savedInvoice && !saveSuccess && (
-                <Button variant="contained" color="success" onClick={handleSaveToDatabase} disabled={isSaving}>
-                    {isSaving ? <CircularProgress size={24} color="inherit" /> : 'Save to Database'}
-                </Button>
-            )}
+          <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+              {(!savedInvoice || isEditing) && !saveSuccess && (
+                  <Button variant="contained" color="success" onClick={handleSaveToDatabase} disabled={isSaving}>
+                      {isSaving ? <CircularProgress size={24} color="inherit" /> : (isEditing ? 'Update Invoice' : 'Save to Database')}
+                  </Button>
+              )}
+          </Box>
         </Box>
-      </Box>
 
-      {saveSuccess && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-            Invoice saved successfully!
-            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+        {saveSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+              {isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
                 <Button variant="contained" onClick={handleDownloadBill}>
                     Download Invoice
                 </Button>

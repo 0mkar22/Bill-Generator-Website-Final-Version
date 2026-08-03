@@ -16,12 +16,12 @@ const WorkOrderInvoice = () => {
   const location = useLocation();
   const invoiceRef = useRef();
 
-  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
+  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(savedInvoice || false);
+  const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const displayDate = passedInvoiceDate
@@ -55,9 +55,14 @@ const WorkOrderInvoice = () => {
                 vendor: selectedItems[0]?.parent?.vendor
             }
         };
-        await API.post('/invoices', invoicePayload);
+        if (isEditing && invoiceId) {
+            await API.put(`/invoices/${invoiceId}`, invoicePayload);
+            setSnackbar({ open: true, message: 'Invoice updated successfully!', severity: 'success' });
+        } else {
+            await API.post('/invoices', invoicePayload);
+            setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
+        }
         setSaveSuccess(true);
-        setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
     } catch (error) {
         console.error("Failed to save invoice:", error);
         const serverError = error.response?.data?.error;
@@ -101,9 +106,9 @@ const WorkOrderInvoice = () => {
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
         <Box sx={{ display: 'flex', gap: 2 }}>
-            {!savedInvoice && (
+            {(!savedInvoice || isEditing) && !saveSuccess && (
                 <Button variant="contained" color="success" onClick={handleSaveToDatabase} disabled={isSaving || saveSuccess}>
-                    {isSaving ? <CircularProgress size={24} color="inherit" /> : (saveSuccess ? 'Saved' : 'Save to Database')}
+                    {isSaving ? <CircularProgress size={24} color="inherit" /> : (isEditing ? 'Update Invoice' : 'Save to Database')}
                 </Button>
             )}
             {saveSuccess && (
@@ -111,7 +116,7 @@ const WorkOrderInvoice = () => {
             )}
         </Box>
       </Box>
-      {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>Invoice saved successfully!</Alert>}
+      {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}</Alert>}
 
       <Paper ref={invoiceRef} id="generated-invoice" sx={{ p: 0, border: '2px solid #000', fontFamily: 'Arial, sans-serif' }}>
         <Box sx={{ textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
