@@ -21,7 +21,7 @@ const borderRightStyle = { borderRight: '1px solid #000' };
 function VendorInvoice() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
+  const { items: selectedItems, invoiceType, savedInvoice, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription } = location.state || { items: [] };
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(savedInvoice || false);
@@ -49,8 +49,18 @@ function VendorInvoice() {
     : new Date().toLocaleDateString('en-GB');
 
   useEffect(() => {
-    setInvoiceNumber(passedInvoiceNumber || '');
+    if (passedInvoiceNumber) setInvoiceNumber(passedInvoiceNumber);
   }, [passedInvoiceNumber]);
+
+  useEffect(() => {
+    if (passedRecipient) setRecipient(passedRecipient);
+    if (passedDealingOfficer) setDealingOfficer(passedDealingOfficer);
+    if (passedEmailId) setEmailId(passedEmailId);
+    if (passedVendorCode) setVendorCode(passedVendorCode);
+    if (passedPoNumber) setPoNumber(passedPoNumber);
+    if (passedPoDate) setPoDate(passedPoDate);
+    if (passedServiceDescription) setServiceDescription(passedServiceDescription);
+  }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription]);
 
   const handleDownloadBill = () => {
     const billElement = document.getElementById('generated-bill');
@@ -70,7 +80,7 @@ function VendorInvoice() {
     }, 100);
   };
 
-  const handleSaveToDatabase = async () => {
+const handleSaveToDatabase = async () => {
     setIsSaving(true);
     try {
         const invoicePayload = {
@@ -80,7 +90,14 @@ function VendorInvoice() {
             parentOrderInfo: {
                 entryNumber: selectedItems[0]?.parent?.entryNumber,
                 vendor: selectedItems[0]?.parent?.vendor
-            }
+            },
+            recipient,
+            dealingOfficer,
+            emailId,
+            vendorCode,
+            poNumber,
+            poDate,
+            serviceDescription
         };
         await API.post('/invoices', invoicePayload);
         setSaveSuccess(true);
@@ -93,7 +110,7 @@ function VendorInvoice() {
     } finally {
         setIsSaving(false);
     }
-  };
+};
 
   const handleGenerateWorkOrderInvoice = () => {
       navigate('/workorder-invoice', { state: { items: selectedItems, invoiceType: 'WorkOrder' } });
