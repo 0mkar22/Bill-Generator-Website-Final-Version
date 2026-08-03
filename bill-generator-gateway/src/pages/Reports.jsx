@@ -41,7 +41,7 @@ const Reports = () => {
             setError(null);
             const response = await API.get('/workOrders');
             const allWorkItems = (response.data.data || []).flatMap(order =>
-                order.workItems.map(item => ({
+                (order.workItems || []).map(item => ({
                     ...item,
                     parentWorkOrderId: order.id,
                     entryNumber: order.entryNumber,
@@ -191,7 +191,7 @@ const Reports = () => {
         try {
             const parentWorkOrderResponse = await API.get(`/workOrders/${editedItemData.parentWorkOrderId}`);
             const parentWorkOrder = parentWorkOrderResponse.data.data;
-            const itemIndex = parentWorkOrder.workItems.findIndex(item => item.id === editedItemData.id);
+            const itemIndex = (parentWorkOrder.workItems || []).findIndex(item => item.id === editedItemData.id);
             if (itemIndex === -1) return;
             const updatedWorkItems = [...parentWorkOrder.workItems];
             updatedWorkItems[itemIndex] = { ...updatedWorkItems[itemIndex], ...editedItemData };
