@@ -97,7 +97,7 @@ const allItems = (response.data.data || []).flatMap(order =>
     }
 
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
-    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, isEditing, invoiceId: savedInvoice.id, invoiceNumber: savedInvoice.invoiceNumber, invoiceDate: savedInvoice.createdAt, recipient: savedInvoice.recipient, dealingOfficer: savedInvoice.dealingOfficer, emailId: savedInvoice.emailId, vendorCode: savedInvoice.vendorCode, poNumber: savedInvoice.poNumber, poDate: savedInvoice.poDate, serviceDescription: savedInvoice.serviceDescription } });
+    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, isEditing, invoiceId: savedInvoice.id, invoiceNumber: savedInvoice.invoiceNumber, invoiceDate: savedInvoice.createdAt, recipient: savedInvoice.recipient, dealingOfficer: savedInvoice.dealingOfficer, emailId: savedInvoice.emailId, vendorCode: savedInvoice.vendorCode, poNumber: savedInvoice.poNumber, poDate: savedInvoice.poDate, serviceDescription: savedInvoice.serviceDescription, gstNo: savedInvoice.gstNo } });
   };
 
   const uniqueVendors = useMemo(() => {

@@ -21,7 +21,7 @@ const borderRightStyle = { borderRight: '1px solid #000' };
 function VendorInvoice() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription } = location.state || { items: [] };
+  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
@@ -43,6 +43,8 @@ function VendorInvoice() {
   const [editingPoDate, setEditingPoDate] = useState(false);
   const [serviceDescription, setServiceDescription] = useState('Photography, Videography');
   const [editingServiceDescription, setEditingServiceDescription] = useState(false);
+  const [gstNo, setGstNo] = useState('27AAAOC1598A1ZN');
+  const [editingGstNo, setEditingGstNo] = useState(false);
 
   const displayDate = passedInvoiceDate
     ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
@@ -60,7 +62,8 @@ function VendorInvoice() {
     if (passedPoNumber !== undefined) setPoNumber(passedPoNumber);
     if (passedPoDate !== undefined) setPoDate(passedPoDate);
     if (passedServiceDescription !== undefined) setServiceDescription(passedServiceDescription);
-  }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription]);
+    if (passedGstNo !== undefined) setGstNo(passedGstNo);
+  }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
   const handleDownloadBill = () => {
     const billElement = document.getElementById('generated-bill');
@@ -97,7 +100,8 @@ function VendorInvoice() {
               vendorCode,
               poNumber,
               poDate,
-              serviceDescription
+              serviceDescription,
+              gstNo
           };
           if (isEditing && invoiceId) {
               await API.put(`/invoices/${invoiceId}`, invoicePayload);
@@ -200,7 +204,9 @@ function VendorInvoice() {
             <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>Email ID :</span>
               {editingEmailId ? ( <TextField value={emailId} onChange={e => setEmailId(e.target.value)} onBlur={() => setEditingEmailId(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => setEditingEmailId(true)} sx={{ cursor: 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.2rem' }}>{emailId}</Typography></Box>)}
             </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>GST No. :</span> <span style={{ fontSize: '1.25rem', verticalAlign: 'middle' }}>27AAAOC1598A1ZN</span></Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>GST No. :</span>
+                {editingGstNo ? ( <TextField value={gstNo} onChange={e => setGstNo(e.target.value)} onBlur={() => setEditingGstNo(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => setEditingGstNo(true)} sx={{ cursor: 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}>{gstNo}</Typography></Box>)}
+              </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO No. :</span>
               {editingPoNumber ? ( <TextField value={poNumber} onChange={e => setPoNumber(e.target.value)} onBlur={() => setEditingPoNumber(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => setEditingPoNumber(true)} sx={{ cursor: 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.2rem' }}>{poNumber || 'N/A'}</Typography></Box>)}
             </Typography>
@@ -300,7 +306,7 @@ function VendorInvoice() {
           </Box>
           <Box sx={{ display: 'flex' }}>
             <Box sx={{ flex: 3, p: '8px', ...borderRightStyle, fontSize: '1rem' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27AAAOC1598A1ZN</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. {gstNo}</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
               <Typography variant="body2">Bank Name: State Bank Of India</Typography>
