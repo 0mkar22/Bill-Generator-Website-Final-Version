@@ -22,6 +22,7 @@ const WorkOrderInvoice = () => {
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
+  const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const displayDate = passedInvoiceDate
@@ -139,10 +140,10 @@ const WorkOrderInvoice = () => {
                         size="small"
                         variant="standard"
                         sx={{ ml: 1, width: '100px' }}
-                        disabled={saveSuccess}
+                        disabled={isReadOnly}
                     />
                 ) : (
-                    <Box component="span" onClick={() => !saveSuccess && setEditingInvoiceNumber(true)} sx={{ cursor: saveSuccess ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}>
+                    <Box component="span" onClick={() => !isReadOnly && setEditingInvoiceNumber(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}>
                         {invoiceNumber || 'Click to set'}
                     </Box>
                 )}
