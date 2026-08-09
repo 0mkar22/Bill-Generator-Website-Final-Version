@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import './VendorInvoice.css';
 import API from '../services/api';
 import { pricing } from '../constants/data';
+import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
@@ -95,7 +96,9 @@ function VendorInvoice() {
                   entryNumber: selectedItems[0]?.parent?.entryNumber,
                   vendor: selectedItems[0]?.parent?.vendor
               },
-              recipient,
+              recipient: companyDetails ? companyDetails.company_name : recipient,
+              company_id: parentOrder.company_id || null,
+              company_address: companyDetails ? companyDetails.address : '',
               dealingOfficer,
               emailId,
               vendorCode,
@@ -142,6 +145,16 @@ function VendorInvoice() {
   const rounded = Math.round(total);
   const parentOrder = selectedItems[0]?.parent || {};
 
+  useEffect(() => {
+    if (parentOrder && parentOrder.company_id) {
+      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
+        .then(({ data }) => {
+          if (data) setCompanyDetails(data);
+        })
+        .catch(console.error);
+    }
+  }, [parentOrder]);
+
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -178,7 +191,7 @@ function VendorInvoice() {
                 <TextField multiline minRows={3} value={recipient} onChange={e => setRecipient(e.target.value)} variant="outlined" fullWidth size="small" sx={{ background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }} onBlur={() => setEditingRecipient(false)} autoFocus />
               ) : (
                 <Box onClick={() => !isReadOnly && setEditingRecipient(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', minHeight: 60, whiteSpace: 'pre-line', p: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>{recipient}</Typography>
+                  <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>{companyDetails ? companyDetails.company_name + '\n' + companyDetails.address : recipient}</Typography>
                 </Box>
               )}
             </Box>
