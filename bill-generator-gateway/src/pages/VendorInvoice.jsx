@@ -150,7 +150,7 @@ function VendorInvoice() {
     if (parentOrder && parentOrder.company_id) {
       supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
         .then(({ data }) => {
-          if (data) setCompanyDetails(data);
+          if (data) { setCompanyDetails(data); if (data.gst_number && passedGstNo === undefined) setGstNo(data.gst_number); }
         })
         .catch(console.error);
     }
@@ -192,7 +192,7 @@ function VendorInvoice() {
                 <TextField multiline minRows={3} value={recipient} onChange={e => setRecipient(e.target.value)} variant="outlined" fullWidth size="small" sx={{ background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }} onBlur={() => setEditingRecipient(false)} autoFocus />
               ) : (
                 <Box onClick={() => !isReadOnly && setEditingRecipient(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', minHeight: 60, whiteSpace: 'pre-line', p: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>{companyDetails ? companyDetails.company_name + '\n' + companyDetails.address : recipient}</Typography>
+                  <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>{companyDetails ? companyDetails.address : recipient}</Typography>
                 </Box>
               )}
             </Box>
