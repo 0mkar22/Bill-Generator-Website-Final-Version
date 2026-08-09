@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { getWorkOrders, createWorkOrder } from '../services/api';
+import { supabase } from '../supabase';
 import { subWorks, venues, vendors } from '../constants/data';
 
 const WorkOrder = () => {
@@ -13,14 +14,28 @@ const WorkOrder = () => {
     entryNumber: '',
     eventDate: '',
     vendor: '',
+    company_id: '',
     workItems: [
       { eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }
     ]
   });
   const [latestEntry, setLatestEntry] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [newCompany, setNewCompany] = useState({ company_name: '', address: '', gst_number: '' });
+
   const [submitting, setSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase.from('companies').select('*');
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error("Failed to fetch companies:", error);
+    }
+  };
   const fetchLatestEntry = async () => {
     try {
         const response = await getWorkOrders();
@@ -39,7 +54,23 @@ const WorkOrder = () => {
 
   useEffect(() => {
     fetchLatestEntry();
+    fetchCompanies();
   }, []);
+
+  const handleSaveCompany = async () => {
+    try {
+      const { data, error } = await supabase.from('companies').insert([newCompany]).select();
+      if (error) throw error;
+      setCompanies(prev => [...prev, data[0]]);
+      setFormData(prev => ({ ...prev, company_id: data[0].id }));
+      setIsCompanyModalOpen(false);
+      setNewCompany({ company_name: '', address: '', gst_number: '' });
+      setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
+    } catch (error) {
+      console.error('Failed to add company:', error);
+      setSnackbar({ open: true, message: 'Failed to add company.', severity: 'error' });
+    }
+  };
 
   const handleMainChange = (e) => {
     const { name, value } = e.target;
@@ -99,7 +130,7 @@ const WorkOrder = () => {
       await createWorkOrder(formData);
       setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
       setFormData({
-        entryNumber: '', eventDate: '', vendor: '',
+        entryNumber: '', eventDate: '', vendor: '', company_id: '',
         workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }]
       });
       fetchLatestEntry();
@@ -118,13 +149,24 @@ const WorkOrder = () => {
       <Typography variant="h4" gutterBottom align="center">Event Data Entry</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Select Company</InputLabel>
+              <Select name="company_id" value={formData.company_id} label="Select Company" onChange={handleMainChange}>
+                <MenuItem value="" onClick={() => setIsCompanyModalOpen(true)}>
+                  <em>+ Add New Company</em>
+                </MenuItem>
+                {companies.map(c => <MenuItem key={c.id} value={c.id}>{c.company_name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
             <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <FormControl fullWidth required>
               <InputLabel>Vendor</InputLabel>
               <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
@@ -173,11 +215,7 @@ const WorkOrder = () => {
                         </Select>
                     </FormControl>
                 </Grid>
-                {item.workMain === '32_GB_Pendrive' ? (
-                    <Grid item xs={12} sm={6}>
-                        <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
-                    </Grid>
-                ) : item.workMain === 'Others' ? (
+                {item.workMain === 'Others' ? (
                     <Grid item xs={12} sm={6}>
                         <TextField name="customWorkMain" label="Custom Work Name" required fullWidth value={item.customWorkMain} onChange={(e) => handleWorkItemChange(index, e)} />
                     </Grid>
@@ -191,6 +229,11 @@ const WorkOrder = () => {
                                 ))}
                             </Select>
                         </FormControl>
+                    </Grid>
+                )}
+                {item.workMain !== '32_GB_Pendrive' && (
+                    <Grid item xs={12} sm={6}>
+                        <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
                     </Grid>
                 )}
             </Grid>
@@ -211,6 +254,45 @@ const WorkOrder = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)}>
+        <DialogTitle>Add New Company</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Company Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newCompany.company_name}
+            onChange={(e) => setNewCompany({...newCompany, company_name: e.target.value})}
+          />
+          <TextField
+            margin="dense"
+            label="Address"
+            type="text"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={3}
+            value={newCompany.address}
+            onChange={(e) => setNewCompany({...newCompany, address: e.target.value})}
+          />
+          <TextField
+            margin="dense"
+            label="GST Number"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newCompany.gst_number}
+            onChange={(e) => setNewCompany({...newCompany, gst_number: e.target.value})}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveCompany} variant="contained" disabled={!newCompany.company_name}>Save</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
