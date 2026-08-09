@@ -41,7 +41,7 @@ exports.createInvoice = async (req, res) => {
         invoiceNumberToSave = String(newInvoiceNumber).padStart(4, '0');
     }
 
-    const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription, gstNo } = req.body;
+    const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription, gstNo, company_id, company_address } = req.body;
 
     const invoiceData = {
         invoiceType,
@@ -54,7 +54,9 @@ exports.createInvoice = async (req, res) => {
         poNumber,
         poDate,
         serviceDescription,
-        gstNo
+        gstno: gstNo,
+        company_id,
+        company_address
     };
 
     const { data: invoice, error: insertError } = await supabase
@@ -77,7 +79,7 @@ exports.createInvoice = async (req, res) => {
 exports.updateInvoice = async (req, res) => {
   try {
     const { id } = req.params;
-    const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription, gstNo } = req.body;
+    const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription, gstNo, company_id, company_address } = req.body;
 
     const invoiceData = {
         invoiceNumber,
@@ -91,7 +93,9 @@ exports.updateInvoice = async (req, res) => {
         poNumber,
         poDate,
         serviceDescription,
-        gstNo
+        gstno: gstNo,
+        company_id,
+        company_address
     };
 
     const { data: invoice, error: updateError } = await supabase

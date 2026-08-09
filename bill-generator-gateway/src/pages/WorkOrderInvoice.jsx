@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import './WorkOrderInvoice.css';
 import API from '../services/api';
 import { pricing } from '../constants/data';
+import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
 const WorkOrderInvoice = () => {
@@ -54,7 +55,11 @@ const WorkOrderInvoice = () => {
             parentOrderInfo: {
                 entryNumber: selectedItems[0]?.parent?.entryNumber,
                 vendor: selectedItems[0]?.parent?.vendor
-            }
+            },
+            company_id: parentOrder.company_id || null,
+            company_address: companyDetails ? companyDetails.address : '',
+            gstNo: companyDetails ? companyDetails.gst_number : '',
+            recipient: companyDetails ? companyDetails.company_name : parentOrder.vendor
         };
         if (isEditing && invoiceId) {
             await API.put(`/invoices/${invoiceId}`, invoicePayload);
@@ -84,6 +89,16 @@ const WorkOrderInvoice = () => {
   }
 
   const parentOrder = selectedItems[0]?.parent || {};
+
+  useEffect(() => {
+    if (parentOrder && parentOrder.company_id) {
+      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
+        .then(({ data }) => {
+          if (data) setCompanyDetails(data);
+        })
+        .catch(console.error);
+    }
+  }, [parentOrder]);
   const totalAmount = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
   const totalWithGst = totalAmount * 1.18;
   const roundedTotal = Math.round(totalWithGst);
@@ -152,7 +167,7 @@ const WorkOrderInvoice = () => {
         </Box>
         <Box sx={{ p: 2, pb: 0 }}>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            To,<br />M/s. {parentOrder.vendor}<br />21, Nilkanth Apartment, Samata Nagar, <br />Pokharan Road No. 1, Thane (W) 400 606
+            To,<br />{companyDetails ? companyDetails.company_name : `M/s. ${parentOrder.vendor}`}<br />{companyDetails ? companyDetails.address : '21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606'}
           </Typography>
           <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
           <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
