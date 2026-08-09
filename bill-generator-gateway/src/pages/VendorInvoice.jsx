@@ -28,6 +28,7 @@ function VendorInvoice() {
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [companyDetails, setCompanyDetails] = useState(null);
 
   const [recipient, setRecipient] = useState(`OIL & NATURAL GAS CORPORATION LTD.\nCorporate Communication,\nN.B.P. Green Heights,\nBKC, Bandra (E),\nMumbai 400 051`);
   const [editingRecipient, setEditingRecipient] = useState(false);
