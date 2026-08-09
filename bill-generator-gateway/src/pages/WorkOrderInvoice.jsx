@@ -25,6 +25,7 @@ const WorkOrderInvoice = () => {
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [companyDetails, setCompanyDetails] = useState(null);
 
   const displayDate = passedInvoiceDate
     ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
