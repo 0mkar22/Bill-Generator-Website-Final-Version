@@ -85,7 +85,7 @@ function VendorInvoice() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [companyDetails, setCompanyDetails] = useState(null);
 
-  const [recipient, setRecipient] = useState(`OIL & NATURAL GAS CORPORATION LTD.\nCorporate Communication,\nN.B.P. Green Heights,\nBKC, Bandra (E),\nMumbai 400 051`);
+  const [recipient, setRecipient] = useState('');
   const [editingRecipient, setEditingRecipient] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
@@ -205,7 +205,13 @@ function VendorInvoice() {
     if (parentOrder && parentOrder.company_id) {
       supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
         .then(({ data }) => {
-          if (data) { setCompanyDetails(data); if (data.gst_number && passedGstNo === undefined) setGstNo(data.gst_number); }
+          if (data) {
+            setCompanyDetails(data);
+            if (passedRecipient === undefined) {
+              setRecipient(data.company_name + '\n' + data.address);
+            }
+            if (data.gst_number && passedGstNo === undefined) setGstNo(data.gst_number);
+          }
         })
         .catch(console.error);
     }
@@ -263,9 +269,6 @@ function VendorInvoice() {
               </Box>
               <Box sx={{ textAlign: 'right', fontSize: '1.2rem' }}>
                 <Typography variant="body2">{parentOrder.vendor || 'Vendor'}</Typography>
-                <Typography variant="body2">21, Nilkanth Aprtment, Samata Nagar,</Typography>
-                <Typography variant="body2">Pokharan Road No. 1, Thane (W) 400 606</Typography>
-                <Typography variant="body2">E-mail : bhogtevijay@gmail.com</Typography>
               </Box>
             </Box>
           </Box>
