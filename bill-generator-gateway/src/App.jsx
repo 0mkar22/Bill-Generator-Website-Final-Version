@@ -78,7 +78,7 @@ function App() {
       <Container maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '80vh' }}>
         <Paper elevation={4} sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 2, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
           <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <img src="/logo.png" alt="Company Logo" style={{ width: '100%', maxWidth: '250px', height: 'auto', margin: '0 auto', display: 'block',marginBottom: '20px' }} />
+            <img src="/logo.PNG" alt="Company Logo" style={{ width: '100%', maxWidth: '250px', height: 'auto', margin: '0 auto', display: 'block',marginBottom: '20px' }} />
             <Typography variant="h4" component="h1" fontWeight="bold">
               {isSignUp ? 'Create Account' : 'Login'}
             </Typography>
