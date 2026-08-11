@@ -168,7 +168,7 @@ const WorkOrderInvoice = () => {
         </Box>
         <Box sx={{ p: 2, pb: 0 }}>
           <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
-            To,{'\n'}{companyDetails ? companyDetails.company_name + '\n' + companyDetails.address : `M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606`}
+            To,{'\n'}{companyDetails?.address || `M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606`}
           </Typography>
           <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
           <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
@@ -247,7 +247,13 @@ const WorkOrderInvoice = () => {
                 <TableRow>
                   <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold' }}>Event</TableCell>
                   <TableCell sx={{ border: '1px solid #000' }}>
-                    {selectedItems.length === 1 ? `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` : 'For Various events at various places.'}
+                    {selectedItems.every(item => 
+                        item.eventName === selectedItems[0].eventName && 
+                        item.eventVenue === selectedItems[0].eventVenue && 
+                        item.customVenue === selectedItems[0].customVenue
+                    ) 
+                      ? `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` 
+                      : 'For Various events at various places.'}
                   </TableCell>
                 </TableRow>
                 <TableRow>
