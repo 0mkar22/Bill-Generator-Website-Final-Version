@@ -178,7 +178,7 @@ const WorkOrder = () => {
         </Grid>
 
         {formData.workItems.map((item, index) => (
-          <Paper key={index} sx={{ p: 2, mt: 3, border: '1px solid #ddd' }}>
+          <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Work Item #{index + 1}</Typography>
               {formData.workItems.length > 1 && (
