@@ -256,8 +256,8 @@ function VendorInvoice() {
       <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff' }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Box sx={{ p: 1, fontSize: '1.8rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>To:</Typography>
+            <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem' }}>To:</Typography>
 
               {/* Render the Company Address below the Editable Name */}
               {(companyDetails?.address || parentOrder?.companyDetails?.address) && (

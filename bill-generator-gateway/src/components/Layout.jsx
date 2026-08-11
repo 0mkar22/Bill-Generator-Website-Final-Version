@@ -77,7 +77,7 @@ const Layout = ({ children }) => {
               <MenuIcon />
             </IconButton>
           )}
-          <img src="/ONGC logo.png" alt="logo" className="app-bar-logo" />
+          <img src="/logo.png" alt="logo" className="app-bar-logo" />
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Bill Generator
           </Typography>
