@@ -152,7 +152,7 @@ function VendorInvoice() {
                   entryNumber: selectedItems[0]?.parent?.entryNumber,
                   vendor: selectedItems[0]?.parent?.vendor
               },
-              recipient: companyDetails ? `${companyDetails.company_name}\n${companyDetails.address}` : recipient,
+              recipient: companyDetails ? companyDetails.company_name : recipient,
               company_id: parentOrder.company_id || null,
               company_address: companyDetails ? companyDetails.address : '',
               dealingOfficer,
@@ -264,13 +264,10 @@ function VendorInvoice() {
           </Box>
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1, justifyContent: 'center', height: '100%' }}>
-              <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start' }}>
-                <img src="/logo.PNG" alt="Company Logo" style={{ width: 'auto', maxHeight: 120, marginBottom: '8px' }} />
-                <Typography variant="body2" sx={{ textAlign: 'right', fontSize: '1.1rem', maxWidth: '350px' }}>
-                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606  E-mail : bhogtevijay@gmail.com
-                </Typography>
+              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+                <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
               </Box>
-              <Box sx={{ textAlign: 'right', fontSize: '1.2rem', mt: 1 }}>
+              <Box sx={{ textAlign: 'right', fontSize: '1.2rem' }}>
                 <Typography variant="body2">{parentOrder.vendor || 'Vendor'}</Typography>
               </Box>
             </Box>
@@ -419,31 +416,23 @@ function VendorInvoice() {
                 </TableRow>
               );
             })}
-
-            <TableRow sx={{ '& > td': { borderBottom: 'none', borderRight: 'none', borderLeft: 'none' } }}>
-              <TableCell colSpan={4}></TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'left', fontWeight: 'bold' }}>Amount Before Tax:</TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'right', pr: '8px' }}>{amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-            </TableRow>
-            <TableRow sx={{ '& > td': { borderBottom: 'none', borderRight: 'none', borderLeft: 'none' } }}>
-              <TableCell colSpan={4}></TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'left', fontWeight: 'bold' }}>CGST 9%:</TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'right', pr: '8px' }}>{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-            </TableRow>
-            <TableRow sx={{ '& > td': { borderBottom: 'none', borderRight: 'none', borderLeft: 'none' } }}>
-              <TableCell colSpan={4}></TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'left', fontWeight: 'bold' }}>SGST 9%:</TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'right', pr: '8px' }}>{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-            </TableRow>
-            <TableRow sx={{ '& > td': { borderBottom: 'none', borderRight: 'none', borderLeft: 'none' } }}>
-              <TableCell colSpan={4}></TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'left', fontWeight: 'bold' }}>Total Amount Rs.:</TableCell>
-              <TableCell sx={{ border: 'none', textAlign: 'right', fontWeight: 'bold', pr: '8px' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-            </TableRow>
           </TableBody>
         </Table>
         <Box sx={{ fontSize: '1.1rem' }}>
-
+          <Box sx={{ ...flexEndColumnStyle, alignItems: 'flex-end', ...borderBottomStyle, m: 1 }}>
+            <Box sx={{ width: 340, p: '8px', textAlign: 'right', m: 1 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 0.5, mb: 0, columnGap: 3 }}>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left', whiteSpace: 'nowrap' }}>Amount Before Tax:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left' }}>CGST 9%:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left' }}>SGST 9%:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left', fontWeight: 'bold' }}>Total Amount Rs.:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right', fontWeight: 'bold' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+              </Box>
+            </Box>
+          </Box>
           <Box sx={{ display: 'flex', ...borderBottomStyle }}>
             <Box sx={{ flex: 1, p: '8px', ...borderRightStyle }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
