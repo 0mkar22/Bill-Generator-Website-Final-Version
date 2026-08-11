@@ -146,7 +146,7 @@ const WorkOrder = () => {
   };
 
   return (
-    <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
+    <Container component={Paper} sx={{ p: 4, mt: 4 }}>
       <Typography variant="h4" gutterBottom align="center">Event Data Entry</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
@@ -256,7 +256,7 @@ const WorkOrder = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)' } }}>
+      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)}>
         <DialogTitle>Add New Company</DialogTitle>
         <DialogContent>
           <TextField
