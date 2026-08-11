@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
   Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { getWorkOrders, createWorkOrder } from '../services/api';
+import API, { getWorkOrders, createWorkOrder } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors } from '../constants/data';
 import { calculateItemAmount } from '../utils/helpers';
 
 const WorkOrder = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const editData = location.state?.editData;
   const [formData, setFormData] = useState({
     entryNumber: '',
     eventDate: '',
@@ -54,9 +58,20 @@ const WorkOrder = () => {
   };
 
   useEffect(() => {
-    fetchLatestEntry();
     fetchCompanies();
-  }, []);
+    if (editData) {
+      setFormData({
+        id: editData.id,
+        entryNumber: editData.entryNumber || '',
+        eventDate: editData.eventDate ? new Date(editData.eventDate).toISOString().split('T')[0] : '',
+        vendor: editData.vendor || '',
+        company_id: editData.company_id || '',
+        workItems: Array.isArray(editData.workItems) ? editData.workItems : []
+      });
+    } else {
+      fetchLatestEntry();
+    }
+  }, [editData]);
 
   const handleSaveCompany = async () => {
     try {
@@ -128,17 +143,23 @@ const WorkOrder = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createWorkOrder(formData);
-      setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
-      setFormData({
-        entryNumber: '', eventDate: '', vendor: '', company_id: '',
-        workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }]
-      });
-      fetchLatestEntry();
+      if (editData) {
+        await API.put(`/workOrders/${formData.id}`, formData);
+        setSnackbar({ open: true, message: 'Work Order updated successfully!', severity: 'success' });
+        setTimeout(() => navigate('/reports'), 1000);
+      } else {
+        await createWorkOrder(formData);
+        setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
+        setFormData({
+          entryNumber: '', eventDate: '', vendor: '', company_id: '',
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }]
+        });
+        fetchLatestEntry();
+      }
     } catch (error) {
-      console.error('Failed to create work order:', error);
+      console.error('Failed to save work order:', error);
       const serverError = error.response?.data?.error;
-      const msg = Array.isArray(serverError) ? serverError.join(', ') : (serverError || 'Failed to create work order. Please ensure all required fields are filled correctly.');
+      const msg = Array.isArray(serverError) ? serverError.join(', ') : (serverError || 'Failed to save work order. Please ensure all required fields are filled correctly.');
       setSnackbar({ open: true, message: msg, severity: 'error' });
     } finally {
       setSubmitting(false);
@@ -147,7 +168,7 @@ const WorkOrder = () => {
 
   return (
     <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
-      <Typography variant="h4" gutterBottom align="center">Event Data Entry</Typography>
+      <Typography variant="h4" gutterBottom align="center">{editData ? 'Edit Event Data' : 'Event Data Entry'}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
           <Grid item xs={12} sm={3}>
@@ -247,7 +268,7 @@ const WorkOrder = () => {
         </Button>
 
         <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 3 }} disabled={submitting}>
-          {submitting ? <CircularProgress size={24} color="inherit" /> : 'Save The Data'}
+          {submitting ? <CircularProgress size={24} color="inherit" /> : (editData ? 'Update The Data' : 'Save The Data')}
         </Button>
       </Box>
 
