@@ -77,8 +77,8 @@ const Layout = ({ children }) => {
               <MenuIcon />
             </IconButton>
           )}
-          <img src="/logo.png" alt="logo" className="app-bar-logo" />
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <img src="/logo.png" alt="Company Logo" className="app-bar-logo" />
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontSize: '1.4rem' }}>
             Bill Generator
           </Typography>
           <Button
