@@ -381,16 +381,18 @@ function VendorInvoice() {
               <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 4 }}>Mumbai</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Service Description :</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
               <EditableField
-              value={serviceDescription}
-              onChange={setServiceDescription}
-              isEditing={editingServiceDescription}
-              setEditing={setEditingServiceDescription}
-              isReadOnly={isReadOnly}
-              sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', width: 250 }}
-              textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
-            />
+                value={serviceDescription}
+                onChange={setServiceDescription}
+                isEditing={editingServiceDescription}
+                setEditing={setEditingServiceDescription}
+                isReadOnly={isReadOnly}
+                /* Removed width: 250 and added flex: 1 to let it take up available space naturally */
+                sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
+                /* Added whiteSpace: 'nowrap' to force it to stay on one line */
+                textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+              />
             </Box>
           </Box>
         </Box>
