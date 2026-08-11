@@ -167,8 +167,8 @@ const WorkOrderInvoice = () => {
              <Typography variant="body2">DT: {displayDate}</Typography>
         </Box>
         <Box sx={{ p: 2, pb: 0 }}>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            To,<br />{companyDetails ? companyDetails.company_name : `M/s. ${parentOrder.vendor}`}<br />{companyDetails ? companyDetails.address : '21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606'}
+          <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
+            To,{'\n'}{companyDetails ? companyDetails.address : `M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606`}
           </Typography>
           <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
           <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
