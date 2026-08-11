@@ -68,7 +68,8 @@ const Layout = ({ children }) => {
       <CssBaseline />
       <AppBar
         position="fixed"
-        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        className="bg-white/10 backdrop-blur-md border-b border-white/20 shadow-lg"
+        sx={{ bgcolor: 'transparent', boxShadow: 'none', zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
         <Toolbar>
           {isMobile && (
@@ -96,6 +97,7 @@ const Layout = ({ children }) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
+          PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', borderRight: '1px solid rgba(255,255,255,0.2)' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -107,6 +109,7 @@ const Layout = ({ children }) => {
       ) : (
         <Drawer
           variant="permanent"
+          PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', borderRight: '1px solid rgba(255,255,255,0.2)' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
