@@ -152,24 +152,15 @@ function VendorInvoice() {
                   entryNumber: selectedItems[0]?.parent?.entryNumber,
                   vendor: selectedItems[0]?.parent?.vendor
               },
-              // Safely fallback to parentOrder if companyDetails isn't loaded
               recipient: companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient,
-              
-              // Safely grab the ID from either state
               company_id: companyDetails?.id || parentOrder?.company_id || null,
-              
-              // Grab the Recipient's address for the "To:" section
               company_address: companyDetails?.address || parentOrder?.companyDetails?.address || '',
-              
               dealingOfficer,
               emailId,
               vendorCode,
               poNumber,
               poDate,
               serviceDescription,
-              
-              // IMPORTANT: Changed to 'gstno' to match your Supabase schema exactly. 
-              // Also pulls from the company database if the input field is empty.
               gstno: gstNo || companyDetails?.gst_number || parentOrder?.companyDetails?.gst_number || ''
           };
           if (isEditing && invoiceId) {
@@ -224,7 +215,7 @@ function VendorInvoice() {
         })
         .catch(console.error);
     }
-  }, [parentOrder]);
+  }, [parentOrder, passedRecipient, passedGstNo]);
 
   return (
     <Container>
@@ -438,53 +429,87 @@ function VendorInvoice() {
                 </TableRow>
               );
             })}
+            
+            {/* Amount Before Tax */}
+            <TableRow sx={{ borderBottom: 'none' }}>
+              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>Amount Before Tax:</Typography>
+              </TableCell>
+              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                  {amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+              </TableCell>
+            </TableRow>
+
+            {/* CGST */}
+            <TableRow sx={{ borderBottom: 'none' }}>
+              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>CGST 9%:</Typography>
+              </TableCell>
+              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                  {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+              </TableCell>
+            </TableRow>
+
+            {/* SGST */}
+            <TableRow sx={{ borderBottom: 'none' }}>
+              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>SGST 9%:</Typography>
+              </TableCell>
+              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                  {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+              </TableCell>
+            </TableRow>
+
+            {/* Total Amount (with border bottom to close the table section) */}
+            <TableRow sx={{ borderBottom: '1px solid #000' }}>
+              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Total Amount Rs.:</Typography>
+              </TableCell>
+              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                  {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
-        <Box sx={{ fontSize: '1.1rem' }}>
-          <Box sx={{ ...flexEndColumnStyle, alignItems: 'flex-end', ...borderBottomStyle, m: 1 }}>
-            <Box sx={{ width: 340, p: '8px', textAlign: 'right', m: 1 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 0.5, mb: 0, columnGap: 3 }}>
-                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left', whiteSpace: 'nowrap' }}>Amount Before Tax:</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left' }}>CGST 9%:</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left' }}>SGST 9%:</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left', fontWeight: 'bold' }}>Total Amount Rs.:</Typography>
-                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right', fontWeight: 'bold' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-              </Box>
-            </Box>
+
+        <Box sx={{ display: 'flex', ...borderBottomStyle }}>
+          <Box sx={{ flex: 1, p: '8px', ...borderRightStyle }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
           </Box>
-          <Box sx={{ display: 'flex', ...borderBottomStyle }}>
-            <Box sx={{ flex: 1, p: '8px', ...borderRightStyle }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
-            </Box>
-            <Box sx={{ width: 280, p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Round up Rs.:</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-            </Box>
+          <Box sx={{ width: 280, p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Round up Rs.:</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
           </Box>
-          <Box sx={{ display: 'flex' }}>
-            <Box sx={{ flex: 3, p: '8px', ...borderRightStyle, fontSize: '1rem' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
-              <Typography variant="body2">Bank Name: State Bank Of India</Typography>
-              <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
-              <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex' }}>
+          <Box sx={{ flex: 3, p: '8px', ...borderRightStyle, fontSize: '1rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
+            <Typography variant="body2">Bank Name: State Bank Of India</Typography>
+            <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
+            <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
+          </Box>
+          <Box sx={{ width: 860, textAlign: 'center', display: 'flex' }}>
+            <Box sx={{ flex: 1, mr: 0.5, textAlign: 'center', ...borderRightStyle, pr: 1, height: '100%', py: '8px', ...flexEndColumnStyle }}>
+              <Box sx={{ height: 100, width: '90%', maxWidth: 220, mx: 'auto', mt: 1 }}></Box>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
             </Box>
-            <Box sx={{ width: 860, textAlign: 'center', display: 'flex' }}>
-              <Box sx={{ flex: 1, mr: 0.5, textAlign: 'center', ...borderRightStyle, pr: 1, height: '100%', py: '8px', ...flexEndColumnStyle }}>
-                <Box sx={{ height: 100, width: '90%', maxWidth: 220, mx: 'auto', mt: 1 }}></Box>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
+            <Box sx={{ flex: 1, ml: 2, textAlign: 'center', height: '100%', py: '8px', ...flexEndColumnStyle }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
+              <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
               </Box>
-              <Box sx={{ flex: 1, ml: 2, textAlign: 'center', height: '100%', py: '8px', ...flexEndColumnStyle }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
-                <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
-              </Box>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
             </Box>
           </Box>
         </Box>
