@@ -77,7 +77,7 @@ const Layout = ({ children }) => {
               <MenuIcon />
             </IconButton>
           )}
-          <img src="/logo.png" alt="Company Logo" className="app-bar-logo" />
+          <img src="/logo.PNG" alt="Company Logo" style={{ width: '100%', maxWidth: '250px', height: 'auto', margin: '0 auto', display: 'block',marginBottom: '20px' }} />  
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontSize: '1.4rem' }}>
             Bill Generator
           </Typography>
