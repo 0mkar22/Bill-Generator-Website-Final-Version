@@ -250,6 +250,7 @@ function VendorInvoice() {
             <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>To,</Typography>
               <EditableField
+                  value={recipient}
                   onChange={setRecipient}
                   isEditing={editingRecipient}
                   setEditing={setEditingRecipient}
