@@ -257,20 +257,7 @@ function VendorInvoice() {
         <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
-              
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>To,</Typography>
-              
-              <EditableField
-                value={recipient}
-                onChange={setRecipient}
-                isEditing={editingRecipient}
-                setEditing={setEditingRecipient}
-                isReadOnly={isReadOnly}
-                multiline={true}
-                minRows={1} 
-                sx={{ minHeight: 30, whiteSpace: 'pre-line', p: 0.5, fontSize: '1.2rem', width: '100%' }}
-                textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
-              />
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>To:</Typography>
 
               {/* Render the Company Address below the Editable Name */}
               {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
