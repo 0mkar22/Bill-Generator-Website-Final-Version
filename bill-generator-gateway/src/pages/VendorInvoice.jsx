@@ -321,7 +321,7 @@ function VendorInvoice() {
           </Box>
           <Box sx={{ display: 'flex' }}>
             <Box sx={{ flex: 3, p: '8px', ...borderRightStyle, fontSize: '1rem' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. {gstNo}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
               <Typography variant="body2">Bank Name: State Bank Of India</Typography>

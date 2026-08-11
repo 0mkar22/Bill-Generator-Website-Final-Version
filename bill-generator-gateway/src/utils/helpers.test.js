@@ -15,10 +15,16 @@ describe('calculateItemAmount', () => {
         expect(result).toBe(pricing['32_GB_Pendrive'] * 1);
     });
 
-    it('should calculate the amount for a category with a valid subcategory', () => {
+    it('should calculate the amount for a category with a valid subcategory and default quantity', () => {
         const item = { workMain: 'Still_Photography', workSub: 'Mumbai_Upto_4_Hrs' };
         const result = calculateItemAmount(item);
         expect(result).toBe(pricing['Still_Photography']['Mumbai_Upto_4_Hrs']);
+    });
+
+    it('should calculate the amount for a category with a valid subcategory and specific quantity', () => {
+        const item = { workMain: 'Still_Photography', workSub: 'Mumbai_Upto_4_Hrs', quantity: 3 };
+        const result = calculateItemAmount(item);
+        expect(result).toBe(pricing['Still_Photography']['Mumbai_Upto_4_Hrs'] * 3);
     });
 
     it('should return 0 for a missing or invalid workMain', () => {
