@@ -19,7 +19,62 @@ const flexEndColumnStyle = { display: 'flex', flexDirection: 'column', justifyCo
 const borderBottomStyle = { borderBottom: '1px solid #000' };
 const borderRightStyle = { borderRight: '1px solid #000' };
 
+
+const EditableField = ({
+  value,
+  onChange,
+  onBlur,
+  isEditing,
+  setEditing,
+  isReadOnly,
+  multiline = false,
+  minRows = 1,
+  sx = {},
+  textSx = {},
+  fallback = 'N/A'
+}) => {
+  if (isEditing) {
+    return (
+      <TextField
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={() => { setEditing(false); if (onBlur) onBlur(); }}
+        autoFocus
+        size="small"
+        multiline={multiline}
+        minRows={minRows}
+        variant="standard"
+        InputProps={{
+            disableUnderline: true,
+            style: { fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }
+        }}
+        sx={{ ...sx, p: 0, '& .MuiInputBase-root': { p: 0 }, '& .MuiInputBase-input': { p: 0 } }}
+      />
+    );
+  }
+
+  return (
+    <Box
+        component="span"
+        onClick={() => !isReadOnly && setEditing(true)}
+        sx={{
+            cursor: isReadOnly ? 'default' : 'pointer',
+            borderBottom: isReadOnly ? 'none' : '1px dashed transparent',
+            '&:hover': {
+                borderBottom: isReadOnly ? 'none' : '1px dashed #aaa'
+            },
+            ...sx
+        }}
+    >
+      <Typography component="span" variant="body2" sx={textSx}>
+        {value || fallback}
+      </Typography>
+    </Box>
+  );
+};
+
 function VendorInvoice() {
+
   const navigate = useNavigate();
   const location = useLocation();
   const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
@@ -188,13 +243,17 @@ function VendorInvoice() {
           <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>To,</Typography>
-              {editingRecipient ? (
-                <TextField multiline minRows={3} value={recipient} onChange={e => setRecipient(e.target.value)} variant="outlined" fullWidth size="small" sx={{ background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }} onBlur={() => setEditingRecipient(false)} autoFocus />
-              ) : (
-                <Box onClick={() => !isReadOnly && setEditingRecipient(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', minHeight: 60, whiteSpace: 'pre-line', p: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>{companyDetails ? companyDetails.address : recipient}</Typography>
-                </Box>
-              )}
+              <EditableField
+                  value={recipient}
+                  onChange={setRecipient}
+                  isEditing={editingRecipient}
+                  setEditing={setEditingRecipient}
+                  isReadOnly={isReadOnly}
+                  multiline={true}
+                  minRows={3}
+                  sx={{ minHeight: 60, whiteSpace: 'pre-line', p: 0.5, fontSize: '1.2rem', width: '100%' }}
+                  textSx={{ fontSize: '1.2rem' }}
+                />
             </Box>
           </Box>
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -214,30 +273,75 @@ function VendorInvoice() {
         <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle }}>
           <Box sx={{ flex: 1, ...borderRightStyle, p: 1, fontSize: '1.2rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold' }}>Dealing Officer :</span>
-              {editingDealingOfficer ? ( <TextField value={dealingOfficer} onChange={e => setDealingOfficer(e.target.value)} onBlur={() => setEditingDealingOfficer(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/> ) : ( <Box component="span" onClick={() => !isReadOnly && setEditingDealingOfficer(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.2rem' }}>{dealingOfficer}</Typography></Box> )}
+              <EditableField
+              value={dealingOfficer}
+              onChange={setDealingOfficer}
+              isEditing={editingDealingOfficer}
+              setEditing={setEditingDealingOfficer}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>Email ID :</span>
-              {editingEmailId ? ( <TextField value={emailId} onChange={e => setEmailId(e.target.value)} onBlur={() => setEditingEmailId(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => !isReadOnly && setEditingEmailId(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.2rem' }}>{emailId}</Typography></Box>)}
+              <EditableField
+              value={emailId}
+              onChange={setEmailId}
+              isEditing={editingEmailId}
+              setEditing={setEditingEmailId}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
             </Typography>
               <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>GST No. :</span>
-                {editingGstNo ? ( <TextField value={gstNo} onChange={e => setGstNo(e.target.value)} onBlur={() => setEditingGstNo(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => !isReadOnly && setEditingGstNo(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}>{gstNo}</Typography></Box>)}
+                <EditableField
+                value={gstNo}
+                onChange={setGstNo}
+                isEditing={editingGstNo}
+                setEditing={setEditingGstNo}
+                isReadOnly={isReadOnly}
+                sx={{ ml: 1, fontSize: '1.25rem' }}
+                textSx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}
+              />
               </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO No. :</span>
-              {editingPoNumber ? ( <TextField value={poNumber} onChange={e => setPoNumber(e.target.value)} onBlur={() => setEditingPoNumber(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => !isReadOnly && setEditingPoNumber(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.2rem' }}>{poNumber || 'N/A'}</Typography></Box>)}
+              <EditableField
+              value={poNumber}
+              onChange={setPoNumber}
+              isEditing={editingPoNumber}
+              setEditing={setEditingPoNumber}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO Date :</span>
-              {editingPoDate ? ( <TextField value={poDate} onChange={e => setPoDate(e.target.value)} onBlur={() => setEditingPoDate(false)} autoFocus size="small" sx={{ ml: 1, background: '#fafafa' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => !isReadOnly && setEditingPoDate(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontSize: '1.2rem' }}>{poDate || 'N/A'}</Typography></Box>)}
+              <EditableField
+              value={poDate}
+              onChange={setPoDate}
+              isEditing={editingPoDate}
+              setEditing={setEditingPoDate}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
             </Typography>
           </Box>
           <Box sx={{ flex: 1, p: 1, fontSize: '1.2rem' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, ...borderBottomStyle, pb: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', ...borderRightStyle, pr: 2, flex: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Invoice No. :</Typography>
-                {editingInvoiceNumber ? (
-                  <TextField value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} onBlur={() => setEditingInvoiceNumber(false)} autoFocus size="small" sx={{ width: 100, background: '#fafafa', ml: '8px' }} InputProps={{ style: { fontSize: '1.2rem' } }} disabled={isReadOnly} />
-                ) : (
-                  <Box component="span" onClick={() => !isReadOnly && setEditingInvoiceNumber(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{invoiceNumber || 'Click to set'}</Typography></Box>
-                )}
+                <EditableField
+                  value={invoiceNumber}
+                  onChange={setInvoiceNumber}
+                  isEditing={editingInvoiceNumber}
+                  setEditing={setEditingInvoiceNumber}
+                  isReadOnly={isReadOnly}
+                  sx={{ width: 100, ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+                  fallback="Click to set"
+                />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', pl: 2, flex: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Date :</Typography>
@@ -246,7 +350,15 @@ function VendorInvoice() {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, mt: 0.5 }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Vendor Code :</Typography>
-              {editingVendorCode ? ( <TextField value={vendorCode} onChange={e => setVendorCode(e.target.value)} onBlur={() => setEditingVendorCode(false)} autoFocus size="small" sx={{ width: 100, background: '#fafafa', ml: '8px' }} InputProps={{ style: { fontSize: '1.2rem' } }} />) : ( <Box component="span" onClick={() => !isReadOnly && setEditingVendorCode(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{vendorCode}</Typography></Box> )}
+              <EditableField
+              value={vendorCode}
+              onChange={setVendorCode}
+              isEditing={editingVendorCode}
+              setEditing={setEditingVendorCode}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
+              textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+            />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Place Of Supply :</Typography>
@@ -254,7 +366,15 @@ function VendorInvoice() {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Service Description :</Typography>
-              {editingServiceDescription ? ( <TextField value={serviceDescription} onChange={e => setServiceDescription(e.target.value)} onBlur={() => setEditingServiceDescription(false)} autoFocus size="small" sx={{ width: 180, background: '#fafafa', ml: '8px' }} InputProps={{ style: { fontSize: '1.2rem' } }}/>) : ( <Box component="span" onClick={() => !isReadOnly && setEditingServiceDescription(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}><Typography component="span" variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{serviceDescription}</Typography></Box> )}
+              <EditableField
+              value={serviceDescription}
+              onChange={setServiceDescription}
+              isEditing={editingServiceDescription}
+              setEditing={setEditingServiceDescription}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', width: 250 }}
+              textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+            />
             </Box>
           </Box>
         </Box>
