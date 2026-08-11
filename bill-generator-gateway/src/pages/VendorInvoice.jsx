@@ -152,16 +152,25 @@ function VendorInvoice() {
                   entryNumber: selectedItems[0]?.parent?.entryNumber,
                   vendor: selectedItems[0]?.parent?.vendor
               },
-              recipient: companyDetails ? companyDetails.company_name : recipient,
-              company_id: parentOrder.company_id || null,
-              company_address: companyDetails ? companyDetails.address : '',
+              // Safely fallback to parentOrder if companyDetails isn't loaded
+              recipient: companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient,
+              
+              // Safely grab the ID from either state
+              company_id: companyDetails?.id || parentOrder?.company_id || null,
+              
+              // Grab the Recipient's address for the "To:" section
+              company_address: companyDetails?.address || parentOrder?.companyDetails?.address || '',
+              
               dealingOfficer,
               emailId,
               vendorCode,
               poNumber,
               poDate,
               serviceDescription,
-              gstNo
+              
+              // IMPORTANT: Changed to 'gstno' to match your Supabase schema exactly. 
+              // Also pulls from the company database if the input field is empty.
+              gstno: gstNo || companyDetails?.gst_number || parentOrder?.companyDetails?.gst_number || ''
           };
           if (isEditing && invoiceId) {
               await API.put(`/invoices/${invoiceId}`, invoicePayload);
@@ -247,19 +256,40 @@ function VendorInvoice() {
       <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff' }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+            <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
+              
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>To,</Typography>
+              
               <EditableField
-                  value={recipient}
-                  onChange={setRecipient}
-                  isEditing={editingRecipient}
-                  setEditing={setEditingRecipient}
-                  isReadOnly={isReadOnly}
-                  multiline={true}
-                  minRows={3}
-                  sx={{ minHeight: 60, whiteSpace: 'pre-line', p: 0.5, fontSize: '1.2rem', width: '100%' }}
-                  textSx={{ fontSize: '1.2rem' }}
-                />
+                value={recipient}
+                onChange={setRecipient}
+                isEditing={editingRecipient}
+                setEditing={setEditingRecipient}
+                isReadOnly={isReadOnly}
+                multiline={true}
+                minRows={1} 
+                sx={{ minHeight: 30, whiteSpace: 'pre-line', p: 0.5, fontSize: '1.2rem', width: '100%' }}
+                textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+              />
+
+              {/* Render the Company Address below the Editable Name */}
+              {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    whiteSpace: 'pre-wrap', 
+                    pl: 0.5, 
+                    pr: 0.5, 
+                    pb: 0.5, 
+                    fontSize: '1rem', 
+                    color: '#333',
+                    lineHeight: 1.4 
+                  }}
+                >
+                  {companyDetails?.address || parentOrder?.companyDetails?.address}
+                </Typography>
+              )}
+
             </Box>
           </Box>
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -267,8 +297,13 @@ function VendorInvoice() {
               <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
                 <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
               </Box>
-              <Box sx={{ textAlign: 'right', fontSize: '1.2rem' }}>
-                <Typography variant="body2">{parentOrder.vendor || 'Vendor'}</Typography>
+              
+              {/* Hardcoded iComp Systems Address - No dynamic variables here */}
+              <Box sx={{ textAlign: 'right', mt: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#333' }}>
+                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,<br />
+                  Thane (W) 400 606 &nbsp;&nbsp; E-mail : bhogtevijay@gmail.com
+                </Typography>
               </Box>
             </Box>
           </Box>
