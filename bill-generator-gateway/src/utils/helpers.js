@@ -1,10 +1,13 @@
 import { pricing } from '../constants/data';
 
 export const calculateItemAmount = (item) => {
+    let rate = 0;
     if (item.workMain === '32_GB_Pendrive') {
-        return (pricing[item.workMain] || 0) * (item.quantity || 1);
+        rate = pricing[item.workMain] || 0;
+    } else {
+        rate = pricing[item.workMain]?.[item.workSub] || 0;
     }
-    return pricing[item.workMain]?.[item.workSub] || 0;
+    return rate * (item.quantity || 1);
 };
 
 export function numberToWords(num) {

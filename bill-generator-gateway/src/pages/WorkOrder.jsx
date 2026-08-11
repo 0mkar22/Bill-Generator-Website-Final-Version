@@ -8,6 +8,7 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import { getWorkOrders, createWorkOrder } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors } from '../constants/data';
+import { calculateItemAmount } from '../utils/helpers';
 
 const WorkOrder = () => {
   const [formData, setFormData] = useState({
@@ -231,11 +232,12 @@ const WorkOrder = () => {
                         </FormControl>
                     </Grid>
                 )}
-                {item.workMain !== '32_GB_Pendrive' && (
-                    <Grid item xs={12} sm={6}>
-                        <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
-                    </Grid>
-                )}
+                <Grid item xs={12} sm={6}>
+                    <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Amount" type="text" fullWidth value={calculateItemAmount(item).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} />
+                </Grid>
             </Grid>
           </Paper>
         ))}
