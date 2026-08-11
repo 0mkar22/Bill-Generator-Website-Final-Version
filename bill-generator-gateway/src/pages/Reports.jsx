@@ -218,7 +218,7 @@ const Reports = () => {
         const totalAmountWithGst = totalAmount * 1.18;
 
         return (
-            <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <TableContainer component={Paper} sx={{ mt: 2, bgcolor: 'transparent', boxShadow: 'none' }}>
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -271,7 +271,7 @@ const Reports = () => {
 
     return (
         <Container maxWidth="xl">
-            <Paper sx={{ p: 3, mt: 3 }}>
+            <Paper sx={{ p: 3, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                     <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')}>Back</Button>
                     <Typography variant="h4" sx={{ flexGrow: 1, textAlign: 'center' }}>Work Orders Report</Typography>
@@ -299,7 +299,7 @@ const Reports = () => {
                 {loading ? <CircularProgress /> : error ? <Alert severity="error">{error}</Alert> : renderTable()}
             </Paper>
 
-            <Dialog open={editModalOpen} onClose={handleCloseEditModal} maxWidth="md" fullWidth>
+            <Dialog open={editModalOpen} onClose={handleCloseEditModal} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)' } }}>
                 <DialogTitle>Edit Work Item</DialogTitle>
                 <DialogContent>
                     {editedItemData && (
