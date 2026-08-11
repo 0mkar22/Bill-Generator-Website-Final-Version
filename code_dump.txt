@@ -1,0 +1,1335 @@
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { supabase } from './supabase';
+
+import { Container, Paper, Typography, TextField, Button, Box, CircularProgress } from '@mui/material';
+
+import ErrorBoundary from './components/ErrorBoundary';
+import Layout from './components/Layout';
+import WorkOrder from './pages/WorkOrder';
+import Reports from './pages/Reports';
+import WorkOrderInvoice from './pages/WorkOrderInvoice';
+import VendorInvoice from './pages/VendorInvoice';
+import InvoiceGenerator from './pages/InvoiceGenerator';
+
+function App() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setMessage('');
+    setAuthLoading(true);
+
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        setMessage(error.message);
+      } else {
+        setMessage('Account created! Please check your email to verify.');
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setMessage(error.message);
+    }
+    setAuthLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!session) {
+    return (
+      <Container maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '80vh' }}>
+        <Paper elevation={4} sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 2 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <img src="/ONGC logo.png" alt="Logo" style={{ height: '80px', marginBottom: '16px' }} />
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              {isSignUp ? 'Create Account' : 'Login'}
+            </Typography>
+          </Box>
+
+          {message && (
+            <Typography variant="body2" color={isSignUp && !message.includes('error') ? 'success.main' : 'error.main'} align="center" sx={{ bgcolor: isSignUp && !message.includes('error') ? '#e8f5e9' : '#ffebee', p: 1, borderRadius: 1 }}>
+              {message}
+            </Typography>
+          )}
+
+          <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <TextField
+              label="Email Address"
+              type="email"
+              variant="outlined"
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <TextField
+              label="Password"
+              type="password"
+              variant="outlined"
+              fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              size="large"
+              fullWidth
+              sx={{ mt: 1, py: 1.5, fontWeight: 'bold' }}
+              disabled={authLoading}
+            >
+              {authLoading ? <CircularProgress size={24} color="inherit" /> : (isSignUp ? 'Sign Up' : 'Sign In')}
+            </Button>
+
+            <Button
+              variant="text"
+              onClick={() => { setIsSignUp(!isSignUp); setMessage(''); }}
+              fullWidth
+              sx={{ textTransform: 'none', mt: 1 }}
+            >
+              {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+            </Button>
+          </form>
+        </Paper>
+      </Container>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<WorkOrder />} />
+            <Route path="/invoices" element={<InvoiceGenerator />} />
+            <Route path="/vendor-invoice" element={<VendorInvoice />} />
+            <Route path="/workorder-invoice" element={<WorkOrderInvoice />} />
+            <Route path="/reports" element={<Reports />} />
+          </Routes>
+        </Layout>
+      </Router>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
+import React, { useState } from 'react';
+import {
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+  Typography,
+  CssBaseline,
+  AppBar,
+  Box,
+  Button,
+  IconButton,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
+import { Link } from 'react-router-dom';
+import WorkIcon from '@mui/icons-material/Work';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import DescriptionIcon from '@mui/icons-material/Description';
+import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
+import { supabase } from '../supabase';
+
+const drawerWidth = 240;
+
+const Layout = ({ children }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        console.error("Error logging out:", error.message);
+    }
+  };
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const drawerContent = (
+    <>
+      <Toolbar />
+      <Box sx={{ overflow: 'auto' }}>
+        <List>
+          <ListItemButton component={Link} to="/" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><WorkIcon /></ListItemIcon>
+            <ListItemText primary="Event Data Entry" />
+          </ListItemButton>
+          <ListItemButton component={Link} to="/invoices" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><DescriptionIcon /></ListItemIcon>
+            <ListItemText primary="Invoices" />
+          </ListItemButton>
+          <ListItemButton component={Link} to="/reports" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><AssessmentIcon /></ListItemIcon>
+            <ListItemText primary="Reports" />
+          </ListItemButton>
+        </List>
+      </Box>
+    </>
+  );
+
+  return (
+    <Box sx={{ display: 'flex' }}>
+      <CssBaseline />
+      <AppBar
+        position="fixed"
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      >
+        <Toolbar>
+          {isMobile && (
+            <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
+              <MenuIcon />
+            </IconButton>
+          )}
+          <img src="/ONGC logo.png" alt="logo" className="app-bar-logo" />
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Bill Generator
+          </Typography>
+          <Button
+            color="inherit"
+            onClick={handleLogout}
+            startIcon={<LogoutIcon />}
+          >
+            Logout
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      {isMobile ? (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            width: drawerWidth,
+            flexShrink: 0,
+            [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      ) : (
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: drawerWidth,
+            flexShrink: 0,
+            [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      )}
+
+      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        <Toolbar />
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+export default Layout;
+import React, { useState, useEffect } from 'react';
+import {
+  Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions
+} from '@mui/material';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import { getWorkOrders, createWorkOrder } from '../services/api';
+import { supabase } from '../supabase';
+import { subWorks, venues, vendors } from '../constants/data';
+import { calculateItemAmount } from '../utils/helpers';
+
+const WorkOrder = () => {
+  const [formData, setFormData] = useState({
+    entryNumber: '',
+    eventDate: '',
+    vendor: '',
+    company_id: '',
+    workItems: [
+      { eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }
+    ]
+  });
+  const [latestEntry, setLatestEntry] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [newCompany, setNewCompany] = useState({ company_name: '', address: '', gst_number: '' });
+
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase.from('companies').select('*');
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error("Failed to fetch companies:", error);
+    }
+  };
+  const fetchLatestEntry = async () => {
+    try {
+        const response = await getWorkOrders();
+        const workOrders = response.data.data || [];
+        if (workOrders.length > 0) {
+            const latest = workOrders.reduce((max, order) =>
+                parseInt(order.entryNumber, 10) > parseInt(max.entryNumber, 10) ? order : max,
+                { entryNumber: '0' }
+            );
+            setLatestEntry(latest.entryNumber);
+        }
+    } catch (error) {
+        console.error("Failed to fetch latest entry number:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLatestEntry();
+    fetchCompanies();
+  }, []);
+
+  const handleSaveCompany = async () => {
+    try {
+      const { data, error } = await supabase.from('companies').insert([newCompany]).select();
+      if (error) throw error;
+      setCompanies(prev => [...prev, data[0]]);
+      setFormData(prev => ({ ...prev, company_id: data[0].id }));
+      setIsCompanyModalOpen(false);
+      setNewCompany({ company_name: '', address: '', gst_number: '' });
+      setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
+    } catch (error) {
+      console.error('Failed to add company:', error);
+      setSnackbar({ open: true, message: 'Failed to add company.', severity: 'error' });
+    }
+  };
+
+  const handleMainChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleWorkItemChange = (index, e) => {
+    const { name, value } = e.target;
+    const newWorkItems = [...formData.workItems];
+    newWorkItems[index][name] = value;
+
+    if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue'].includes(name)) {
+        for (let i = 1; i < newWorkItems.length; i++) {
+            newWorkItems[i][name] = value;
+        }
+    }
+
+    if (name === 'workMain') {
+        newWorkItems[index]['workSub'] = '';
+        newWorkItems[index]['quantity'] = 1;
+    }
+    setFormData(prev => ({ ...prev, workItems: newWorkItems }));
+  };
+
+  const addWorkItem = () => {
+    const firstItem = formData.workItems[0];
+    setFormData(prev => ({
+      ...prev,
+      workItems: [
+          ...prev.workItems,
+          {
+              eventName: firstItem.eventName,
+              poNpo: firstItem.poNpo,
+              eventTime: firstItem.eventTime,
+              eventVenue: firstItem.eventVenue,
+              contactPerson: firstItem.contactPerson,
+              contactNumber: firstItem.contactNumber,
+              customVenue: firstItem.customVenue,
+              workMain: '',
+              workSub: '',
+              quantity: 1,
+              customWorkMain: ''
+          }
+      ]
+    }));
+  };
+
+  const removeWorkItem = (index) => {
+    const newWorkItems = formData.workItems.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, workItems: newWorkItems }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await createWorkOrder(formData);
+      setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
+      setFormData({
+        entryNumber: '', eventDate: '', vendor: '', company_id: '',
+        workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }]
+      });
+      fetchLatestEntry();
+    } catch (error) {
+      console.error('Failed to create work order:', error);
+      const serverError = error.response?.data?.error;
+      const msg = Array.isArray(serverError) ? serverError.join(', ') : (serverError || 'Failed to create work order. Please ensure all required fields are filled correctly.');
+      setSnackbar({ open: true, message: msg, severity: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Container component={Paper} sx={{ p: 4, mt: 4 }}>
+      <Typography variant="h4" gutterBottom align="center">Event Data Entry</Typography>
+      <Box component="form" onSubmit={handleSubmit}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Select Company</InputLabel>
+              <Select name="company_id" value={formData.company_id} label="Select Company" onChange={handleMainChange}>
+                <MenuItem value="" onClick={() => setIsCompanyModalOpen(true)}>
+                  <em>+ Add New Company</em>
+                </MenuItem>
+                {companies.map(c => <MenuItem key={c.id} value={c.id}>{c.company_name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth required>
+              <InputLabel>Vendor</InputLabel>
+              <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
+                {vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+
+        {formData.workItems.map((item, index) => (
+          <Paper key={index} sx={{ p: 2, mt: 3, border: '1px solid #ddd' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6">Work Item #{index + 1}</Typography>
+              {formData.workItems.length > 1 && (
+                <IconButton onClick={() => removeWorkItem(index)} color="error">
+                  <RemoveCircleOutlineIcon />
+                </IconButton>
+              )}
+            </Box>
+
+            {index === 0 && (
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid item xs={12} sm={6}><TextField name="eventName" label="Event Name" required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>PO/NPO</InputLabel><Select name="poNpo" value={item.poNpo} label="PO/NPO" onChange={(e) => handleWorkItemChange(index, e)}><MenuItem value="PO">PO</MenuItem><MenuItem value="NPO">NPO</MenuItem></Select></FormControl></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>Event Venue</InputLabel><Select name="eventVenue" value={item.eventVenue} label="Event Venue" onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                    {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
+                    <Grid item xs={12} sm={6}><TextField name="contactPerson" label="Contact Person" required fullWidth value={item.contactPerson} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="contactNumber" label="Contact Number" required fullWidth value={item.contactNumber} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    <Grid item xs={12}><Divider>Work Details</Divider></Grid>
+                </Grid>
+            )}
+
+            <Grid container spacing={2} sx={{ mt: index === 0 ? 1 : 0 }}>
+                <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth required>
+                        <InputLabel>Work Name</InputLabel>
+                        <Select name="workMain" value={item.workMain} label="Work Name" onChange={(e) => handleWorkItemChange(index, e)}>
+                            <MenuItem value="Still_Photography">Still Photography</MenuItem>
+                            <MenuItem value="Videography">Videography</MenuItem>
+                            <MenuItem value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>
+                            <MenuItem value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>
+                            <MenuItem value="Live_Telecast">Live Telecast Setup</MenuItem>
+                            <MenuItem value="32_GB_Pendrive">32 GB Pendrive</MenuItem>
+                            <MenuItem value="Others">Others</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Grid>
+                {item.workMain === 'Others' ? (
+                    <Grid item xs={12} sm={6}>
+                        <TextField name="customWorkMain" label="Custom Work Name" required fullWidth value={item.customWorkMain} onChange={(e) => handleWorkItemChange(index, e)} />
+                    </Grid>
+                ) : (
+                    <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth required={!!item.workMain} disabled={!item.workMain}>
+                            <InputLabel>Work Subcategory</InputLabel>
+                            <Select name="workSub" value={item.workSub} label="Work Subcategory" onChange={(e) => handleWorkItemChange(index, e)}>
+                                {(subWorks[item.workMain] || []).map(sub => (
+                                    <MenuItem key={sub} value={sub}>{sub.replaceAll('_', ' ')}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                )}
+                <Grid item xs={12} sm={6}>
+                    <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Amount" type="text" fullWidth value={calculateItemAmount(item).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} />
+                </Grid>
+            </Grid>
+          </Paper>
+        ))}
+
+        <Button startIcon={<AddCircleOutlineIcon />} onClick={addWorkItem} sx={{ mt: 2 }}>
+          Add Another Item
+        </Button>
+
+        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 3 }} disabled={submitting}>
+          {submitting ? <CircularProgress size={24} color="inherit" /> : 'Save The Data'}
+        </Button>
+      </Box>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)}>
+        <DialogTitle>Add New Company</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Company Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newCompany.company_name}
+            onChange={(e) => setNewCompany({...newCompany, company_name: e.target.value})}
+          />
+          <TextField
+            margin="dense"
+            label="Address"
+            type="text"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={3}
+            value={newCompany.address}
+            onChange={(e) => setNewCompany({...newCompany, address: e.target.value})}
+          />
+          <TextField
+            margin="dense"
+            label="GST Number"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newCompany.gst_number}
+            onChange={(e) => setNewCompany({...newCompany, gst_number: e.target.value})}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveCompany} variant="contained" disabled={!newCompany.company_name}>Save</Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
+};
+
+export default WorkOrder;
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
+  Button, TextField, Container, CircularProgress, Alert, Snackbar
+} from '@mui/material';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import './VendorInvoice.css';
+import API from '../services/api';
+import { pricing } from '../constants/data';
+import { supabase } from '../supabase';
+import { calculateItemAmount, numberToWords } from '../utils/helpers';
+
+const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
+const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
+const boldRightAlignedCellStyle = { ...boldHeaderCellStyle, textAlign: 'right' };
+const flexEndColumnStyle = { display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' };
+const borderBottomStyle = { borderBottom: '1px solid #000' };
+const borderRightStyle = { borderRight: '1px solid #000' };
+
+
+const EditableField = ({
+  value,
+  onChange,
+  onBlur,
+  isEditing,
+  setEditing,
+  isReadOnly,
+  multiline = false,
+  minRows = 1,
+  sx = {},
+  textSx = {},
+  fallback = 'N/A'
+}) => {
+  if (isEditing) {
+    return (
+      <TextField
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={() => { setEditing(false); if (onBlur) onBlur(); }}
+        autoFocus
+        size="small"
+        multiline={multiline}
+        minRows={minRows}
+        variant="standard"
+        InputProps={{
+            disableUnderline: true,
+            style: { fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }
+        }}
+        sx={{ ...sx, p: 0, '& .MuiInputBase-root': { p: 0 }, '& .MuiInputBase-input': { p: 0 } }}
+      />
+    );
+  }
+
+  return (
+    <Box
+        component="span"
+        onClick={() => !isReadOnly && setEditing(true)}
+        sx={{
+            cursor: isReadOnly ? 'default' : 'pointer',
+            borderBottom: isReadOnly ? 'none' : '1px dashed transparent',
+            '&:hover': {
+                borderBottom: isReadOnly ? 'none' : '1px dashed #aaa'
+            },
+            ...sx
+        }}
+    >
+      <Typography component="span" variant="body2" sx={textSx}>
+        {value || fallback}
+      </Typography>
+    </Box>
+  );
+};
+
+function VendorInvoice() {
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
+  const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [companyDetails, setCompanyDetails] = useState(null);
+
+  const [recipient, setRecipient] = useState('');
+  const [editingRecipient, setEditingRecipient] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
+  const [dealingOfficer, setDealingOfficer] = useState('Bagmishree');
+  const [editingDealingOfficer, setEditingDealingOfficer] = useState(false);
+  const [emailId, setEmailId] = useState('bagmishree@ongc.co.in');
+  const [editingEmailId, setEditingEmailId] = useState(false);
+  const [vendorCode, setVendorCode] = useState('896180');
+  const [editingVendorCode, setEditingVendorCode] = useState(false);
+  const [poNumber, setPoNumber] = useState('');
+  const [editingPoNumber, setEditingPoNumber] = useState(false);
+  const [poDate, setPoDate] = useState('');
+  const [editingPoDate, setEditingPoDate] = useState(false);
+  const [serviceDescription, setServiceDescription] = useState('Photography, Videography');
+  const [editingServiceDescription, setEditingServiceDescription] = useState(false);
+  const [gstNo, setGstNo] = useState('27AAAOC1598A1ZN');
+  const [editingGstNo, setEditingGstNo] = useState(false);
+
+  const displayDate = passedInvoiceDate
+    ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
+    : new Date().toLocaleDateString('en-GB');
+
+  useEffect(() => {
+    if (passedInvoiceNumber) setInvoiceNumber(passedInvoiceNumber);
+  }, [passedInvoiceNumber]);
+
+  useEffect(() => {
+    if (passedRecipient !== undefined) setRecipient(passedRecipient);
+    if (passedDealingOfficer !== undefined) setDealingOfficer(passedDealingOfficer);
+    if (passedEmailId !== undefined) setEmailId(passedEmailId);
+    if (passedVendorCode !== undefined) setVendorCode(passedVendorCode);
+    if (passedPoNumber !== undefined) setPoNumber(passedPoNumber);
+    if (passedPoDate !== undefined) setPoDate(passedPoDate);
+    if (passedServiceDescription !== undefined) setServiceDescription(passedServiceDescription);
+    if (passedGstNo !== undefined) setGstNo(passedGstNo);
+  }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
+
+  const handleDownloadBill = () => {
+    const billElement = document.getElementById('generated-bill');
+    if (!billElement) return;
+    billElement.classList.add('pdf-bill-large');
+    setTimeout(() => {
+      html2canvas(billElement, { scale: 2.5, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' })
+        .then(canvas => {
+            const imgData = canvas.toDataURL('image/png', 1.0);
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`VendorInvoice_${invoiceNumber || 'preview'}.pdf`);
+            billElement.classList.remove('pdf-bill-large');
+        });
+    }, 100);
+  };
+
+  const handleSaveToDatabase = async () => {
+      setIsSaving(true);
+      try {
+          const invoicePayload = {
+              invoiceNumber,
+              invoiceType: invoiceType || 'Vendor',
+              workItems: selectedItems.map(item => item.id),
+              parentOrderInfo: {
+                  entryNumber: selectedItems[0]?.parent?.entryNumber,
+                  vendor: selectedItems[0]?.parent?.vendor
+              },
+              recipient: companyDetails ? companyDetails.company_name : recipient,
+              company_id: parentOrder.company_id || null,
+              company_address: companyDetails ? companyDetails.address : '',
+              dealingOfficer,
+              emailId,
+              vendorCode,
+              poNumber,
+              poDate,
+              serviceDescription,
+              gstNo
+          };
+          if (isEditing && invoiceId) {
+              await API.put(`/invoices/${invoiceId}`, invoicePayload);
+              setSnackbar({ open: true, message: 'Invoice updated successfully!', severity: 'success' });
+          } else {
+              await API.post('/invoices', invoicePayload);
+              setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
+          }
+          setSaveSuccess(true);
+      } catch (error) {
+          console.error("Failed to save invoice:", error);
+          const serverError = error.response?.data?.error;
+          const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
+          setSnackbar({ open: true, message: msg, severity: 'error' });
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  const handleGenerateWorkOrderInvoice = () => {
+      navigate('/workorder-invoice', { state: { items: selectedItems, invoiceType: 'WorkOrder' } });
+  };
+
+  if (selectedItems.length === 0) {
+    return (
+        <Container sx={{ textAlign: 'center', mt: 5 }}>
+            <Typography variant="h6">No items to display.</Typography>
+            <Button sx={{mt: 2}} variant="contained" onClick={() => navigate('/invoices')}>Back to Invoices</Button>
+        </Container>
+    );
+  }
+
+  const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
+  const cgst = amountBeforeTax * 0.09;
+  const sgst = amountBeforeTax * 0.09;
+  const total = amountBeforeTax + cgst + sgst;
+  const rounded = Math.round(total);
+  const parentOrder = selectedItems[0]?.parent || {};
+
+  useEffect(() => {
+    if (parentOrder && parentOrder.company_id) {
+      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
+        .then(({ data }) => {
+          if (data) {
+            setCompanyDetails(data);
+            if (passedRecipient === undefined) {
+              setRecipient(data.company_name + '\n' + data.address);
+            }
+            if (data.gst_number && passedGstNo === undefined) setGstNo(data.gst_number);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [parentOrder]);
+
+  return (
+    <Container>
+      <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+              {(!savedInvoice || isEditing) && !saveSuccess && (
+                  <Button variant="contained" color="success" onClick={handleSaveToDatabase} disabled={isSaving}>
+                      {isSaving ? <CircularProgress size={24} color="inherit" /> : (isEditing ? 'Update Invoice' : 'Save to Database')}
+                  </Button>
+              )}
+          </Box>
+        </Box>
+
+        {saveSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+              {isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button variant="contained" onClick={handleDownloadBill}>
+                    Download Invoice
+                </Button>
+                <Button variant="contained" color="secondary" onClick={handleGenerateWorkOrderInvoice}>
+                    Generate Work Order Invoice
+                </Button>
+            </Box>
+        </Alert>
+      )}
+
+      <Paper id="generated-bill" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle, alignItems: 'stretch' }}>
+          <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>To,</Typography>
+              <EditableField
+                  value={recipient}
+                  onChange={setRecipient}
+                  isEditing={editingRecipient}
+                  setEditing={setEditingRecipient}
+                  isReadOnly={isReadOnly}
+                  multiline={true}
+                  minRows={3}
+                  sx={{ minHeight: 60, whiteSpace: 'pre-line', p: 0.5, fontSize: '1.2rem', width: '100%' }}
+                  textSx={{ fontSize: '1.2rem' }}
+                />
+            </Box>
+          </Box>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1, justifyContent: 'center', height: '100%' }}>
+              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+                <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
+              </Box>
+              <Box sx={{ textAlign: 'right', fontSize: '1.2rem' }}>
+                <Typography variant="body2">{parentOrder.vendor || 'Vendor'}</Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle }}>
+          <Box sx={{ flex: 1, ...borderRightStyle, p: 1, fontSize: '1.2rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold' }}>Dealing Officer :</span>
+              <EditableField
+              value={dealingOfficer}
+              onChange={setDealingOfficer}
+              isEditing={editingDealingOfficer}
+              setEditing={setEditingDealingOfficer}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>Email ID :</span>
+              <EditableField
+              value={emailId}
+              onChange={setEmailId}
+              isEditing={editingEmailId}
+              setEditing={setEditingEmailId}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
+            </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>GST No. :</span>
+                <EditableField
+                value={gstNo}
+                onChange={setGstNo}
+                isEditing={editingGstNo}
+                setEditing={setEditingGstNo}
+                isReadOnly={isReadOnly}
+                sx={{ ml: 1, fontSize: '1.25rem' }}
+                textSx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}
+              />
+              </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO No. :</span>
+              <EditableField
+              value={poNumber}
+              onChange={setPoNumber}
+              isEditing={editingPoNumber}
+              setEditing={setEditingPoNumber}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO Date :</span>
+              <EditableField
+              value={poDate}
+              onChange={setPoDate}
+              isEditing={editingPoDate}
+              setEditing={setEditingPoDate}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem' }}
+              textSx={{ fontSize: '1.2rem' }}
+            />
+            </Typography>
+          </Box>
+          <Box sx={{ flex: 1, p: 1, fontSize: '1.2rem' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, ...borderBottomStyle, pb: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', ...borderRightStyle, pr: 2, flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Invoice No. :</Typography>
+                <EditableField
+                  value={invoiceNumber}
+                  onChange={setInvoiceNumber}
+                  isEditing={editingInvoiceNumber}
+                  setEditing={setEditingInvoiceNumber}
+                  isReadOnly={isReadOnly}
+                  sx={{ width: 100, ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+                  fallback="Click to set"
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2, flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Date :</Typography>
+                <Typography variant="body2" sx={{ ml: 1, fontWeight: 'bold', fontSize: '1.1rem' }}>{displayDate}</Typography>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, mt: 0.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Vendor Code :</Typography>
+              <EditableField
+              value={vendorCode}
+              onChange={setVendorCode}
+              isEditing={editingVendorCode}
+              setEditing={setEditingVendorCode}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
+              textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+            />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Place Of Supply :</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 4 }}>Mumbai</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Service Description :</Typography>
+              <EditableField
+              value={serviceDescription}
+              onChange={setServiceDescription}
+              isEditing={editingServiceDescription}
+              setEditing={setEditingServiceDescription}
+              isReadOnly={isReadOnly}
+              sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', width: 250 }}
+              textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+            />
+            </Box>
+          </Box>
+        </Box>
+        <Table size="small" sx={{ borderCollapse: 'collapse', border: '1px solid #000', borderTop: 'none' }}>
+          <TableHead>
+            <TableRow sx={{ borderBottom: '1px solid #000' }}>
+              <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
+              <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
+              <TableCell sx={boldHeaderCellStyle}>Quantity</TableCell>
+              <TableCell sx={boldHeaderCellStyle}>HSN Code</TableCell>
+              <TableCell sx={boldRightAlignedCellStyle}>Rate Rs.</TableCell>
+              <TableCell sx={boldRightAlignedCellStyle}>Amount Rs.</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {selectedItems.map((item, idx) => {
+              const amount = calculateItemAmount(item);
+              const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+              const quantity = item.quantity || 1;
+              return (
+                <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000' }}>
+                  <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
+                  <TableCell sx={tableCellStyle}>
+                    <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>
+                      <span style={{ fontWeight: 'bold' }}>Event Date:</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                      <span style={{ fontWeight: 'bold' }}>Event Name:</span> {item.eventName}<br />
+                      <span style={{ fontWeight: 'bold' }}>Venue:</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
+                      <span style={{ fontWeight: 'bold' }}>Work Type:</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
+                      {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>Location and Duration:</span>} {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center' }}>{quantity}</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center' }}>99838</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        <Box sx={{ fontSize: '1.1rem' }}>
+          <Box sx={{ ...flexEndColumnStyle, alignItems: 'flex-end', ...borderBottomStyle, m: 1 }}>
+            <Box sx={{ width: 340, p: '8px', textAlign: 'right', m: 1 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 0.5, mb: 0, columnGap: 3 }}>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left', whiteSpace: 'nowrap' }}>Amount Before Tax:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left' }}>CGST 9%:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left' }}>SGST 9%:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right' }}>{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '1 / 2', textAlign: 'left', fontWeight: 'bold' }}>Total Amount Rs.:</Typography>
+                <Typography variant="body2" sx={{ gridColumn: '2 / 3', textAlign: 'right', fontWeight: 'bold' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+              </Box>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', ...borderBottomStyle }}>
+            <Box sx={{ flex: 1, p: '8px', ...borderRightStyle }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
+            </Box>
+            <Box sx={{ width: 280, p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Round up Rs.:</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex' }}>
+            <Box sx={{ flex: 3, p: '8px', ...borderRightStyle, fontSize: '1rem' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
+              <Typography variant="body2">Bank Name: State Bank Of India</Typography>
+              <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
+              <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
+            </Box>
+            <Box sx={{ width: 860, textAlign: 'center', display: 'flex' }}>
+              <Box sx={{ flex: 1, mr: 0.5, textAlign: 'center', ...borderRightStyle, pr: 1, height: '100%', py: '8px', ...flexEndColumnStyle }}>
+                <Box sx={{ height: 100, width: '90%', maxWidth: 220, mx: 'auto', mt: 1 }}></Box>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
+              </Box>
+              <Box sx={{ flex: 1, ml: 2, textAlign: 'center', height: '100%', py: '8px', ...flexEndColumnStyle }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
+                <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+}
+
+export default VendorInvoice;
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Button, Container, CircularProgress, Alert, TextField, Snackbar
+} from '@mui/material';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import './WorkOrderInvoice.css';
+import API from '../services/api';
+import { pricing } from '../constants/data';
+import { supabase } from '../supabase';
+import { calculateItemAmount, numberToWords } from '../utils/helpers';
+
+const WorkOrderInvoice = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const invoiceRef = useRef();
+
+  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
+
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
+  const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [companyDetails, setCompanyDetails] = useState(null);
+
+  const displayDate = passedInvoiceDate
+    ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
+    : new Date().toLocaleDateString('en-GB');
+
+  useEffect(() => {
+    setInvoiceNumber(passedInvoiceNumber || selectedItems[0]?.parent?.entryNumber || '');
+  }, [passedInvoiceNumber, selectedItems]);
+
+  const handleDownload = async () => {
+    const input = invoiceRef.current;
+    const canvas = await html2canvas(input, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`WorkOrder_${invoiceNumber || 'preview'}.pdf`);
+  };
+
+  const handleSaveToDatabase = async () => {
+    setIsSaving(true);
+    try {
+        const invoicePayload = {
+            invoiceNumber,
+            invoiceType: invoiceType || 'WorkOrder',
+            workItems: selectedItems.map(item => item.id),
+            parentOrderInfo: {
+                entryNumber: selectedItems[0]?.parent?.entryNumber,
+                vendor: selectedItems[0]?.parent?.vendor
+            },
+            company_id: parentOrder.company_id || null,
+            company_address: companyDetails ? companyDetails.address : '',
+            gstNo: companyDetails ? companyDetails.gst_number : '',
+            recipient: companyDetails ? companyDetails.company_name : parentOrder.vendor
+        };
+        if (isEditing && invoiceId) {
+            await API.put(`/invoices/${invoiceId}`, invoicePayload);
+            setSnackbar({ open: true, message: 'Invoice updated successfully!', severity: 'success' });
+        } else {
+            await API.post('/invoices', invoicePayload);
+            setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
+        }
+        setSaveSuccess(true);
+    } catch (error) {
+        console.error("Failed to save invoice:", error);
+        const serverError = error.response?.data?.error;
+        const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
+        setSnackbar({ open: true, message: msg, severity: 'error' });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  if (selectedItems.length === 0) {
+    return (
+        <Container sx={{ textAlign: 'center', mt: 5 }}>
+            <Typography variant="h6">No items to display.</Typography>
+            <Button sx={{mt: 2}} variant="contained" onClick={() => navigate('/invoices')}>Back to Invoices</Button>
+        </Container>
+    );
+  }
+
+  const parentOrder = selectedItems[0]?.parent || {};
+
+  useEffect(() => {
+    if (parentOrder && parentOrder.company_id) {
+      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
+        .then(({ data }) => {
+          if (data) setCompanyDetails(data);
+        })
+        .catch(console.error);
+    }
+  }, [parentOrder]);
+  const totalAmount = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
+  const totalWithGst = totalAmount * 1.18;
+  const roundedTotal = Math.round(totalWithGst);
+
+  const uniqueEvents = selectedItems.reduce((acc, item) => {
+      const key = `${item.eventName}-${item.parent?.eventDate}`;
+      if (!acc.has(key)) {
+          acc.set(key, {
+              name: `For ${item.eventName} at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`,
+              date: item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''
+          });
+      }
+      return acc;
+  }, new Map());
+
+  const eventDateDetails = Array.from(uniqueEvents.values());
+  const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
+
+  return (
+    <Container>
+      <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+            {(!savedInvoice || isEditing) && !saveSuccess && (
+                <Button variant="contained" color="success" onClick={handleSaveToDatabase} disabled={isSaving || saveSuccess}>
+                    {isSaving ? <CircularProgress size={24} color="inherit" /> : (isEditing ? 'Update Invoice' : 'Save to Database')}
+                </Button>
+            )}
+            {saveSuccess && (
+                <Button variant="contained" onClick={handleDownload}>Download Invoice</Button>
+            )}
+        </Box>
+      </Box>
+      {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}</Alert>}
+
+      <Paper ref={invoiceRef} id="generated-invoice" sx={{ p: 0, border: '2px solid #000', fontFamily: 'Arial, sans-serif' }}>
+        <Box sx={{ textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
+          <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
+          <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>बांद्रा (ईस्ट) , मुंबई - ४०००५१</Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>दूरभाष: 022-26274105 /4134  email : ongcmumbaice@ongc.co.in</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, pb: 0 }}>
+             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                सं. प.अ.क्षे.का./नि.सं./
+                {editingInvoiceNumber ? (
+                    <TextField
+                        value={invoiceNumber}
+                        onChange={(e) => setInvoiceNumber(e.target.value)}
+                        onBlur={() => setEditingInvoiceNumber(false)}
+                        autoFocus
+                        size="small"
+                        variant="standard"
+                        sx={{ ml: 1, width: '100px' }}
+                        disabled={isReadOnly}
+                    />
+                ) : (
+                    <Box component="span" onClick={() => !isReadOnly && setEditingInvoiceNumber(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}>
+                        {invoiceNumber || 'Click to set'}
+                    </Box>
+                )}
+             </Typography>
+             <Typography variant="body2">DT: {displayDate}</Typography>
+        </Box>
+        <Box sx={{ p: 2, pb: 0 }}>
+          <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
+            To,{'\n'}{companyDetails ? companyDetails.address : `M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606`}
+          </Typography>
+          <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
+          <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
+            The Following Photography Assignment Is Assigned To Your Agency.
+          </Typography>
+        </Box>
+        <TableContainer sx={{ p: 2, pt: 0 }}>
+          <Table size="small" sx={{ border: '1px solid #000' }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Sr.<br />No.</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Work</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Qty.</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Rate</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Amount<br />(Rs.)</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedItems.map((item, idx) => {
+                const amount = calculateItemAmount(item);
+                const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+                const quantity = item.quantity || 1;
+                return (
+                  <TableRow key={item.id || idx}>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{idx + 1}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000' }}>
+                      <Typography variant="body2" component="div">{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
+                      <>
+                          <Typography variant="body2" component="div">{item.workSub && `Duration : ${item.workSub.replaceAll('_', ' ')}`}</Typography>
+                          <Typography variant="body2" component="div">{`dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                          <Typography variant="body2" component="div">{`For ${item.eventName}`}</Typography>
+                          <Typography variant="body2" component="div">{`at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
+                      </>
+                    </TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{quantity}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{rate.toLocaleString('en-IN')}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{amount.toLocaleString('en-IN')}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box sx={{ p: 2, pt: 0 }}>
+          <TableContainer>
+            <Table size="small">
+              <TableBody>
+                  <TableRow>
+                      <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right'}}>Total Cost</TableCell>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: '25%' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>CGST 9%</TableCell>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>SGST 9%</TableCell>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                      <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>Total</TableCell>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                      <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
+                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+        <Box sx={{ p: 2, pt: 0 }}>
+          <TableContainer>
+            <Table size="small" sx={{ border: '1px solid #000' }}>
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold' }}>Event</TableCell>
+                  <TableCell sx={{ border: '1px solid #000' }}>
+                    {selectedItems.length === 1 ? `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` : 'For Various events at various places.'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>Date</TableCell>
+                  <TableCell sx={{ border: '1px solid #000' }}>
+                    {uniqueDates.join(', ')}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+        <Box sx={{ p: 2, pt: 0, mt: 4, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '60%', paddingTop : '10%' }}>
+          <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.1rem', lineHeight: 1.7 }}>
+            केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
+          </Typography>
+        </Box>
+      </Paper>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+};
+
+export default WorkOrderInvoice;
