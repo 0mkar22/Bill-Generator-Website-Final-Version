@@ -244,7 +244,7 @@ function VendorInvoice() {
         </Alert>
       )}
 
-      <Paper id="generated-bill" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff' }}>
+      <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff' }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
