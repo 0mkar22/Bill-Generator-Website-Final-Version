@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { supabase } from './supabase';
 
-import { Container, Paper, Typography, TextField, Button, Box, CircularProgress } from '@mui/material';
+import { Container, Paper, Typography, TextField, Button, Box, CircularProgress, ThemeProvider, createTheme } from '@mui/material';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
@@ -11,6 +11,13 @@ import Reports from './pages/Reports';
 import WorkOrderInvoice from './pages/WorkOrderInvoice';
 import VendorInvoice from './pages/VendorInvoice';
 import InvoiceGenerator from './pages/InvoiceGenerator';
+
+
+const theme = createTheme({
+  typography: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+  },
+});
 
 function App() {
   const [session, setSession] = useState(null);
@@ -57,14 +64,17 @@ function App() {
 
   if (loading) {
     return (
+      <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
       </Box>
+      </ThemeProvider>
     );
   }
 
   if (!session) {
     return (
+      <ThemeProvider theme={theme}>
       <Container maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '80vh' }}>
         <Paper elevation={4} sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 2, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
           <Box sx={{ textAlign: 'center', mb: 2 }}>
@@ -123,10 +133,12 @@ function App() {
           </form>
         </Paper>
       </Container>
+      </ThemeProvider>
     );
   }
 
   return (
+    <ThemeProvider theme={theme}>
     <ErrorBoundary>
       <Router>
         <Layout>
@@ -140,6 +152,7 @@ function App() {
         </Layout>
       </Router>
     </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 
