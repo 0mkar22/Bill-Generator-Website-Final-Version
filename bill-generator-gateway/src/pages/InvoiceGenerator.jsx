@@ -20,7 +20,7 @@ const InvoiceGenerator = () => {
   const fetchWorkItems = async () => {
     try {
       const response = await getWorkOrders();
-const allItems = (response.data.data || []).flatMap(order =>
+      const allItems = (response.data.data || []).flatMap(order =>
              (order.workItems || []).map((item, index) => {
              const uniqueId = item.id || `entry-${order.entryNumber}-item-${index}`;
              return { ...item, id: uniqueId, parent: order };
@@ -97,7 +97,40 @@ const allItems = (response.data.data || []).flatMap(order =>
     }
 
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
-    navigate(route, { state: { items: itemsForInvoice, savedInvoice: true, isEditing, invoiceId: savedInvoice.id, invoiceNumber: savedInvoice.invoiceNumber, invoiceDate: savedInvoice.createdAt, recipient: savedInvoice.recipient, dealingOfficer: savedInvoice.dealingOfficer, emailId: savedInvoice.emailId, vendorCode: savedInvoice.vendorCode, poNumber: savedInvoice.poNumber, poDate: savedInvoice.poDate, serviceDescription: savedInvoice.serviceDescription, gstNo: savedInvoice.gstNo } });
+    // Fallback to _id for MongoDB compatibility if Supabase's id isn't present
+    const currentInvoiceId = savedInvoice.id || savedInvoice._id; 
+    
+    navigate(route, { 
+      state: { 
+        items: itemsForInvoice, 
+        savedInvoice: true, 
+        isEditing, 
+        invoiceId: currentInvoiceId, 
+        invoiceNumber: savedInvoice.invoiceNumber, 
+        invoiceDate: savedInvoice.createdAt, 
+        recipient: savedInvoice.recipient, 
+        dealingOfficer: savedInvoice.dealingOfficer, 
+        emailId: savedInvoice.emailId, 
+        vendorCode: savedInvoice.vendorCode, 
+        poNumber: savedInvoice.poNumber, 
+        poDate: savedInvoice.poDate, 
+        serviceDescription: savedInvoice.serviceDescription, 
+        gstNo: savedInvoice.gstNo 
+      } 
+    });
+  };
+
+  // NEW: Handler for editing the core Work Item / Order itself
+  const handleEditWorkItem = (parentOrder) => {
+    // Note: Change '/work-order' to whatever your actual route is for the WorkOrder.jsx entry form
+    navigate('/work-order', { 
+      state: { 
+        isEditing: true, 
+        recordId: parentOrder.id || parentOrder._id, 
+        savedData: parentOrder,
+        items: parentOrder.workItems || []
+      } 
+    });
   };
 
   const uniqueVendors = useMemo(() => {
@@ -152,6 +185,7 @@ const allItems = (response.data.data || []).flatMap(order =>
                     <TableCell>PO/NPO</TableCell>
                     <TableCell>Event Date</TableCell>
                     <TableCell>Work Type</TableCell>
+                    <TableCell align="center">Actions</TableCell> {/* Added Action Column */}
                 </TableRow>
             </TableHead>
             <TableBody>
@@ -177,6 +211,16 @@ const allItems = (response.data.data || []).flatMap(order =>
                       <TableCell>{item.poNpo}</TableCell>
                       <TableCell>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
+                      <TableCell align="center">
+                         {/* Added Edit Button for the Work Item */}
+                         <Button 
+                            variant="outlined" 
+                            size="small" 
+                            onClick={() => handleEditWorkItem(item.parent)}
+                         >
+                            Edit
+                         </Button>
+                      </TableCell>
                     </TableRow>
                 )
               })}

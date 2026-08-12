@@ -194,11 +194,6 @@ function VendorInvoice() {
     );
   }
 
-  const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
-  const cgst = amountBeforeTax * 0.09;
-  const sgst = amountBeforeTax * 0.09;
-  const total = amountBeforeTax + cgst + sgst;
-  const rounded = Math.round(total);
   const parentOrder = selectedItems[0]?.parent || {};
 
   useEffect(() => {
@@ -216,6 +211,13 @@ function VendorInvoice() {
         .catch(console.error);
     }
   }, [parentOrder, passedRecipient, passedGstNo]);
+
+  // Updated to pass companyDetails so custom rates are factored into the grand total
+  const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
+  const cgst = amountBeforeTax * 0.09;
+  const sgst = amountBeforeTax * 0.09;
+  const total = amountBeforeTax + cgst + sgst;
+  const rounded = Math.round(total);
 
   return (
     <Container>
@@ -388,9 +390,7 @@ function VendorInvoice() {
                 isEditing={editingServiceDescription}
                 setEditing={setEditingServiceDescription}
                 isReadOnly={isReadOnly}
-                /* Removed width: 250 and added flex: 1 to let it take up available space naturally */
                 sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
-                /* Added whiteSpace: 'nowrap' to force it to stay on one line */
                 textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
               />
             </Box>
@@ -409,9 +409,17 @@ function VendorInvoice() {
           </TableHead>
           <TableBody>
             {selectedItems.map((item, idx) => {
-              const amount = calculateItemAmount(item);
-              const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+              // Updated to calculate using company Details
+              const amount = calculateItemAmount(item, companyDetails);
+              
+              const defaultRate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+              const companyCustomRate = companyDetails?.work_rates?.[item.workMain];
+              const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                            ? Number(companyCustomRate) 
+                            : defaultRate;
+
               const quantity = item.quantity || 1;
+              
               return (
                 <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000' }}>
                   <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>

@@ -27,7 +27,21 @@ const WorkOrder = () => {
   const [latestEntry, setLatestEntry] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
-  const [newCompany, setNewCompany] = useState({ company_name: '', address: '', gst_number: '' });
+  
+  // Updated newCompany state to include work_rates
+  const [newCompany, setNewCompany] = useState({ 
+    company_name: '', 
+    address: '', 
+    gst_number: '',
+    work_rates: {
+      Still_Photography: '',
+      Videography: '',
+      Two_Camera_Setup: '',
+      Three_Camera_Setup: '',
+      Live_Telecast: '',
+      '32_GB_Pendrive': ''
+    }
+  });
 
   const [submitting, setSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -41,6 +55,7 @@ const WorkOrder = () => {
       console.error("Failed to fetch companies:", error);
     }
   };
+  
   const fetchLatestEntry = async () => {
     try {
         const response = await getWorkOrders();
@@ -73,6 +88,17 @@ const WorkOrder = () => {
     }
   }, [editData]);
 
+  // Handler for updating custom rates in the modal
+  const handleRateChange = (workType, value) => {
+    setNewCompany(prev => ({
+      ...prev,
+      work_rates: {
+        ...prev.work_rates,
+        [workType]: value === '' ? '' : Number(value)
+      }
+    }));
+  };
+
   const handleSaveCompany = async () => {
     try {
       const { data, error } = await supabase.from('companies').insert([newCompany]).select();
@@ -80,7 +106,11 @@ const WorkOrder = () => {
       setCompanies(prev => [...prev, data[0]]);
       setFormData(prev => ({ ...prev, company_id: data[0].id }));
       setIsCompanyModalOpen(false);
-      setNewCompany({ company_name: '', address: '', gst_number: '' });
+      // Reset state including work_rates
+      setNewCompany({ 
+        company_name: '', address: '', gst_number: '', 
+        work_rates: { Still_Photography: '', Videography: '', Two_Camera_Setup: '', Three_Camera_Setup: '', Live_Telecast: '', '32_GB_Pendrive': '' } 
+      });
       setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
     } catch (error) {
       console.error('Failed to add company:', error);
@@ -165,6 +195,9 @@ const WorkOrder = () => {
       setSubmitting(false);
     }
   };
+
+  // Find the selected company details to pass to the helper function
+  const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
 
   return (
     <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
@@ -257,7 +290,8 @@ const WorkOrder = () => {
                     <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                    <TextField label="Amount" type="text" fullWidth value={calculateItemAmount(item).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} />
+                    {/* Updated to pass selectedCompany into the calculate function */}
+                    <TextField label="Amount" type="text" fullWidth value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} />
                 </Grid>
             </Grid>
           </Paper>
@@ -277,7 +311,7 @@ const WorkOrder = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)' } }}>
+      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', minWidth: '400px' } }}>
         <DialogTitle>Add New Company</DialogTitle>
         <DialogContent>
           <TextField
@@ -310,6 +344,23 @@ const WorkOrder = () => {
             value={newCompany.gst_number}
             onChange={(e) => setNewCompany({...newCompany, gst_number: e.target.value})}
           />
+          
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Custom Work Rates (Optional)</Typography>
+          
+          {Object.keys(newCompany.work_rates).map(key => (
+            <TextField
+              key={key}
+              margin="dense"
+              label={`${key.replaceAll('_', ' ')} Rate`}
+              type="number"
+              fullWidth
+              variant="outlined"
+              value={newCompany.work_rates[key]}
+              onChange={(e) => handleRateChange(key, e.target.value)}
+            />
+          ))}
+
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
