@@ -311,7 +311,30 @@ const WorkOrder = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', minWidth: '400px' } }}>
+      <Dialog 
+        open={isCompanyModalOpen} 
+        onClose={() => setIsCompanyModalOpen(false)} 
+        
+        // 1. Lighten the dark background overlay so the glass stays bright
+        slotProps={{
+          backdrop: {
+            sx: { backgroundColor: 'rgba(0, 0, 0, 0.1)' } // Very light shadow instead of heavy dark gray
+          }
+        }}
+        
+        PaperProps={{ 
+          sx: { 
+            // 2. Bring back the glass translucency (40% white)
+            bgcolor: 'rgba(255, 255, 255, 0.4)', 
+            // 3. Keep the frosted glass blur
+            backdropFilter: 'blur(16px)', 
+            // 4. A slightly stronger white border to define the glass edge
+            border: '1px solid rgba(255, 255, 255, 0.6)', 
+            minWidth: '400px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)' 
+          } 
+        }}
+      >
         <DialogTitle>Add New Company</DialogTitle>
         <DialogContent>
           <TextField
