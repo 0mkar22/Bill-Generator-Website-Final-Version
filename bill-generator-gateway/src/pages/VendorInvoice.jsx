@@ -8,7 +8,6 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import './VendorInvoice.css';
 import API from '../services/api';
-import { pricing } from '../constants/data';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
@@ -409,15 +408,14 @@ function VendorInvoice() {
           </TableHead>
           <TableBody>
             {selectedItems.map((item, idx) => {
-              // Updated to calculate using company Details
               const amount = calculateItemAmount(item, companyDetails);
               
-              const defaultRate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+              // Extract strictly from the company details in the database
               const companyCustomRate = companyDetails?.work_rates?.[item.workMain];
               const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
                             ? Number(companyCustomRate) 
-                            : defaultRate;
-
+                            : 0;
+                            
               const quantity = item.quantity || 1;
               
               return (
