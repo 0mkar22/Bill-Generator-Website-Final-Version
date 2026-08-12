@@ -12,8 +12,10 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import API from '../services/api';
-import { pricing, subWorks, venues, vendors } from '../constants/data';
+// REMOVED 'pricing' import since we are using dynamic database rates now
+import { subWorks, venues, vendors } from '../constants/data';
 import { calculateItemAmount, formatDateToYYYYMMDD } from '../utils/helpers';
+import { supabase } from '../supabase'; // Added supabase to fetch company rates
 
 const Reports = () => {
     const navigate = useNavigate();
@@ -30,22 +32,33 @@ const Reports = () => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const itemsPerPage = 10;
     const [monthFilter, setMonthFilter] = useState('');
-        const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     const fetchWorkOrders = async () => {
         try {
             setLoading(true);
             setError(null);
+
+            // Fetch companies so we can calculate dynamic rates for the report
+            const { data: companyData } = await supabase.from('companies').select('*');
+            const fetchedCompanies = companyData || [];
+
             const response = await API.get('/workOrders');
-            const allWorkItems = (response.data.data || []).flatMap(order =>
-                (order.workItems || []).map(item => ({
+            const allWorkItems = (response.data.data || []).flatMap(order => {
+                // Find the specific company details for this order to pass to the rate calculator
+                const companyDetails = fetchedCompanies.find(c => c.id === order.company_id) || null;
+
+                return (order.workItems || []).map(item => ({
                     ...item,
                     parentWorkOrderId: order.id,
                     entryNumber: order.entryNumber,
                     date: order.eventDate,
-                    vendor: order.vendor
-                }))
-            );
+                    vendor: order.vendor,
+                    fullOrder: order, // CRITICAL FIX: Attach the full order data so the Edit button works
+                    companyDetails: companyDetails // Attach company details for amount calculation
+                }));
+            });
+            
             setWorkItems(allWorkItems);
             const uniqueVendors = [...new Set(allWorkItems.map(item => item.vendor))];
             const uniqueWorkTypes = [...new Set(allWorkItems.map(item => item.workMain))];
@@ -114,7 +127,7 @@ const Reports = () => {
 
     const handleExportToExcel = () => {
         const filteredItems = getSortedItems();
-        const totalAmount = filteredItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
+        const totalAmount = filteredItems.reduce((sum, item) => sum + calculateItemAmount(item, item.companyDetails), 0);
         const totalAmountWithGst = totalAmount * 1.18;
         const data = filteredItems.map((item, idx) => ({
             'Entry Number': item.entryNumber, 'Sr. No': idx + 1, 'Event Date': new Date(item.date).toLocaleDateString('en-GB'),
@@ -122,7 +135,7 @@ const Reports = () => {
             'PO/NPO': item.poNpo,
             'Work Type': getWorkTypeDisplay(item),
             'Contact Person': item.contactPerson, 'Contact Number': item.contactNumber,
-            'Amount': calculateItemAmount(item), 'Amount with GST': calculateItemAmount(item) * 1.18
+            'Amount': calculateItemAmount(item, item.companyDetails), 'Amount with GST': calculateItemAmount(item, item.companyDetails) * 1.18
         }));
         data.push({ 'Contact Number': 'Total Amount:', 'Amount': totalAmount, 'Amount with GST': totalAmountWithGst });
         const ws = XLSX.utils.json_to_sheet(data);
@@ -142,7 +155,7 @@ const Reports = () => {
         const tableColumn = ["Entry No", "Sr. No", "Date", "Vendor", "Event Name", "Venue", "Time", "PO/NPO", "Work Type", "Contact", "Phone", "Amount", "Amount+GST"];
         const tableRows = [];
         filteredItems.forEach((item, idx) => {
-            const amount = calculateItemAmount(item);
+            const amount = calculateItemAmount(item, item.companyDetails);
             const rowData = [
                 item.entryNumber, idx + 1, new Date(item.date).toLocaleDateString('en-GB'),
                 item.vendor, item.eventName, item.eventVenue, item.eventTime, item.poNpo,
@@ -157,7 +170,7 @@ const Reports = () => {
             headStyles: { fillColor: [22, 160, 133] }, styles: { fontSize: 8, cellPadding: 1.5 },
             columnStyles: { 11: { halign: 'right' }, 12: { halign: 'right' } }
         });
-        const totalAmount = filteredItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
+        const totalAmount = filteredItems.reduce((sum, item) => sum + calculateItemAmount(item, item.companyDetails), 0);
         const totalAmountWithGst = totalAmount * 1.18;
         const finalY = doc.lastAutoTable.finalY;
         doc.setFontSize(10);
@@ -169,13 +182,14 @@ const Reports = () => {
     };
 
     const handleEditWorkItem = (item) => {
+        // Change '/' to '/work-order' if your entry form is on a different path
         navigate('/', { state: { editData: item.fullOrder } });
     };
 
     const renderTable = () => {
         const sortedItems = getSortedItems();
         const paginatedItems = sortedItems.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-        const totalAmount = sortedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
+        const totalAmount = sortedItems.reduce((sum, item) => sum + calculateItemAmount(item, item.companyDetails), 0);
         const totalAmountWithGst = totalAmount * 1.18;
 
         return (
@@ -196,7 +210,7 @@ const Reports = () => {
                     </TableHead>
                     <TableBody>
                         {paginatedItems.map((item) => {
-                            const amount = calculateItemAmount(item);
+                            const amount = calculateItemAmount(item, item.companyDetails);
                             return (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.entryNumber}</TableCell>
@@ -259,8 +273,6 @@ const Reports = () => {
                 </Box>
                 {loading ? <CircularProgress /> : error ? <Alert severity="error">{error}</Alert> : renderTable()}
             </Paper>
-
-
 
             <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
                 <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
