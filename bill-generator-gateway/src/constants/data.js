@@ -1,11 +1,4 @@
 export const pricing = {
-  "Still_Photography": { "Mumbai_Upto_4_Hrs": 2950, "Mumbai_Above_4_and_upto_8_Hrs": 4150, "Panvel_Upto_4_Hrs": 3200, "Panvel_Above_4_and_upto_8_Hrs": 4150, "Uran_Upto_4_Hrs": 4000, "Uran_Above_4_and_upto_8_Hrs": 5200, "Nhava_Upto_4_Hrs": 4000, "Nhava_Above_4_and_upto_8_Hrs": 5200, "Outstation_Upto_4_Hrs": 4490, "Outstation_Above_4_and_upto_8_Hrs": 6300 },
-  "Videography": { "Mumbai_Upto_4_Hrs": 4300, "Mumbai_Above_4_and_upto_8_Hrs": 6000, "Panvel_Upto_4_Hrs": 4300, "Panvel_Above_4_and_upto_8_Hrs": 6000, "Uran_Upto_4_Hrs": 4500, "Uran_Above_4_and_upto_8_Hrs": 6000, "Nhava_Upto_4_Hrs": 4500, "Nhava_Above_4_and_upto_8_Hrs": 6000, "Outstation_Upto_4_Hrs": 5800, "Outstation_Above_4_and_upto_8_Hrs": 7500 },
-  "Two_Camera_Setup": { "Mumbai_Upto_4_Hrs": 23650, "Mumbai_Above_4_and_upto_8_Hrs": 37000, "Panvel_Upto_4_Hrs": 25500, "Panvel_Above_4_and_upto_8_Hrs": 37000, "Uran_Upto_4_Hrs": 26500, "Uran_Above_4_and_upto_8_Hrs": 38000, "Nhava_Upto_4_Hrs": 26500, "Nhava_Above_4_and_upto_8_Hrs": 38000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 41000 },
-  "Three_Camera_Setup": { "Mumbai_Upto_4_Hrs": 31000, "Mumbai_Above_4_and_upto_8_Hrs": 40000, "Panvel_Upto_4_Hrs": 31000, "Panvel_Above_4_and_upto_8_Hrs": 40000, "Uran_Upto_4_Hrs": 31000, "Uran_Above_4_and_upto_8_Hrs": 40000, "Nhava_Upto_4_Hrs": 31000, "Nhava_Above_4_and_upto_8_Hrs": 40000, "Outstation_Upto_4_Hrs": 32000, "Outstation_Above_4_and_upto_8_Hrs": 43000 },
-  "Live_Telecast": { "Mumbai_Upto_4_Hrs": 7000, "Mumbai_Above_4_and_upto_8_Hrs": 9000, "Panvel_Upto_4_Hrs": 7000, "Panvel_Above_4_and_upto_8_Hrs": 9000, "Uran_Upto_4_Hrs": 7000, "Uran_Above_4_and_upto_8_Hrs": 9000, "Nhava_Upto_4_Hrs": 7000, "Nhava_Above_4_and_upto_8_Hrs": 9000, "Outstation_Upto_4_Hrs": 9000, "Outstation_Above_4_and_upto_8_Hrs": 10000 },
-  "32_GB_Pendrive": 550,
-  "Others": {}
 };
 
 export const subWorks = {
