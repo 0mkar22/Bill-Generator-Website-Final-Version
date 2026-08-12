@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Button, Container, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Typography, TextField, Select, MenuItem, FormControl,
-  InputLabel, Pagination, CircularProgress, Alert, Grid, Dialog, DialogTitle,
-  DialogContent, DialogActions, Snackbar
+  InputLabel, Pagination, CircularProgress, Alert, Grid, Snackbar
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon,
@@ -31,9 +30,7 @@ const Reports = () => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const itemsPerPage = 10;
     const [monthFilter, setMonthFilter] = useState('');
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editedItemData, setEditedItemData] = useState(null);
-    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+        const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     const fetchWorkOrders = async () => {
         try {
@@ -172,43 +169,7 @@ const Reports = () => {
     };
 
     const handleEditWorkItem = (item) => {
-        setEditedItemData({ ...item, date: formatDateToYYYYMMDD(item.date) });
-        setEditModalOpen(true);
-    };
-
-    const handleCloseEditModal = () => {
-        setEditModalOpen(false);
-        setEditedItemData(null);
-    };
-
-    const handleEditInputChange = (event) => {
-        const { name, value } = event.target;
-        setEditedItemData(prevData => ({ ...prevData, [name]: value }));
-    };
-
-    const handleSaveChanges = async () => {
-        if (!editedItemData?.id || !editedItemData?.parentWorkOrderId) return;
-        try {
-            const parentWorkOrderResponse = await API.get(`/workOrders/${editedItemData.parentWorkOrderId}`);
-            const parentWorkOrder = parentWorkOrderResponse.data.data;
-            const itemIndex = (parentWorkOrder.workItems || []).findIndex(item => item.id === editedItemData.id);
-            if (itemIndex === -1) return;
-            const updatedWorkItems = [...parentWorkOrder.workItems];
-            updatedWorkItems[itemIndex] = { ...updatedWorkItems[itemIndex], ...editedItemData };
-            const updatedParentWorkOrder = {
-                ...parentWorkOrder,
-                workItems: updatedWorkItems,
-                eventDate: editedItemData.date || parentWorkOrder.eventDate,
-                vendor: editedItemData.vendor || parentWorkOrder.vendor
-            };
-            await API.put(`/workOrders/${updatedParentWorkOrder.id}`, updatedParentWorkOrder);
-            setSnackbar({ open: true, message: 'Work item updated successfully!', severity: 'success' });
-            handleCloseEditModal();
-            fetchWorkOrders();
-        } catch (err) {
-            console.error('Error updating work item:', err);
-            setSnackbar({ open: true, message: 'Failed to update work item.', severity: 'error' });
-        }
+        navigate('/', { state: { editData: item.fullOrder } });
     };
 
     const renderTable = () => {
@@ -299,52 +260,7 @@ const Reports = () => {
                 {loading ? <CircularProgress /> : error ? <Alert severity="error">{error}</Alert> : renderTable()}
             </Paper>
 
-            <Dialog open={editModalOpen} onClose={handleCloseEditModal} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)' } }}>
-                <DialogTitle>Edit Work Item</DialogTitle>
-                <DialogContent>
-                    {editedItemData && (
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={12} sm={6}><TextField fullWidth label="Entry Number" name="entryNumber" value={editedItemData.entryNumber || ''} onChange={handleEditInputChange} /></Grid>
-                            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>Vendor</InputLabel><Select label="Vendor" name="vendor" value={editedItemData.vendor || ''} onChange={handleEditInputChange}>{dynamicVendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
-                            <Grid item xs={12} sm={6}><TextField fullWidth label="Event Name" name="eventName" value={editedItemData.eventName || ''} onChange={handleEditInputChange} /></Grid>
-                            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>PO/NPO</InputLabel><Select label="PO/NPO" name="poNpo" value={editedItemData.poNpo || 'PO'} onChange={handleEditInputChange}><MenuItem value="PO">PO</MenuItem><MenuItem value="NPO">NPO</MenuItem></Select></FormControl></Grid>
-                            <Grid item xs={12} sm={6}><TextField fullWidth label="Event Time" type="time" name="eventTime" value={editedItemData.eventTime || ''} onChange={handleEditInputChange} InputLabelProps={{ shrink: true }} /></Grid>
-                            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>Event Venue</InputLabel><Select label="Event Venue" name="eventVenue" value={editedItemData.eventVenue || ''} onChange={handleEditInputChange}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
-                            {editedItemData.eventVenue === 'Others' && <Grid item xs={12}><TextField fullWidth label="Custom Venue" name="customVenue" value={editedItemData.customVenue || ''} onChange={handleEditInputChange} /></Grid>}
-                            <Grid item xs={12} sm={6}><TextField fullWidth label="Contact Person" name="contactPerson" value={editedItemData.contactPerson || ''} onChange={handleEditInputChange} /></Grid>
-                            <Grid item xs={12} sm={6}><TextField fullWidth label="Contact Number" name="contactNumber" value={editedItemData.contactNumber || ''} onChange={handleEditInputChange} /></Grid>
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Work Name</InputLabel>
-                                    <Select label="Work Name" name="workMain" value={editedItemData.workMain || ''} onChange={handleEditInputChange}>
-                                        <MenuItem value="Still_Photography">Still Photography</MenuItem>
-                                        <MenuItem value="Videography">Videography</MenuItem>
-                                        <MenuItem value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>
-                                        <MenuItem value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>
-                                        <MenuItem value="Live_Telecast">Live Telecast Setup</MenuItem>
-                                        <MenuItem value="32_GB_Pendrive">32 GB Pendrive</MenuItem>
-                                        <MenuItem value="Others">Others</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            {editedItemData.workMain === '32_GB_Pendrive' ? (
-                                <Grid item xs={12} sm={6}>
-                                    <TextField name="quantity" label="Quantity" type="number" fullWidth value={editedItemData.quantity || 1} onChange={handleEditInputChange} />
-                                </Grid>
-                            ) : editedItemData.workMain === 'Others' ? (
-                                <Grid item xs={12} sm={6}><TextField fullWidth label="Custom Work Name" name="customWorkMain" value={editedItemData.customWorkMain || ''} onChange={handleEditInputChange} /></Grid>
-                            ) : (
-                                <Grid item xs={12} sm={6}><FormControl fullWidth disabled={!editedItemData.workMain}><InputLabel>Work Subcategory</InputLabel><Select label="Work Subcategory" name="workSub" value={editedItemData.workSub || ''} onChange={handleEditInputChange}>{(subWorks[editedItemData.workMain] || []).map(sub => <MenuItem key={sub} value={sub}>{sub.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl></Grid>
-                            )}
-                            <Grid item xs={12} sm={6}><TextField fullWidth label="Event Date" type="date" name="date" value={editedItemData.date || ''} onChange={handleEditInputChange} InputLabelProps={{ shrink: true }} /></Grid>
-                        </Grid>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseEditModal}>Cancel</Button>
-                    <Button variant="contained" onClick={handleSaveChanges}>Save Changes</Button>
-                </DialogActions>
-            </Dialog>
+
 
             <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
                 <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
