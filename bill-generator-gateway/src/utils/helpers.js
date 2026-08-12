@@ -1,13 +1,25 @@
 import { pricing } from '../constants/data';
 
-export const calculateItemAmount = (item) => {
-    let rate = 0;
+export const calculateItemAmount = (item, companyDetails = null) => {
+    // 1. Calculate standard default rate
+    let defaultRate = 0;
     if (item.workMain === '32_GB_Pendrive') {
-        rate = pricing[item.workMain] || 0;
+        defaultRate = pricing[item.workMain] || 0;
     } else {
-        rate = pricing[item.workMain]?.[item.workSub] || 0;
+        defaultRate = pricing[item.workMain]?.[item.workSub] || 0;
     }
-    return rate * (item.quantity || 1);
+
+    // 2. Check for a custom rate specific to the company
+    const companyCustomRate = companyDetails?.work_rates?.[item.workMain];
+    
+    // 3. Decide which rate to apply
+    const finalRate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                        ? Number(companyCustomRate) 
+                        : defaultRate;
+
+    // 4. Calculate total amount based on quantity
+    const quantity = item.quantity || 1;
+    return finalRate * quantity;
 };
 
 export function numberToWords(num) {

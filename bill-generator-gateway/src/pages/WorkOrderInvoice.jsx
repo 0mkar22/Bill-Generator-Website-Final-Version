@@ -100,7 +100,9 @@ const WorkOrderInvoice = () => {
         .catch(console.error);
     }
   }, [parentOrder]);
-  const totalAmount = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
+
+  // Updated to pass companyDetails so custom rates factor into the grand total
+  const totalAmount = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
   const totalWithGst = totalAmount * 1.18;
   const roundedTotal = Math.round(totalWithGst);
 
@@ -188,8 +190,15 @@ const WorkOrderInvoice = () => {
             </TableHead>
             <TableBody>
               {selectedItems.map((item, idx) => {
-                const amount = calculateItemAmount(item);
-                const rate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+                // Updated to calculate using company Details
+                const amount = calculateItemAmount(item, companyDetails);
+                
+                const defaultRate = (item.workMain === '32_GB_Pendrive') ? pricing[item.workMain] : (pricing[item.workMain]?.[item.workSub] || 0);
+                const companyCustomRate = companyDetails?.work_rates?.[item.workMain];
+                const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                              ? Number(companyCustomRate) 
+                              : defaultRate;
+                              
                 const quantity = item.quantity || 1;
                 return (
                   <TableRow key={item.id || idx}>
