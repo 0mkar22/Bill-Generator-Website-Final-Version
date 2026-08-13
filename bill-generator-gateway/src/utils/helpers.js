@@ -1,23 +1,49 @@
-import { pricing } from '../constants/data';
-
 export const calculateItemAmount = (item, companyDetails = null) => {
-    // 1. Calculate standard default rate
-    let defaultRate = 0;
-    if (item.workMain === '32_GB_Pendrive') {
-        defaultRate = pricing[item.workMain] || 0;
-    } else {
-        defaultRate = pricing[item.workMain]?.[item.workSub] || 0;
-    }
-
-    // 2. Check for a custom rate specific to the company
-    const companyCustomRate = companyDetails?.work_rates?.[item.workMain];
+    let companyCustomRate = null;
     
-    // 3. Decide which rate to apply
+    // Check if the user manually entered a rate for "Others"
+    if (item.workMain === 'Others') {
+        companyCustomRate = item.customRate;
+    } else {
+        // 1. Safely handle if Supabase returns work_rates as a JSON string instead of an object
+        let workRates = companyDetails?.work_rates;
+        if (typeof workRates === 'string') {
+            try { workRates = JSON.parse(workRates); } catch (e) { workRates = {}; }
+        }
+
+        // 2. Navigate the nested object to find the rate
+        if (workRates && item.workMain) {
+            if (item.workMain === '32_GB_Pendrive') {
+                companyCustomRate = workRates[item.workMain];
+            } else {
+                const categoryRates = workRates[item.workMain];
+                
+                if (categoryRates && item.workSub) {
+                    // Try an exact match first
+                    if (categoryRates[item.workSub] !== undefined) {
+                        companyCustomRate = categoryRates[item.workSub];
+                    } else {
+                        // FUZZY MATCH: If spaces/underscores don't align perfectly, strip them out
+                        const normalize = (str) => (str || '').toLowerCase().replace(/[_ ]/g, '');
+                        const normalizedTarget = normalize(item.workSub);
+                        
+                        const matchedKey = Object.keys(categoryRates).find(k => normalize(k) === normalizedTarget);
+                        
+                        if (matchedKey) {
+                            companyCustomRate = categoryRates[matchedKey];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 3. Fall back to 0 if the rate is completely empty or missing
     const finalRate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
                         ? Number(companyCustomRate) 
-                        : defaultRate;
+                        : 0;
 
-    // 4. Calculate total amount based on quantity
+    // 4. Calculate total
     const quantity = item.quantity || 1;
     return finalRate * quantity;
 };

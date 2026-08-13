@@ -6,10 +6,44 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import API, { getWorkOrders, createWorkOrder } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors } from '../constants/data';
 import { calculateItemAmount } from '../utils/helpers';
+
+const getDefaultRatesTemplate = () => {
+  const baseLocations = ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'];
+  
+  const generateCategoryRates = (workMain) => {
+    const rates = {};
+    const rawSubWorks = subWorks[workMain] || [];
+    
+    const hasLocationPrefix = rawSubWorks.some(sub => 
+      ['mumbai', 'panvel', 'uran', 'nhava', 'outstation'].some(loc => sub.toLowerCase().includes(loc))
+    );
+
+    if (hasLocationPrefix) {
+      rawSubWorks.forEach(dur => { rates[dur] = ''; });
+    } else {
+      baseLocations.forEach(loc => {
+        rawSubWorks.forEach(dur => {
+          rates[`${loc}_${dur}`] = '';
+        });
+      });
+    }
+    return rates;
+  };
+
+  return {
+    Still_Photography: generateCategoryRates('Still_Photography'),
+    Videography: generateCategoryRates('Videography'),
+    Two_Camera_Setup: generateCategoryRates('Two_Camera_Setup'),
+    Three_Camera_Setup: generateCategoryRates('Three_Camera_Setup'),
+    Live_Telecast: generateCategoryRates('Live_Telecast'),
+    '32_GB_Pendrive': ''
+  };
+};
 
 const WorkOrder = () => {
   const location = useLocation();
@@ -21,26 +55,20 @@ const WorkOrder = () => {
     vendor: '',
     company_id: '',
     workItems: [
-      { eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }
+      { eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '' }
     ]
   });
   const [latestEntry, setLatestEntry] = useState(null);
   const [companies, setCompanies] = useState([]);
-  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   
-  // Updated newCompany state to include work_rates
+  // Modal states
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [editingCompanyId, setEditingCompanyId] = useState(null);
   const [newCompany, setNewCompany] = useState({ 
     company_name: '', 
     address: '', 
     gst_number: '',
-    work_rates: {
-      Still_Photography: '',
-      Videography: '',
-      Two_Camera_Setup: '',
-      Three_Camera_Setup: '',
-      Live_Telecast: '',
-      '32_GB_Pendrive': ''
-    }
+    work_rates: getDefaultRatesTemplate()
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -75,46 +103,176 @@ const WorkOrder = () => {
   useEffect(() => {
     fetchCompanies();
     if (editData) {
+      let parsedItems = [];
+      if (Array.isArray(editData.workItems)) {
+        parsedItems = editData.workItems;
+      } else if (typeof editData.workItems === 'string') {
+        try { parsedItems = JSON.parse(editData.workItems); } catch (e) {}
+      }
+
+      if (parsedItems.length === 0) {
+        parsedItems = [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '' }];
+      }
+
+      let formattedDate = '';
+      if (editData.eventDate) {
+        try {
+          const dateObj = new Date(editData.eventDate);
+          if (!isNaN(dateObj)) {
+            formattedDate = dateObj.toISOString().split('T')[0];
+          }
+        } catch (e) {}
+      }
+
       setFormData({
-        id: editData.id,
+        id: editData.id || editData._id || '',
         entryNumber: editData.entryNumber || '',
-        eventDate: editData.eventDate ? new Date(editData.eventDate).toISOString().split('T')[0] : '',
+        eventDate: formattedDate,
         vendor: editData.vendor || '',
         company_id: editData.company_id || '',
-        workItems: Array.isArray(editData.workItems) ? editData.workItems : []
+        workItems: parsedItems
       });
     } else {
       fetchLatestEntry();
     }
   }, [editData]);
 
-  // Handler for updating custom rates in the modal
-  const handleRateChange = (workType, value) => {
-    setNewCompany(prev => ({
-      ...prev,
-      work_rates: {
-        ...prev.work_rates,
-        [workType]: value === '' ? '' : Number(value)
-      }
-    }));
+  const getFilteredSubWorks = (workMain, company) => {
+    const companyName = company?.company_name?.toUpperCase() || '';
+    const isONGC = companyName.includes('ONGC') || 
+                   companyName.includes('OIL & NATURAL GAS') || 
+                   companyName.includes('OIL AND NATURAL GAS');
+
+    const allowedLocations = isONGC 
+      ? ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'] 
+      : ['Mumbai', 'Outstation'];
+
+    const rawSubWorks = subWorks[workMain] || [];
+
+    const hasLocationPrefix = rawSubWorks.some(sub => 
+      ['mumbai', 'panvel', 'uran', 'nhava', 'outstation'].some(loc => sub.toLowerCase().includes(loc))
+    );
+
+    if (hasLocationPrefix) {
+      return rawSubWorks.filter(sub => 
+        allowedLocations.some(loc => sub.toLowerCase().includes(loc.toLowerCase()))
+      );
+    }
+
+    if (rawSubWorks.length > 0) {
+      const combinations = [];
+      allowedLocations.forEach(loc => {
+        rawSubWorks.forEach(dur => {
+          combinations.push(`${loc}_${dur}`);
+        });
+      });
+      return combinations;
+    }
+
+    return allowedLocations;
   };
 
-  const handleSaveCompany = async () => {
+  // Modal Triggers
+  const handleOpenAddCompany = () => {
+    setEditingCompanyId(null);
+    setNewCompany({ 
+      company_name: '', address: '', gst_number: '', 
+      work_rates: getDefaultRatesTemplate() 
+    });
+    setIsCompanyModalOpen(true);
+  };
+
+  const handleEditCompanyClick = (e, company) => {
+    e.preventDefault();
+    e.stopPropagation(); 
+    setEditingCompanyId(company.id);
+    
+    const existingRates = company.work_rates || {};
+    const mergedRates = getDefaultRatesTemplate();
+    
+    for (const key in mergedRates) {
+      if (typeof mergedRates[key] === 'object') {
+        mergedRates[key] = { ...mergedRates[key], ...(existingRates[key] || {}) };
+      } else {
+        mergedRates[key] = existingRates[key] !== undefined ? existingRates[key] : '';
+      }
+    }
+
+    setNewCompany({
+      company_name: company.company_name || '',
+      address: company.address || '',
+      gst_number: company.gst_number || '',
+      work_rates: mergedRates
+    });
+    setIsCompanyModalOpen(true);
+  };
+
+  const handleRateChange = (workType, subType, value) => {
+    setNewCompany(prev => {
+      const updatedRates = { ...prev.work_rates };
+      if (subType) {
+        updatedRates[workType] = {
+          ...updatedRates[workType],
+          [subType]: value === '' ? '' : Number(value)
+        };
+      } else {
+        updatedRates[workType] = value === '' ? '' : Number(value);
+      }
+      return { ...prev, work_rates: updatedRates };
+    });
+  };
+
+  const handleSaveCompany = async (e) => {
+    if (e) e.preventDefault();
     try {
-      const { data, error } = await supabase.from('companies').insert([newCompany]).select();
-      if (error) throw error;
-      setCompanies(prev => [...prev, data[0]]);
-      setFormData(prev => ({ ...prev, company_id: data[0].id }));
-      setIsCompanyModalOpen(false);
-      // Reset state including work_rates
-      setNewCompany({ 
-        company_name: '', address: '', gst_number: '', 
-        work_rates: { Still_Photography: '', Videography: '', Two_Camera_Setup: '', Three_Camera_Setup: '', Live_Telecast: '', '32_GB_Pendrive': '' } 
+      const companyNameStr = newCompany.company_name?.toUpperCase() || '';
+      const isONGC = companyNameStr.includes('ONGC') || 
+                     companyNameStr.includes('OIL & NATURAL GAS') || 
+                     companyNameStr.includes('OIL AND NATURAL GAS');
+      
+      const allowedLocations = isONGC 
+          ? ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'] 
+          : ['Mumbai', 'Outstation'];
+
+      const cleanedRates = JSON.parse(JSON.stringify(newCompany.work_rates));
+
+      Object.keys(cleanedRates).forEach(category => {
+        if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null) {
+          Object.keys(cleanedRates[category]).forEach(subKey => {
+            const isAllowed = allowedLocations.some(loc => subKey.includes(loc));
+            if (!isAllowed) {
+              delete cleanedRates[category][subKey];
+            }
+          });
+        }
       });
-      setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
+
+      const payloadToSave = { ...newCompany, work_rates: cleanedRates };
+
+      if (editingCompanyId) {
+        const { data, error } = await supabase
+          .from('companies')
+          .update(payloadToSave)
+          .eq('id', editingCompanyId)
+          .select();
+        
+        if (error) throw error;
+        
+        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? data[0] : c));
+        setSnackbar({ open: true, message: 'Company updated successfully!', severity: 'success' });
+      } else {
+        const { data, error } = await supabase.from('companies').insert([payloadToSave]).select();
+        if (error) throw error;
+        
+        setCompanies(prev => [...prev, data[0]]);
+        setFormData(prev => ({ ...prev, company_id: data[0].id }));
+        setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
+      }
+      
+      setIsCompanyModalOpen(false);
     } catch (error) {
-      console.error('Failed to add company:', error);
-      setSnackbar({ open: true, message: 'Failed to add company.', severity: 'error' });
+      console.error('Failed to save company:', error);
+      setSnackbar({ open: true, message: 'Failed to save company data.', severity: 'error' });
     }
   };
 
@@ -137,6 +295,7 @@ const WorkOrder = () => {
     if (name === 'workMain') {
         newWorkItems[index]['workSub'] = '';
         newWorkItems[index]['quantity'] = 1;
+        newWorkItems[index]['customRate'] = ''; // reset custom rate on category change
     }
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
   };
@@ -158,7 +317,8 @@ const WorkOrder = () => {
               workMain: '',
               workSub: '',
               quantity: 1,
-              customWorkMain: ''
+              customWorkMain: '',
+              customRate: ''
           }
       ]
     }));
@@ -182,7 +342,7 @@ const WorkOrder = () => {
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
-          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '' }]
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '' }]
         });
         fetchLatestEntry();
       }
@@ -196,7 +356,6 @@ const WorkOrder = () => {
     }
   };
 
-  // Find the selected company details to pass to the helper function
   const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
 
   return (
@@ -208,10 +367,24 @@ const WorkOrder = () => {
             <FormControl fullWidth>
               <InputLabel>Select Company</InputLabel>
               <Select name="company_id" value={formData.company_id} label="Select Company" onChange={handleMainChange}>
-                <MenuItem value="" onClick={() => setIsCompanyModalOpen(true)}>
+                <MenuItem value="" onClick={handleOpenAddCompany}>
                   <em>+ Add New Company</em>
                 </MenuItem>
-                {companies.map(c => <MenuItem key={c.id} value={c.id}>{c.company_name}</MenuItem>)}
+                
+                {companies.map(c => (
+                  <MenuItem key={c.id} value={c.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {c.company_name}
+                    <IconButton 
+                      type="button"
+                      size="small" 
+                      onClick={(e) => handleEditCompanyClick(e, c)}
+                      sx={{ ml: 2, padding: '2px' }}
+                    >
+                      <EditIcon fontSize="small" color="action" />
+                    </IconButton>
+                  </MenuItem>
+                ))}
+
               </Select>
             </FormControl>
           </Grid>
@@ -236,7 +409,7 @@ const WorkOrder = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Work Item #{index + 1}</Typography>
               {formData.workItems.length > 1 && (
-                <IconButton onClick={() => removeWorkItem(index)} color="error">
+                <IconButton type="button" onClick={() => removeWorkItem(index)} color="error">
                   <RemoveCircleOutlineIcon />
                 </IconButton>
               )}
@@ -279,7 +452,7 @@ const WorkOrder = () => {
                         <FormControl fullWidth required={!!item.workMain} disabled={!item.workMain}>
                             <InputLabel>Work Subcategory</InputLabel>
                             <Select name="workSub" value={item.workSub} label="Work Subcategory" onChange={(e) => handleWorkItemChange(index, e)}>
-                                {(subWorks[item.workMain] || []).map(sub => (
+                                {getFilteredSubWorks(item.workMain, selectedCompany).map(sub => (
                                     <MenuItem key={sub} value={sub}>{sub.replaceAll('_', ' ')}</MenuItem>
                                 ))}
                             </Select>
@@ -289,15 +462,33 @@ const WorkOrder = () => {
                 <Grid item xs={12} sm={6}>
                     <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
                 </Grid>
+                
+                {/* Dynamically swap Read-Only Amount for an Editable Custom Rate Field */}
                 <Grid item xs={12} sm={6}>
-                    {/* Updated to pass selectedCompany into the calculate function */}
-                    <TextField label="Amount" type="text" fullWidth value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} />
+                    {item.workMain === 'Others' ? (
+                        <TextField 
+                            name="customRate" 
+                            label="Custom Rate / Amount (Rs.)" 
+                            type="number" 
+                            fullWidth 
+                            value={item.customRate || ''} 
+                            onChange={(e) => handleWorkItemChange(index, e)} 
+                        />
+                    ) : (
+                        <TextField 
+                            label="Amount" 
+                            type="text" 
+                            fullWidth 
+                            value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                            InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
+                        />
+                    )}
                 </Grid>
             </Grid>
           </Paper>
         ))}
 
-        <Button startIcon={<AddCircleOutlineIcon />} onClick={addWorkItem} sx={{ mt: 2 }}>
+        <Button type="button" startIcon={<AddCircleOutlineIcon />} onClick={addWorkItem} sx={{ mt: 2 }}>
           Add Another Item
         </Button>
 
@@ -306,36 +497,25 @@ const WorkOrder = () => {
         </Button>
       </Box>
 
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
-        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
       <Dialog 
         open={isCompanyModalOpen} 
         onClose={() => setIsCompanyModalOpen(false)} 
-        
-        // 1. Lighten the dark background overlay so the glass stays bright
         slotProps={{
-          backdrop: {
-            sx: { backgroundColor: 'rgba(0, 0, 0, 0.1)' } // Very light shadow instead of heavy dark gray
-          }
+          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.1)' } }
         }}
-        
         PaperProps={{ 
           sx: { 
-            // 2. Bring back the glass translucency (40% white)
             bgcolor: 'rgba(255, 255, 255, 0.4)', 
-            // 3. Keep the frosted glass blur
             backdropFilter: 'blur(16px)', 
-            // 4. A slightly stronger white border to define the glass edge
             border: '1px solid rgba(255, 255, 255, 0.6)', 
             minWidth: '400px',
+            maxWidth: '600px',
+            maxHeight: '90vh',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)' 
           } 
         }}
       >
-        <DialogTitle>Add New Company</DialogTitle>
+        <DialogTitle>{editingCompanyId ? 'Edit Company Rates' : 'Add New Company'}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -368,28 +548,70 @@ const WorkOrder = () => {
             onChange={(e) => setNewCompany({...newCompany, gst_number: e.target.value})}
           />
           
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Custom Work Rates (Optional)</Typography>
+          <Divider sx={{ my: 3 }} />
+          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Custom Work Rates</Typography>
           
-          {Object.keys(newCompany.work_rates).map(key => (
-            <TextField
-              key={key}
-              margin="dense"
-              label={`${key.replaceAll('_', ' ')} Rate`}
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={newCompany.work_rates[key]}
-              onChange={(e) => handleRateChange(key, e.target.value)}
-            />
-          ))}
+          {Object.keys(newCompany.work_rates).map(key => {
+            const rateData = newCompany.work_rates[key];
+            
+            if (typeof rateData === 'object' && rateData !== null) {
+              const subKeys = getFilteredSubWorks(key, newCompany);
+
+              return (
+                <Box key={key} sx={{ mb: 3, p: 2, borderLeft: '4px solid #1976d2', bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: '0 8px 8px 0' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 2, color: '#1976d2', textTransform: 'uppercase' }}>
+                    {key.replaceAll('_', ' ')}
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {subKeys.map(subKey => (
+                      <Grid item xs={12} sm={6} key={subKey}>
+                        <TextField
+                          label={`${subKey.replaceAll('_', ' ')} Rate`}
+                          type="number"
+                          fullWidth
+                          variant="outlined"
+                          size="small"
+                          value={rateData[subKey] || ''}
+                          onChange={(e) => handleRateChange(key, subKey, e.target.value)}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              );
+            } else {
+              return (
+                <TextField
+                  key={key}
+                  margin="dense"
+                  label={`${key.replaceAll('_', ' ')} Rate`}
+                  type="number"
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  value={rateData || ''}
+                  onChange={(e) => handleRateChange(key, null, e.target.value)}
+                  sx={{ mb: 2 }}
+                />
+              );
+            }
+          })}
 
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveCompany} variant="contained" disabled={!newCompany.company_name}>Save</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button type="button" onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
+          <Button type="button" onClick={handleSaveCompany} variant="contained" disabled={!newCompany.company_name}>
+            {editingCompanyId ? 'Update' : 'Save'}
+          </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

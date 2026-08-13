@@ -189,15 +189,23 @@ const WorkOrderInvoice = () => {
             </TableHead>
             <TableBody>
               {selectedItems.map((item, idx) => {
-                const amount = calculateItemAmount(item, companyDetails);
-                
-                // Extract strictly from the company details in the database
-                const companyCustomRate = companyDetails?.work_rates?.[item.workMain];
-                const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
-                              ? Number(companyCustomRate) 
-                              : 0;
-                              
-                const quantity = item.quantity || 1;
+              const amount = calculateItemAmount(item, companyDetails);
+              
+              // Extract strictly from the company details in the database
+              let companyCustomRate = null;
+              if (companyDetails?.work_rates) {
+                  if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
+                      companyCustomRate = companyDetails.work_rates[item.workMain];
+                  } else {
+                      companyCustomRate = companyDetails.work_rates[item.workMain]?.[item.workSub];
+                  }
+              }
+              
+              const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                            ? Number(companyCustomRate) 
+                            : 0;
+
+              const quantity = item.quantity || 1;
                 
                 return (
                   <TableRow key={item.id || idx}>
