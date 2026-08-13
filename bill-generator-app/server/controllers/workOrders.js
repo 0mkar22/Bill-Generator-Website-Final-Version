@@ -17,9 +17,18 @@ exports.getWorkOrders = async (req, res) => {
 
 exports.createWorkOrder = async (req, res) => {
   try {
+    // Explicitly formatting the payload to ensure the nested personnel array is preserved
+    const payload = { ...req.body };
+    if (payload.workItems && Array.isArray(payload.workItems)) {
+        payload.workItems = payload.workItems.map(item => ({
+            ...item,
+            personnel: item.personnel || [] 
+        }));
+    }
+
     const { data: workOrder, error } = await supabase
       .from('workOrders')
-      .insert([req.body])
+      .insert([payload])
       .select();
 
     if (error) throw error;
@@ -55,9 +64,18 @@ exports.getWorkOrder = async (req, res) => {
 
 exports.updateWorkOrder = async (req, res) => {
   try {
+    // Explicitly formatting the payload for updates as well
+    const payload = { ...req.body };
+    if (payload.workItems && Array.isArray(payload.workItems)) {
+        payload.workItems = payload.workItems.map(item => ({
+            ...item,
+            personnel: item.personnel || [] 
+        }));
+    }
+
     const { data: workOrder, error } = await supabase
       .from('workOrders')
-      .update(req.body)
+      .update(payload)
       .eq('id', req.params.id)
       .select()
       .single();
