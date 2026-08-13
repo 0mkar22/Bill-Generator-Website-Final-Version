@@ -127,6 +127,7 @@ const WorkOrder = () => {
           let targetPersonnelCount = qty;
           if (item.workMain === 'Two_Camera_Setup') targetPersonnelCount = 4;
           else if (item.workMain === 'Three_Camera_Setup') targetPersonnelCount = 5;
+          else if (item.workMain === 'Storage' || item.workMain === '32_GB_Pendrive') targetPersonnelCount = 0;
 
           let personnel = item.personnel || [];
           if (personnel.length < targetPersonnelCount) {
@@ -164,7 +165,6 @@ const WorkOrder = () => {
   }, [editData]);
 
   const getFilteredSubWorks = (workMain, company) => {
-    // Storage has flat suboptions regardless of location
     if (workMain === 'Storage') {
         return subWorks['Storage'] || ['32GB', '64GB', '128GB', '256GB', '1TB', '2TB'];
     }
@@ -345,6 +345,8 @@ const WorkOrder = () => {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
         } else if (value === 'Three_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(5).fill(null).map(() => ({ name: '', number: '' }));
+        } else if (value === 'Storage' || value === '32_GB_Pendrive') {
+            newWorkItems[index]['personnel'] = []; // Clear personnel for storage
         } else {
             newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
         }
@@ -577,31 +579,37 @@ const WorkOrder = () => {
                     )}
                 </Grid>
 
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Assigned Personnel</Typography>
-                </Grid>
-                {(item.personnel || [{ name: '', number: '' }]).map((person, pIdx) => (
-                  <React.Fragment key={pIdx}>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        label={`Photographer/Videographer ${pIdx + 1} Name`}
-                        fullWidth
-                        size="small"
-                        value={person.name || ''}
-                        onChange={(e) => handlePersonnelChange(index, pIdx, 'name', e.target.value)}
-                      />
+                {/* --- DYNAMIC PERSONNEL FIELDS --- */}
+                {item.workMain !== 'Storage' && item.workMain !== '32_GB_Pendrive' && (
+                  <React.Fragment>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Assigned Personnel</Typography>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        label={`Contact Number`}
-                        fullWidth
-                        size="small"
-                        value={person.number || ''}
-                        onChange={(e) => handlePersonnelChange(index, pIdx, 'number', e.target.value)}
-                      />
-                    </Grid>
+                    {(item.personnel || [{ name: '', number: '' }]).map((person, pIdx) => (
+                      <React.Fragment key={pIdx}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            label={`Photographer/Videographer ${pIdx + 1} Name`}
+                            fullWidth
+                            size="small"
+                            value={person.name || ''}
+                            onChange={(e) => handlePersonnelChange(index, pIdx, 'name', e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            label={`Contact Number`}
+                            fullWidth
+                            size="small"
+                            value={person.number || ''}
+                            onChange={(e) => handlePersonnelChange(index, pIdx, 'number', e.target.value)}
+                          />
+                        </Grid>
+                      </React.Fragment>
+                    ))}
                   </React.Fragment>
-                ))}
+                )}
+                {/* --- END PERSONNEL FIELDS --- */}
             </Grid>
           </Paper>
         ))}
