@@ -58,7 +58,7 @@ const WorkOrder = () => {
       { 
         eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', 
         workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
-        personnel: [{ name: '', number: '' }] // Added personnel tracking
+        personnel: [{ name: '', number: '' }]
       }
     ]
   });
@@ -121,7 +121,6 @@ const WorkOrder = () => {
           personnel: [{ name: '', number: '' }]
         }];
       } else {
-        // Ensure legacy items being edited get their personnel array generated based on their quantity
         parsedItems = parsedItems.map(item => {
           const qty = Number(item.quantity) || 1;
           let personnel = item.personnel || [];
@@ -307,7 +306,6 @@ const WorkOrder = () => {
     const newWorkItems = [...formData.workItems];
     newWorkItems[index][name] = value;
 
-    // Detect quantity changes to dynamically adjust personnel array
     if (name === 'quantity') {
       const qty = Number(value) || 1;
       let personnel = newWorkItems[index].personnel || [];
@@ -332,12 +330,11 @@ const WorkOrder = () => {
         newWorkItems[index]['workSub'] = '';
         newWorkItems[index]['quantity'] = 1;
         newWorkItems[index]['customRate'] = '';
-        newWorkItems[index]['personnel'] = [{ name: '', number: '' }]; // Reset to 1 person
+        newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
     }
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
   };
 
-  // Dedicated handler for the nested personnel inputs
   const handlePersonnelChange = (itemIndex, personIndex, field, value) => {
     setFormData(prev => {
       const newWorkItems = [...prev.workItems];
@@ -372,7 +369,7 @@ const WorkOrder = () => {
               quantity: 1,
               customWorkMain: '',
               customRate: '',
-              personnel: [{ name: '', number: '' }] // Add default personnel
+              personnel: [{ name: '', number: '' }] 
           }
       ]
     }));
@@ -411,6 +408,10 @@ const WorkOrder = () => {
   };
 
   const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
+  const selectedCompanyNameStr = selectedCompany?.company_name?.toUpperCase() || '';
+  const isONGCSelected = selectedCompanyNameStr.includes('ONGC') || 
+                         selectedCompanyNameStr.includes('OIL & NATURAL GAS') || 
+                         selectedCompanyNameStr.includes('OIL AND NATURAL GAS');
 
   return (
     <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
@@ -472,7 +473,20 @@ const WorkOrder = () => {
             {index === 0 && (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label="Event Name" required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>PO/NPO</InputLabel><Select name="poNpo" value={item.poNpo} label="PO/NPO" onChange={(e) => handleWorkItemChange(index, e)}><MenuItem value="PO">PO</MenuItem><MenuItem value="NPO">NPO</MenuItem></Select></FormControl></Grid>
+                    
+                    {/* Conditionally render PO/NPO based on if the company is ONGC */}
+                    {isONGCSelected && (
+                        <Grid item xs={12} sm={6}>
+                          <FormControl fullWidth required>
+                            <InputLabel>PO/NPO</InputLabel>
+                            <Select name="poNpo" value={item.poNpo} label="PO/NPO" onChange={(e) => handleWorkItemChange(index, e)}>
+                              <MenuItem value="PO">PO</MenuItem>
+                              <MenuItem value="NPO">NPO</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                    )}
+
                     <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>Event Venue</InputLabel><Select name="eventVenue" value={item.eventVenue} label="Event Venue" onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
                     {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
@@ -537,7 +551,6 @@ const WorkOrder = () => {
                     )}
                 </Grid>
 
-                {/* --- DYNAMIC PERSONNEL FIELDS --- */}
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Assigned Personnel</Typography>
                 </Grid>
@@ -563,8 +576,6 @@ const WorkOrder = () => {
                     </Grid>
                   </React.Fragment>
                 ))}
-                {/* --- END PERSONNEL FIELDS --- */}
-
             </Grid>
           </Paper>
         ))}
