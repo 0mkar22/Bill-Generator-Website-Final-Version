@@ -41,7 +41,7 @@ const getDefaultRatesTemplate = () => {
     Two_Camera_Setup: generateCategoryRates('Two_Camera_Setup'),
     Three_Camera_Setup: generateCategoryRates('Three_Camera_Setup'),
     Live_Telecast: generateCategoryRates('Live_Telecast'),
-    '32_GB_Pendrive': ''
+    Storage: { '32GB': '', '64GB': '', '128GB': '', '256GB': '', '1TB': '', '2TB': '' }
   };
 };
 
@@ -124,7 +124,6 @@ const WorkOrder = () => {
         parsedItems = parsedItems.map(item => {
           const qty = Number(item.quantity) || 1;
           
-          // Determine correct personnel count based on category
           let targetPersonnelCount = qty;
           if (item.workMain === 'Two_Camera_Setup') targetPersonnelCount = 4;
           else if (item.workMain === 'Three_Camera_Setup') targetPersonnelCount = 5;
@@ -165,6 +164,11 @@ const WorkOrder = () => {
   }, [editData]);
 
   const getFilteredSubWorks = (workMain, company) => {
+    // Storage has flat suboptions regardless of location
+    if (workMain === 'Storage') {
+        return subWorks['Storage'] || ['32GB', '64GB', '128GB', '256GB', '1TB', '2TB'];
+    }
+
     const companyName = company?.company_name?.toUpperCase() || '';
     const isONGC = companyName.includes('ONGC') || 
                    companyName.includes('OIL & NATURAL GAS') || 
@@ -263,7 +267,7 @@ const WorkOrder = () => {
       const cleanedRates = JSON.parse(JSON.stringify(newCompany.work_rates));
 
       Object.keys(cleanedRates).forEach(category => {
-        if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null) {
+        if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null && category !== 'Storage') {
           Object.keys(cleanedRates[category]).forEach(subKey => {
             const isAllowed = allowedLocations.some(loc => subKey.includes(loc));
             if (!isAllowed) {
@@ -335,9 +339,8 @@ const WorkOrder = () => {
     if (name === 'workMain') {
         newWorkItems[index]['workSub'] = '';
         newWorkItems[index]['customRate'] = '';
-        newWorkItems[index]['quantity'] = 1; // Default reset
+        newWorkItems[index]['quantity'] = 1; 
 
-        // Auto-assign specific personnel limits for Two/Three camera setups
         if (value === 'Two_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
         } else if (value === 'Three_Camera_Setup') {
@@ -519,7 +522,7 @@ const WorkOrder = () => {
                             <MenuItem value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>
                             <MenuItem value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>
                             <MenuItem value="Live_Telecast">Live Telecast Setup</MenuItem>
-                            <MenuItem value="32_GB_Pendrive">32 GB Pendrive</MenuItem>
+                            <MenuItem value="Storage">Storage</MenuItem>
                             <MenuItem value="Others">Others</MenuItem>
                         </Select>
                     </FormControl>
@@ -550,7 +553,6 @@ const WorkOrder = () => {
                         value={item.quantity} 
                         onChange={(e) => handleWorkItemChange(index, e)} 
                         InputProps={{ inputProps: { min: 1 } }} 
-                        // Disable the field if Two or Three camera setup is selected
                         disabled={item.workMain === 'Two_Camera_Setup' || item.workMain === 'Three_Camera_Setup'}
                     />
                 </Grid>
