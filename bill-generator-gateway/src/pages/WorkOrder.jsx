@@ -55,7 +55,11 @@ const WorkOrder = () => {
     vendor: '',
     company_id: '',
     workItems: [
-      { eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '' }
+      { 
+        eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', 
+        workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
+        personnel: [{ name: '', number: '' }] // Added personnel tracking
+      }
     ]
   });
   const [latestEntry, setLatestEntry] = useState(null);
@@ -111,7 +115,25 @@ const WorkOrder = () => {
       }
 
       if (parsedItems.length === 0) {
-        parsedItems = [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '' }];
+        parsedItems = [{ 
+          eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', 
+          workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
+          personnel: [{ name: '', number: '' }]
+        }];
+      } else {
+        // Ensure legacy items being edited get their personnel array generated based on their quantity
+        parsedItems = parsedItems.map(item => {
+          const qty = Number(item.quantity) || 1;
+          let personnel = item.personnel || [];
+          if (personnel.length < qty) {
+            for (let i = personnel.length; i < qty; i++) {
+              personnel.push({ name: '', number: '' });
+            }
+          } else if (personnel.length > qty) {
+            personnel = personnel.slice(0, qty);
+          }
+          return { ...item, personnel };
+        });
       }
 
       let formattedDate = '';
@@ -172,7 +194,6 @@ const WorkOrder = () => {
     return allowedLocations;
   };
 
-  // Modal Triggers
   const handleOpenAddCompany = () => {
     setEditingCompanyId(null);
     setNewCompany({ 
@@ -286,6 +307,21 @@ const WorkOrder = () => {
     const newWorkItems = [...formData.workItems];
     newWorkItems[index][name] = value;
 
+    // Detect quantity changes to dynamically adjust personnel array
+    if (name === 'quantity') {
+      const qty = Number(value) || 1;
+      let personnel = newWorkItems[index].personnel || [];
+      
+      if (personnel.length < qty) {
+        for (let i = personnel.length; i < qty; i++) {
+          personnel.push({ name: '', number: '' });
+        }
+      } else if (personnel.length > qty) {
+        personnel = personnel.slice(0, qty);
+      }
+      newWorkItems[index].personnel = personnel;
+    }
+
     if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue'].includes(name)) {
         for (let i = 1; i < newWorkItems.length; i++) {
             newWorkItems[i][name] = value;
@@ -295,9 +331,26 @@ const WorkOrder = () => {
     if (name === 'workMain') {
         newWorkItems[index]['workSub'] = '';
         newWorkItems[index]['quantity'] = 1;
-        newWorkItems[index]['customRate'] = ''; // reset custom rate on category change
+        newWorkItems[index]['customRate'] = '';
+        newWorkItems[index]['personnel'] = [{ name: '', number: '' }]; // Reset to 1 person
     }
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
+  };
+
+  // Dedicated handler for the nested personnel inputs
+  const handlePersonnelChange = (itemIndex, personIndex, field, value) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const updatedPersonnel = [...(newWorkItems[itemIndex].personnel || [])];
+      
+      if (!updatedPersonnel[personIndex]) {
+        updatedPersonnel[personIndex] = { name: '', number: '' };
+      }
+      
+      updatedPersonnel[personIndex] = { ...updatedPersonnel[personIndex], [field]: value };
+      newWorkItems[itemIndex].personnel = updatedPersonnel;
+      return { ...prev, workItems: newWorkItems };
+    });
   };
 
   const addWorkItem = () => {
@@ -318,7 +371,8 @@ const WorkOrder = () => {
               workSub: '',
               quantity: 1,
               customWorkMain: '',
-              customRate: ''
+              customRate: '',
+              personnel: [{ name: '', number: '' }] // Add default personnel
           }
       ]
     }));
@@ -342,7 +396,7 @@ const WorkOrder = () => {
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
-          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '' }]
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();
       }
@@ -462,8 +516,6 @@ const WorkOrder = () => {
                 <Grid item xs={12} sm={6}>
                     <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
                 </Grid>
-                
-                {/* Dynamically swap Read-Only Amount for an Editable Custom Rate Field */}
                 <Grid item xs={12} sm={6}>
                     {item.workMain === 'Others' ? (
                         <TextField 
@@ -484,6 +536,35 @@ const WorkOrder = () => {
                         />
                     )}
                 </Grid>
+
+                {/* --- DYNAMIC PERSONNEL FIELDS --- */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Assigned Personnel</Typography>
+                </Grid>
+                {(item.personnel || [{ name: '', number: '' }]).map((person, pIdx) => (
+                  <React.Fragment key={pIdx}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label={`Photographer/Videographer ${pIdx + 1} Name`}
+                        fullWidth
+                        size="small"
+                        value={person.name || ''}
+                        onChange={(e) => handlePersonnelChange(index, pIdx, 'name', e.target.value)}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label={`Contact Number`}
+                        fullWidth
+                        size="small"
+                        value={person.number || ''}
+                        onChange={(e) => handlePersonnelChange(index, pIdx, 'number', e.target.value)}
+                      />
+                    </Grid>
+                  </React.Fragment>
+                ))}
+                {/* --- END PERSONNEL FIELDS --- */}
+
             </Grid>
           </Paper>
         ))}
