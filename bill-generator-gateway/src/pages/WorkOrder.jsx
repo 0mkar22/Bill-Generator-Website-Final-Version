@@ -123,13 +123,19 @@ const WorkOrder = () => {
       } else {
         parsedItems = parsedItems.map(item => {
           const qty = Number(item.quantity) || 1;
+          
+          // Determine correct personnel count based on category
+          let targetPersonnelCount = qty;
+          if (item.workMain === 'Two_Camera_Setup') targetPersonnelCount = 4;
+          else if (item.workMain === 'Three_Camera_Setup') targetPersonnelCount = 5;
+
           let personnel = item.personnel || [];
-          if (personnel.length < qty) {
-            for (let i = personnel.length; i < qty; i++) {
+          if (personnel.length < targetPersonnelCount) {
+            for (let i = personnel.length; i < targetPersonnelCount; i++) {
               personnel.push({ name: '', number: '' });
             }
-          } else if (personnel.length > qty) {
-            personnel = personnel.slice(0, qty);
+          } else if (personnel.length > targetPersonnelCount) {
+            personnel = personnel.slice(0, targetPersonnelCount);
           }
           return { ...item, personnel };
         });
@@ -328,9 +334,17 @@ const WorkOrder = () => {
 
     if (name === 'workMain') {
         newWorkItems[index]['workSub'] = '';
-        newWorkItems[index]['quantity'] = 1;
         newWorkItems[index]['customRate'] = '';
-        newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
+        newWorkItems[index]['quantity'] = 1; // Default reset
+
+        // Auto-assign specific personnel limits for Two/Three camera setups
+        if (value === 'Two_Camera_Setup') {
+            newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
+        } else if (value === 'Three_Camera_Setup') {
+            newWorkItems[index]['personnel'] = Array(5).fill(null).map(() => ({ name: '', number: '' }));
+        } else {
+            newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
+        }
     }
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
   };
@@ -474,7 +488,6 @@ const WorkOrder = () => {
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label="Event Name" required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     
-                    {/* Conditionally render PO/NPO based on if the company is ONGC */}
                     {isONGCSelected && (
                         <Grid item xs={12} sm={6}>
                           <FormControl fullWidth required>
@@ -528,7 +541,18 @@ const WorkOrder = () => {
                     </Grid>
                 )}
                 <Grid item xs={12} sm={6}>
-                    <TextField name="quantity" label="Quantity" type="number" required fullWidth value={item.quantity} onChange={(e) => handleWorkItemChange(index, e)} InputProps={{ inputProps: { min: 1 } }} />
+                    <TextField 
+                        name="quantity" 
+                        label="Quantity" 
+                        type="number" 
+                        required 
+                        fullWidth 
+                        value={item.quantity} 
+                        onChange={(e) => handleWorkItemChange(index, e)} 
+                        InputProps={{ inputProps: { min: 1 } }} 
+                        // Disable the field if Two or Three camera setup is selected
+                        disabled={item.workMain === 'Two_Camera_Setup' || item.workMain === 'Three_Camera_Setup'}
+                    />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                     {item.workMain === 'Others' ? (
