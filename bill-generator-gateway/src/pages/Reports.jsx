@@ -12,10 +12,8 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import API from '../services/api';
-// REMOVED 'pricing' import since we are using dynamic database rates now
-import { subWorks, venues, vendors } from '../constants/data';
-import { calculateItemAmount, formatDateToYYYYMMDD } from '../utils/helpers';
-import { supabase } from '../supabase'; // Added supabase to fetch company rates
+import { calculateItemAmount } from '../utils/helpers';
+import { supabase } from '../supabase';
 
 const Reports = () => {
     const navigate = useNavigate();
@@ -24,9 +22,11 @@ const Reports = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [vendorFilter, setVendorFilter] = useState('');
+    const [companyFilter, setCompanyFilter] = useState('');
     const [workTypeFilter, setWorkTypeFilter] = useState('');
     const [poNpoFilter, setPoNpoFilter] = useState('');
     const [dynamicVendors, setDynamicVendors] = useState([]);
+    const [dynamicCompanies, setDynamicCompanies] = useState([]);
     const [workTypes, setWorkTypes] = useState([]);
     const [page, setPage] = useState(1);
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
@@ -39,14 +39,13 @@ const Reports = () => {
             setLoading(true);
             setError(null);
 
-            // Fetch companies so we can calculate dynamic rates for the report
             const { data: companyData } = await supabase.from('companies').select('*');
             const fetchedCompanies = companyData || [];
 
             const response = await API.get('/workOrders');
             const allWorkItems = (response.data.data || []).flatMap(order => {
-                // Find the specific company details for this order to pass to the rate calculator
                 const companyDetails = fetchedCompanies.find(c => c.id === order.company_id) || null;
+                const companyName = companyDetails ? companyDetails.company_name : 'N/A';
 
                 return (order.workItems || []).map(item => ({
                     ...item,
@@ -54,15 +53,19 @@ const Reports = () => {
                     entryNumber: order.entryNumber,
                     date: order.eventDate,
                     vendor: order.vendor,
-                    fullOrder: order, // CRITICAL FIX: Attach the full order data so the Edit button works
-                    companyDetails: companyDetails // Attach company details for amount calculation
+                    companyName: companyName,
+                    fullOrder: order,
+                    companyDetails: companyDetails
                 }));
             });
             
             setWorkItems(allWorkItems);
-            const uniqueVendors = [...new Set(allWorkItems.map(item => item.vendor))];
-            const uniqueWorkTypes = [...new Set(allWorkItems.map(item => item.workMain))];
+            const uniqueVendors = [...new Set(allWorkItems.map(item => item.vendor).filter(Boolean))];
+            const uniqueCompanies = [...new Set(allWorkItems.map(item => item.companyName).filter(Boolean))];
+            const uniqueWorkTypes = [...new Set(allWorkItems.map(item => item.workMain).filter(Boolean))];
+            
             setDynamicVendors(uniqueVendors);
+            setDynamicCompanies(uniqueCompanies);
             setWorkTypes(uniqueWorkTypes);
         } catch (err) {
             console.error('Error fetching work items:', err);
@@ -84,10 +87,22 @@ const Reports = () => {
         setSortConfig({ key, direction });
     };
 
+    const getPersonnelDisplay = (item) => {
+        if (!item.personnel || item.personnel.length === 0) return '—';
+        const formatted = item.personnel
+            .filter(p => p.name || p.number)
+            .map(p => `${p.name || 'Unnamed'}${p.number ? ` (${p.number})` : ''}`);
+        return formatted.length > 0 ? formatted.join(', ') : '—';
+    };
+
     const getSortedItems = () => {
         let sortedItems = [...workItems];
         if (searchTerm) {
-            sortedItems = sortedItems.filter(item => Object.values(item).some(value => String(value).toLowerCase().includes(searchTerm.toLowerCase())));
+            sortedItems = sortedItems.filter(item => {
+                const personnelStr = (item.personnel || []).map(p => `${p.name} ${p.number}`).join(' ');
+                const combinedValues = `${Object.values(item).join(' ')} ${personnelStr}`.toLowerCase();
+                return combinedValues.includes(searchTerm.toLowerCase());
+            });
         }
         if (monthFilter) {
             sortedItems = sortedItems.filter(item => {
@@ -96,6 +111,9 @@ const Reports = () => {
                 const [filterYear, filterMonth] = monthFilter.split('-');
                 return (itemDate.getFullYear() === parseInt(filterYear, 10) && itemDate.getMonth() + 1 === parseInt(filterMonth, 10));
             });
+        }
+        if (companyFilter) {
+            sortedItems = sortedItems.filter(item => item.companyName === companyFilter);
         }
         if (vendorFilter) {
             sortedItems = sortedItems.filter(item => item.vendor === vendorFilter);
@@ -118,7 +136,13 @@ const Reports = () => {
 
     const getWorkTypeDisplay = (item) => {
         if (item.workMain === '32_GB_Pendrive') {
-            return `${item.workMain.replaceAll('_', ' ')} (Qty: ${item.quantity || 1})`;
+            return `32 GB Pendrive (Qty: ${item.quantity || 1})`;
+        }
+        if (item.workMain === 'Storage') {
+            return `Storage - ${item.workSub || 'N/A'} (Qty: ${item.quantity || 1})`;
+        }
+        if (item.workMain === 'Others') {
+            return item.customWorkMain || 'Others';
         }
         const mainDisplay = item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A';
         const subDisplay = item.workSub ? item.workSub.replaceAll('_', ' ') : '';
@@ -130,14 +154,22 @@ const Reports = () => {
         const totalAmount = filteredItems.reduce((sum, item) => sum + calculateItemAmount(item, item.companyDetails), 0);
         const totalAmountWithGst = totalAmount * 1.18;
         const data = filteredItems.map((item, idx) => ({
-            'Entry Number': item.entryNumber, 'Sr. No': idx + 1, 'Event Date': new Date(item.date).toLocaleDateString('en-GB'),
-            'Vendor': item.vendor, 'Event Name': item.eventName, 'Event Venue': item.eventVenue, 'Event Time': item.eventTime,
-            'PO/NPO': item.poNpo,
+            'Entry Number': item.entryNumber,
+            'Sr. No': idx + 1,
+            'Company': item.companyName,
+            'Event Date': item.date ? new Date(item.date).toLocaleDateString('en-GB') : '',
+            'Vendor': item.vendor,
+            'Event Name': item.eventName,
+            'Event Venue': item.eventVenue === 'Others' ? (item.customVenue || 'Others') : item.eventVenue,
+            'Event Time': item.eventTime,
+            'PO/NPO': item.poNpo || 'N/A',
             'Work Type': getWorkTypeDisplay(item),
-            'Contact Person': item.contactPerson, 'Contact Number': item.contactNumber,
-            'Amount': calculateItemAmount(item, item.companyDetails), 'Amount with GST': calculateItemAmount(item, item.companyDetails) * 1.18
+            'Assigned Personnel': getPersonnelDisplay(item),
+            'Contact Person': item.contactPerson ? `${item.contactPerson} ${item.contactNumber ? `(${item.contactNumber})` : ''}` : '—',
+            'Amount': calculateItemAmount(item, item.companyDetails),
+            'Amount with GST': calculateItemAmount(item, item.companyDetails) * 1.18
         }));
-        data.push({ 'Contact Number': 'Total Amount:', 'Amount': totalAmount, 'Amount with GST': totalAmountWithGst });
+        data.push({ 'Contact Person': 'Total Amount:', 'Amount': totalAmount, 'Amount with GST': totalAmountWithGst });
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Work Orders');
@@ -147,42 +179,51 @@ const Reports = () => {
     const handleExportToPDF = () => {
         const filteredItems = getSortedItems();
         const doc = new jsPDF({ orientation: 'landscape' });
-        doc.setFontSize(18);
-        doc.text('Work Orders Report', 14, 22);
-        doc.setFontSize(11);
+        doc.setFontSize(16);
+        doc.text('Work Orders Report', 14, 18);
+        doc.setFontSize(9);
         doc.setTextColor(100);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-        const tableColumn = ["Entry No", "Sr. No", "Date", "Vendor", "Event Name", "Venue", "Time", "PO/NPO", "Work Type", "Contact", "Phone", "Amount", "Amount+GST"];
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+        
+        const tableColumn = ["Entry", "Date", "Company", "Vendor", "Event Name", "Work Type", "Assigned Personnel", "Contact Person", "Amount", "Amount+GST"];
         const tableRows = [];
-        filteredItems.forEach((item, idx) => {
+        filteredItems.forEach((item) => {
             const amount = calculateItemAmount(item, item.companyDetails);
             const rowData = [
-                item.entryNumber, idx + 1, new Date(item.date).toLocaleDateString('en-GB'),
-                item.vendor, item.eventName, item.eventVenue, item.eventTime, item.poNpo,
+                item.entryNumber,
+                item.date ? new Date(item.date).toLocaleDateString('en-GB') : '',
+                item.companyName,
+                item.vendor,
+                item.eventName,
                 getWorkTypeDisplay(item),
-                item.contactPerson, item.contactNumber,
-                `Rs.${amount.toLocaleString('en-IN')}`, `Rs.${(amount * 1.18).toLocaleString('en-IN')}`
+                getPersonnelDisplay(item),
+                item.contactPerson ? `${item.contactPerson} ${item.contactNumber ? `(${item.contactNumber})` : ''}` : '—',
+                `Rs.${amount.toLocaleString('en-IN')}`,
+                `Rs.${(amount * 1.18).toLocaleString('en-IN')}`
             ];
             tableRows.push(rowData);
         });
         doc.autoTable({
-            head: [tableColumn], body: tableRows, startY: 35, theme: 'grid',
-            headStyles: { fillColor: [22, 160, 133] }, styles: { fontSize: 8, cellPadding: 1.5 },
-            columnStyles: { 11: { halign: 'right' }, 12: { halign: 'right' } }
+            head: [tableColumn],
+            body: tableRows,
+            startY: 30,
+            theme: 'grid',
+            headStyles: { fillColor: [22, 160, 133] },
+            styles: { fontSize: 7, cellPadding: 1.5 },
+            columnStyles: { 8: { halign: 'right' }, 9: { halign: 'right' } }
         });
         const totalAmount = filteredItems.reduce((sum, item) => sum + calculateItemAmount(item, item.companyDetails), 0);
         const totalAmountWithGst = totalAmount * 1.18;
         const finalY = doc.lastAutoTable.finalY;
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
-        doc.text('Total Amount:', 200, finalY + 10);
-        doc.text(`Rs.${totalAmount.toLocaleString('en-IN')}`, 240, finalY + 10);
-        doc.text(`Rs.${totalAmountWithGst.toLocaleString('en-IN')}`, 270, finalY + 10);
+        doc.text('Total Amount:', 200, finalY + 8);
+        doc.text(`Rs.${totalAmount.toLocaleString('en-IN')}`, 235, finalY + 8);
+        doc.text(`Rs.${totalAmountWithGst.toLocaleString('en-IN')}`, 265, finalY + 8);
         doc.save('work_orders_report.pdf');
     };
 
     const handleEditWorkItem = (item) => {
-        // Change '/' to '/work-order' if your entry form is on a different path
         navigate('/', { state: { editData: item.fullOrder } });
     };
 
@@ -194,43 +235,54 @@ const Reports = () => {
 
         return (
             <TableContainer component={Paper} sx={{ mt: 2, bgcolor: 'transparent', boxShadow: 'none' }}>
-                <Table>
+                <Table size="small">
                     <TableHead>
                         <TableRow>
-                            {['entryNumber', 'date', 'vendor', 'eventName', 'eventVenue', 'eventTime', 'poNpo', 'workMain', 'contactPerson', 'contactNumber'].map(key => (
-                                <TableCell key={key} onClick={() => handleSort(key)} sx={{ cursor: 'pointer' }}>
-                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            {['entryNumber', 'date', 'companyName', 'vendor', 'eventName', 'eventVenue', 'eventTime', 'poNpo', 'workMain'].map(key => (
+                                <TableCell key={key} onClick={() => handleSort(key)} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>
+                                    {key === 'companyName' ? 'Company' : key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                                     {sortConfig.key === key && (sortConfig.direction === 'asc' ? ' ↑' : ' ↓')}
                                 </TableCell>
                             ))}
-                            <TableCell>Amount</TableCell>
-                            <TableCell>Amount+GST</TableCell>
-                            <TableCell>Edit</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Assigned Personnel</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Contact Person</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Amount+GST</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Edit</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {paginatedItems.map((item) => {
+                        {paginatedItems.map((item, idx) => {
                             const amount = calculateItemAmount(item, item.companyDetails);
                             return (
-                                <TableRow key={item.id}>
+                                <TableRow key={`${item.parentWorkOrderId || ''}-${idx}`}>
                                     <TableCell>{item.entryNumber}</TableCell>
-                                    <TableCell>{new Date(item.date).toLocaleDateString('en-GB')}</TableCell>
+                                    <TableCell>{item.date ? new Date(item.date).toLocaleDateString('en-GB') : '—'}</TableCell>
+                                    <TableCell>{item.companyName}</TableCell>
                                     <TableCell>{item.vendor}</TableCell>
                                     <TableCell>{item.eventName}</TableCell>
-                                    <TableCell>{item.eventVenue}</TableCell>
+                                    <TableCell>{item.eventVenue === 'Others' ? (item.customVenue || 'Others') : item.eventVenue}</TableCell>
                                     <TableCell>{item.eventTime}</TableCell>
-                                    <TableCell>{item.poNpo}</TableCell>
+                                    <TableCell>{item.poNpo || '—'}</TableCell>
                                     <TableCell>{getWorkTypeDisplay(item)}</TableCell>
-                                    <TableCell>{item.contactPerson}</TableCell>
-                                    <TableCell>{item.contactNumber}</TableCell>
+                                    <TableCell sx={{ maxWidth: 200, wordBreak: 'break-word' }}>
+                                        {getPersonnelDisplay(item)}
+                                    </TableCell>
+                                    <TableCell sx={{ maxWidth: 200, wordBreak: 'break-word' }}>
+                                        {item.contactPerson ? `${item.contactPerson} ${item.contactNumber ? `(${item.contactNumber})` : ''}` : '—'}
+                                    </TableCell>
                                     <TableCell>Rs.{amount.toLocaleString('en-IN')}</TableCell>
                                     <TableCell>Rs.{(amount * 1.18).toLocaleString('en-IN')}</TableCell>
-                                    <TableCell><Button variant="contained" size="small" onClick={() => handleEditWorkItem(item)}>Edit</Button></TableCell>
+                                    <TableCell>
+                                        <Button variant="contained" size="small" onClick={() => handleEditWorkItem(item)}>
+                                            Edit
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             );
                         })}
-                        <TableRow sx={{ '& > *': { fontWeight: 'bold', fontSize: '1.1rem' } }}>
-                            <TableCell colSpan={10} align="right">Total:</TableCell>
+                        <TableRow sx={{ '& > *': { fontWeight: 'bold', fontSize: '1rem' } }}>
+                            <TableCell colSpan={11} align="right">Total:</TableCell>
                             <TableCell>Rs.{totalAmount.toLocaleString('en-IN')}</TableCell>
                             <TableCell>Rs.{totalAmountWithGst.toLocaleString('en-IN')}</TableCell>
                             <TableCell />
@@ -238,7 +290,7 @@ const Reports = () => {
                     </TableBody>
                 </Table>
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                    <Pagination count={Math.ceil(sortedItems.length / itemsPerPage)} page={page} onChange={(e, value) => setPage(value)} color="primary" />
+                    <Pagination count={Math.ceil(sortedItems.length / itemsPerPage) || 1} page={page} onChange={(e, value) => setPage(value)} color="primary" />
                 </Box>
             </TableContainer>
         );
@@ -252,11 +304,40 @@ const Reports = () => {
                     <Typography variant="h4" sx={{ flexGrow: 1, textAlign: 'center' }}>Work Orders Report</Typography>
                 </Box>
                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={3}><TextField fullWidth label="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></Grid>
-                    <Grid item xs={12} sm={2}><TextField fullWidth label="Month" type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} InputLabelProps={{ shrink: true }} /></Grid>
-                    <Grid item xs={12} sm={2}><FormControl fullWidth><InputLabel>Vendor</InputLabel><Select value={vendorFilter} label="Vendor" onChange={(e) => setVendorFilter(e.target.value)}><MenuItem value="">All</MenuItem>{dynamicVendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
-                    <Grid item xs={12} sm={3}><FormControl fullWidth><InputLabel>Work Type</InputLabel><Select value={workTypeFilter} label="Work Type" onChange={(e) => setWorkTypeFilter(e.target.value)}><MenuItem value="">All</MenuItem>{workTypes.map(t => <MenuItem key={t} value={t}>{t.replaceAll('_', ' ')}</MenuItem>)}</Select></FormControl></Grid>
+                    <Grid item xs={12} sm={3}>
+                        <TextField fullWidth label="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    </Grid>
                     <Grid item xs={12} sm={2}>
+                        <TextField fullWidth label="Month" type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} InputLabelProps={{ shrink: true }} />
+                    </Grid>
+                    <Grid item xs={12} sm={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Company</InputLabel>
+                            <Select value={companyFilter} label="Company" onChange={(e) => setCompanyFilter(e.target.value)}>
+                                <MenuItem value="">All</MenuItem>
+                                {dynamicCompanies.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Vendor</InputLabel>
+                            <Select value={vendorFilter} label="Vendor" onChange={(e) => setVendorFilter(e.target.value)}>
+                                <MenuItem value="">All</MenuItem>
+                                {dynamicVendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Work Type</InputLabel>
+                            <Select value={workTypeFilter} label="Work Type" onChange={(e) => setWorkTypeFilter(e.target.value)}>
+                                <MenuItem value="">All</MenuItem>
+                                {workTypes.map(t => <MenuItem key={t} value={t}>{t.replaceAll('_', ' ')}</MenuItem>)}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={1}>
                         <FormControl fullWidth>
                             <InputLabel>PO/NPO</InputLabel>
                             <Select value={poNpoFilter} label="PO/NPO" onChange={(e) => setPoNpoFilter(e.target.value)}>
