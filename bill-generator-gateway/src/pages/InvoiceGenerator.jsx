@@ -185,7 +185,6 @@ const InvoiceGenerator = () => {
                     <TableCell>PO/NPO</TableCell>
                     <TableCell>Event Date</TableCell>
                     <TableCell>Work Type</TableCell>
-                    <TableCell align="center">Actions</TableCell> {/* Added Action Column */}
                 </TableRow>
             </TableHead>
             <TableBody>
@@ -211,16 +210,6 @@ const InvoiceGenerator = () => {
                       <TableCell>{item.poNpo}</TableCell>
                       <TableCell>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
-                      <TableCell align="center">
-                         {/* Added Edit Button for the Work Item */}
-                         <Button 
-                            variant="outlined" 
-                            size="small" 
-                            onClick={() => handleEditWorkItem(item.parent)}
-                         >
-                            Edit
-                         </Button>
-                      </TableCell>
                     </TableRow>
                 )
               })}
