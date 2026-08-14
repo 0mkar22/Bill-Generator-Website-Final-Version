@@ -446,7 +446,7 @@ const WorkOrder = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
               <InputLabel>Select Company</InputLabel>
               <Select name="company_id" value={formData.company_id} label="Select Company" onChange={handleMainChange}>
@@ -474,9 +474,6 @@ const WorkOrder = () => {
           <Grid item xs={12} sm={3}>
             <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
           </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
-          </Grid>
           
         </Grid>
 
@@ -494,7 +491,12 @@ const WorkOrder = () => {
             {index === 0 && (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label="Event Name" required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    
+                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>Event Venue</InputLabel><Select name="eventVenue" value={item.eventVenue} label="Event Venue" onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
+                    <Grid item xs={12} sm={6}><TextField name="contactPerson" label="Contact Person" required fullWidth value={item.contactPerson} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="contactNumber" label="Contact Number" required fullWidth value={item.contactNumber} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     {isONGCSelected && (
                         <Grid item xs={12} sm={6}>
                           <FormControl fullWidth required>
@@ -506,12 +508,6 @@ const WorkOrder = () => {
                           </FormControl>
                         </Grid>
                     )}
-
-                    <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>Event Venue</InputLabel><Select name="eventVenue" value={item.eventVenue} label="Event Venue" onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
-                    {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
-                    <Grid item xs={12} sm={6}><TextField name="contactPerson" label="Contact Person" required fullWidth value={item.contactPerson} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><TextField name="contactNumber" label="Contact Number" required fullWidth value={item.contactNumber} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     <Grid item xs={12}><Divider>Work Details</Divider></Grid>
                 </Grid>
             )}
