@@ -437,6 +437,21 @@ const WorkOrder = () => {
       <Typography variant="h4" gutterBottom align="center">{editData ? 'Edit Event Data' : 'Event Data Entry'}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
+          
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth required>
+              <InputLabel>Vendor</InputLabel>
+              <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
+                {vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
+          </Grid>
           <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
               <InputLabel>Select Company</InputLabel>
@@ -459,20 +474,6 @@ const WorkOrder = () => {
                   </MenuItem>
                 ))}
 
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth required>
-              <InputLabel>Vendor</InputLabel>
-              <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
-                {vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
               </Select>
             </FormControl>
           </Grid>
