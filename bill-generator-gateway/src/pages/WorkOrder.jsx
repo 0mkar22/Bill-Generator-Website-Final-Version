@@ -447,12 +447,6 @@ const WorkOrder = () => {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={3}>
-            <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
-          </Grid>
-          <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
               <InputLabel>Select Company</InputLabel>
               <Select name="company_id" value={formData.company_id} label="Select Company" onChange={handleMainChange}>
@@ -477,6 +471,13 @@ const WorkOrder = () => {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} />
+          </Grid>
+          
         </Grid>
 
         {formData.workItems.map((item, index) => (
