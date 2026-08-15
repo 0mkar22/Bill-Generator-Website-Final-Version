@@ -202,7 +202,8 @@ const WorkOrderInvoice = () => {
       {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}</Alert>}
 
       <Paper ref={invoiceRef} id="generated-invoice" className="invoice-container" sx={{ p: 0, border: '2px solid #000' }}>
-        <Box sx={{ textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
+        {/* Updated Header Box with display: 'flex' and flexDirection: 'column' */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
           <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
           <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
           <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</Typography>
@@ -245,10 +246,9 @@ const WorkOrderInvoice = () => {
         </Box>
         <Box sx={{ p: 2, pb: 0 }}>
           <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
-            To,{'\n'}{`M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar,\nPokharan Road No. 1, Thane (W) - 400606`}
+            To,{'\n'}{`${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar,\nPokharan Road No. 1, Thane (W) 400606`}
           </Typography>
           
-          {/* Work Order Header with Conditional PO Number */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 3 }}>
             <Box sx={{ display: 'inline-flex', alignItems: 'center', borderBottom: '1.5px solid #000', pb: 0.2 }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', m: 0 }}>
