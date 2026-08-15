@@ -399,16 +399,32 @@ const WorkOrder = () => {
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
   };
 
+  // Check company to automatically inject "N/A" into PO/NPO for non-ONGC
+  const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
+  const selectedCompanyNameStr = selectedCompany?.company_name?.toUpperCase() || '';
+  const isONGCSelected = selectedCompanyNameStr.includes('ONGC') || 
+                         selectedCompanyNameStr.includes('OIL & NATURAL GAS') || 
+                         selectedCompanyNameStr.includes('OIL AND NATURAL GAS');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      
+      const payloadToSubmit = JSON.parse(JSON.stringify(formData));
+      if (!isONGCSelected) {
+          payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
+              ...item,
+              poNpo: 'N/A' // Satisfies the backend validation silently
+          }));
+      }
+
       if (editData) {
-        await API.put(`/workOrders/${formData.id}`, formData);
+        await API.put(`/workOrders/${formData.id}`, payloadToSubmit);
         setSnackbar({ open: true, message: 'Work Order updated successfully!', severity: 'success' });
         setTimeout(() => navigate('/reports'), 1000);
       } else {
-        await createWorkOrder(formData);
+        await createWorkOrder(payloadToSubmit);
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
@@ -425,12 +441,6 @@ const WorkOrder = () => {
       setSubmitting(false);
     }
   };
-
-  const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
-  const selectedCompanyNameStr = selectedCompany?.company_name?.toUpperCase() || '';
-  const isONGCSelected = selectedCompanyNameStr.includes('ONGC') || 
-                         selectedCompanyNameStr.includes('OIL & NATURAL GAS') || 
-                         selectedCompanyNameStr.includes('OIL AND NATURAL GAS');
 
   return (
     <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>

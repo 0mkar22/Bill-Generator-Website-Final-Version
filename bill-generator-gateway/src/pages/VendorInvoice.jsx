@@ -18,7 +18,6 @@ const flexEndColumnStyle = { display: 'flex', flexDirection: 'column', justifyCo
 const borderBottomStyle = { borderBottom: '1px solid #000' };
 const borderRightStyle = { borderRight: '1px solid #000' };
 
-
 const EditableField = ({
   value,
   onChange,
@@ -88,6 +87,10 @@ function VendorInvoice() {
   const [editingRecipient, setEditingRecipient] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
+  
+  const [invoiceDate, setInvoiceDate] = useState(passedInvoiceDate ? new Date(passedInvoiceDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
+  const [editingInvoiceDate, setEditingInvoiceDate] = useState(false);
+
   const [dealingOfficer, setDealingOfficer] = useState('Bagmishree');
   const [editingDealingOfficer, setEditingDealingOfficer] = useState(false);
   const [emailId, setEmailId] = useState('bagmishree@ongc.co.in');
@@ -103,13 +106,10 @@ function VendorInvoice() {
   const [gstNo, setGstNo] = useState('27AAAOC1598A1ZN');
   const [editingGstNo, setEditingGstNo] = useState(false);
 
-  const displayDate = passedInvoiceDate
-    ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
-    : new Date().toLocaleDateString('en-GB');
-
   useEffect(() => {
     if (passedInvoiceNumber) setInvoiceNumber(passedInvoiceNumber);
-  }, [passedInvoiceNumber]);
+    if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
+  }, [passedInvoiceNumber, passedInvoiceDate]);
 
   useEffect(() => {
     if (passedRecipient !== undefined) setRecipient(passedRecipient);
@@ -211,11 +211,19 @@ function VendorInvoice() {
     }
   }, [parentOrder, passedRecipient, passedGstNo]);
 
-  // Updated to pass companyDetails so custom rates are factored into the grand total
+  // GST Calculation Logic
   const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
+  
+  // Detect if address is outside Maharashtra based on 6-digit pin code
+  const addressString = (companyDetails?.address || parentOrder?.companyDetails?.address || recipient || '').toLowerCase();
+  const pincodeMatch = addressString.match(/\b\d{6}\b/);
+  const isIGST = pincodeMatch && !pincodeMatch[0].startsWith('4') && !addressString.includes('maharashtra');
+
   const cgst = amountBeforeTax * 0.09;
   const sgst = amountBeforeTax * 0.09;
-  const total = amountBeforeTax + cgst + sgst;
+  const igst = amountBeforeTax * 0.18;
+  
+  const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
   const rounded = Math.round(total);
 
   return (
@@ -245,13 +253,13 @@ function VendorInvoice() {
         </Alert>
       )}
 
-      <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle, alignItems: 'stretch' }}>
-          <Box sx={{ flex: 1, ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Box sx={{ p: 1, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
+      <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+        
+        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
+          <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Box sx={{ p: 1, pl: 2, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem' }}>To:</Typography>
 
-              {/* Render the Company Address below the Editable Name */}
               {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
                 <Typography 
                   variant="body2" 
@@ -268,16 +276,14 @@ function VendorInvoice() {
                   {companyDetails?.address || parentOrder?.companyDetails?.address}
                 </Typography>
               )}
-
             </Box>
           </Box>
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1, justifyContent: 'center', height: '100%' }}>
               <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
                 <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
               </Box>
               
-              {/* Hardcoded iComp Systems Address - No dynamic variables here */}
               <Box sx={{ textAlign: 'right', mt: 1 }}>
                 <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#333' }}>
                   21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,<br />
@@ -287,8 +293,9 @@ function VendorInvoice() {
             </Box>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'row', ...borderBottomStyle }}>
-          <Box sx={{ flex: 1, ...borderRightStyle, p: 1, fontSize: '1.2rem' }}>
+
+        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+          <Box sx={{ width: '50%', ...borderRightStyle, p: 1, pl: 2, fontSize: '1.2rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold' }}>Dealing Officer :</span>
               <EditableField
               value={dealingOfficer}
@@ -345,10 +352,11 @@ function VendorInvoice() {
             />
             </Typography>
           </Box>
-          <Box sx={{ flex: 1, p: 1, fontSize: '1.2rem' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, ...borderBottomStyle, pb: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', ...borderRightStyle, pr: 2, flex: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Invoice No. :</Typography>
+          
+          <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: 1, ...borderRightStyle }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Invoice No. :</Typography>
                 <EditableField
                   value={invoiceNumber}
                   onChange={setInvoiceNumber}
@@ -360,42 +368,53 @@ function VendorInvoice() {
                   fallback="Click to set"
                 />
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2, flex: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Date :</Typography>
-                <Typography variant="body2" sx={{ ml: 1, fontWeight: 'bold', fontSize: '1.1rem' }}>{displayDate}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Date :</Typography>
+                <EditableField
+                  value={invoiceDate}
+                  onChange={setInvoiceDate}
+                  isEditing={editingInvoiceDate}
+                  setEditing={setEditingInvoiceDate}
+                  isReadOnly={isReadOnly}
+                  sx={{ ml: 1, fontSize: '1.1rem', fontWeight: 'bold' }}
+                  textSx={{ fontSize: '1.1rem', fontWeight: 'bold' }}
+                />
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, mt: 0.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Vendor Code :</Typography>
-              <EditableField
-              value={vendorCode}
-              onChange={setVendorCode}
-              isEditing={editingVendorCode}
-              setEditing={setEditingVendorCode}
-              isReadOnly={isReadOnly}
-              sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
-              textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
-            />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Place Of Supply :</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 4 }}>Mumbai</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
-              <EditableField
-                value={serviceDescription}
-                onChange={setServiceDescription}
-                isEditing={editingServiceDescription}
-                setEditing={setEditingServiceDescription}
-                isReadOnly={isReadOnly}
-                sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
-                textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-              />
+            <Box sx={{ p: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Vendor Code :</Typography>
+                <EditableField
+                  value={vendorCode}
+                  onChange={setVendorCode}
+                  isEditing={editingVendorCode}
+                  setEditing={setEditingVendorCode}
+                  isReadOnly={isReadOnly}
+                  sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Place Of Supply :</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 1 }}>Mumbai</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
+                <EditableField
+                  value={serviceDescription}
+                  onChange={setServiceDescription}
+                  isEditing={editingServiceDescription}
+                  setEditing={setEditingServiceDescription}
+                  isReadOnly={isReadOnly}
+                  sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                />
+              </Box>
             </Box>
           </Box>
         </Box>
-        <Table size="small" sx={{ borderCollapse: 'collapse', border: '1px solid #000', borderTop: 'none' }}>
+
+        <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: 'none' }}>
           <TableHead>
             <TableRow sx={{ borderBottom: '1px solid #000' }}>
               <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
@@ -410,7 +429,6 @@ function VendorInvoice() {
             {selectedItems.map((item, idx) => {
               const amount = calculateItemAmount(item, companyDetails);
               
-              // Extract strictly from the company details in the database
               let companyCustomRate = null;
               if (companyDetails?.work_rates) {
                   if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
@@ -446,7 +464,6 @@ function VendorInvoice() {
               );
             })}
             
-            {/* Amount Before Tax */}
             <TableRow sx={{ borderBottom: 'none' }}>
               <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                 <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>Amount Before Tax:</Typography>
@@ -458,31 +475,42 @@ function VendorInvoice() {
               </TableCell>
             </TableRow>
 
-            {/* CGST */}
-            <TableRow sx={{ borderBottom: 'none' }}>
-              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>CGST 9%:</Typography>
-              </TableCell>
-              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
-                  {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </TableCell>
-            </TableRow>
+            {isIGST ? (
+              <TableRow sx={{ borderBottom: 'none' }}>
+                <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>IGST 18%:</Typography>
+                </TableCell>
+                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                    {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              <>
+                <TableRow sx={{ borderBottom: 'none' }}>
+                  <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>CGST 9%:</Typography>
+                  </TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                      {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow sx={{ borderBottom: 'none' }}>
+                  <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>SGST 9%:</Typography>
+                  </TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                      {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              </>
+            )}
 
-            {/* SGST */}
-            <TableRow sx={{ borderBottom: 'none' }}>
-              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>SGST 9%:</Typography>
-              </TableCell>
-              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
-                  {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </TableCell>
-            </TableRow>
-
-            {/* Total Amount (with border bottom to close the table section) */}
             <TableRow sx={{ borderBottom: '1px solid #000' }}>
               <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
                 <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Total Amount Rs.:</Typography>
@@ -496,18 +524,18 @@ function VendorInvoice() {
           </TableBody>
         </Table>
 
-        <Box sx={{ display: 'flex', ...borderBottomStyle }}>
-          <Box sx={{ flex: 1, p: '8px', ...borderRightStyle }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+          <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
           </Box>
-          <Box sx={{ width: 280, p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>Round up Rs.:</Typography>
+          <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Round up Rs.:</Typography>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
           </Box>
         </Box>
         
-        <Box sx={{ display: 'flex' }}>
-          <Box sx={{ flex: 3, p: '8px', ...borderRightStyle, fontSize: '1rem' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+          <Box sx={{ width: '50%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
@@ -515,12 +543,12 @@ function VendorInvoice() {
             <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
             <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
           </Box>
-          <Box sx={{ width: 860, textAlign: 'center', display: 'flex' }}>
-            <Box sx={{ flex: 1, mr: 0.5, textAlign: 'center', ...borderRightStyle, pr: 1, height: '100%', py: '8px', ...flexEndColumnStyle }}>
+          <Box sx={{ width: '50%', textAlign: 'center', display: 'flex' }}>
+            <Box sx={{ width: '50%', ...borderRightStyle, pr: 1, height: '100%', py: '8px', ...flexEndColumnStyle }}>
               <Box sx={{ height: 100, width: '90%', maxWidth: 220, mx: 'auto', mt: 1 }}></Box>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
             </Box>
-            <Box sx={{ flex: 1, ml: 2, textAlign: 'center', height: '100%', py: '8px', ...flexEndColumnStyle }}>
+            <Box sx={{ width: '50%', ml: 2, height: '100%', py: '8px', ...flexEndColumnStyle }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
               <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
@@ -529,6 +557,7 @@ function VendorInvoice() {
             </Box>
           </Box>
         </Box>
+
       </Paper>
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
