@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -65,6 +65,10 @@ const WorkOrder = () => {
   const [latestEntry, setLatestEntry] = useState(null);
   const [companies, setCompanies] = useState([]);
   
+  // Historical databases for smart autofill
+  const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
+  const [historicalContacts, setHistoricalContacts] = useState([]);
+  
   // Modal states
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState(null);
@@ -87,6 +91,18 @@ const WorkOrder = () => {
       console.error("Failed to fetch companies:", error);
     }
   };
+
+  // --- NEW: Fetch strictly from the team table ---
+  const fetchTeamData = async () => {
+    try {
+      const { data, error } = await supabase.from('team').select('*');
+      if (error) throw error;
+      setHistoricalPersonnel(data || []);
+    } catch (error) {
+      console.error("Failed to fetch team data:", error);
+    }
+  };
+  // -----------------------------------------------
   
   const fetchLatestEntry = async () => {
     try {
@@ -98,14 +114,39 @@ const WorkOrder = () => {
                 { entryNumber: '0' }
             );
             setLatestEntry(latest.entryNumber);
+
+            const cMap = new Map();
+
+            workOrders.forEach(order => {
+                let wItems = [];
+                if (typeof order.workItems === 'string') {
+                    try { wItems = JSON.parse(order.workItems); } catch(e) {}
+                } else if (Array.isArray(order.workItems)) {
+                    wItems = order.workItems;
+                }
+                
+                wItems.forEach(item => {
+                    // Keep Contact Person History extracting from old items
+                    if (item.contactPerson && item.contactNumber) {
+                        cMap.set(item.contactPerson.trim().toLowerCase(), { 
+                            name: item.contactPerson.trim(), 
+                            number: item.contactNumber.trim() 
+                        });
+                    }
+                });
+            });
+            setHistoricalContacts(Array.from(cMap.values()));
         }
     } catch (error) {
-        console.error("Failed to fetch latest entry number:", error);
+        console.error("Failed to fetch latest entry & history:", error);
     }
   };
 
   useEffect(() => {
     fetchCompanies();
+    fetchLatestEntry();
+    fetchTeamData(); // Call the new team fetcher
+
     if (editData) {
       let parsedItems = [];
       if (Array.isArray(editData.workItems)) {
@@ -159,8 +200,6 @@ const WorkOrder = () => {
         company_id: editData.company_id || '',
         workItems: parsedItems
       });
-    } else {
-      fetchLatestEntry();
     }
   }, [editData]);
 
@@ -314,10 +353,48 @@ const WorkOrder = () => {
   const handleWorkItemChange = (index, e) => {
     const { name, value } = e.target;
     const newWorkItems = [...formData.workItems];
-    newWorkItems[index][name] = value;
+    
+    let finalValue = value;
+    if (name === 'contactNumber') {
+        finalValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+    }
+    
+    newWorkItems[index][name] = finalValue;
+
+    if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue'].includes(name)) {
+        for (let i = 1; i < newWorkItems.length; i++) {
+            newWorkItems[i][name] = finalValue;
+        }
+    }
+
+    if (name === 'contactPerson') {
+      let matchedNumber = '';
+      const cleanedValue = finalValue.trim().toLowerCase();
+
+      if (cleanedValue !== '') {
+          const foundDb = historicalContacts.find(c => c.name.toLowerCase() === cleanedValue);
+          if (foundDb) {
+              matchedNumber = foundDb.number.replace(/[^0-9]/g, '').slice(0, 10);
+          } else {
+              for (const workItem of formData.workItems) {
+                  if (workItem.contactPerson?.toLowerCase().trim() === cleanedValue && workItem.contactNumber) {
+                      matchedNumber = workItem.contactNumber.replace(/[^0-9]/g, '').slice(0, 10);
+                      break;
+                  }
+              }
+          }
+      }
+      
+      newWorkItems[index]['contactNumber'] = matchedNumber;
+      if (index === 0) {
+          for (let i = 1; i < newWorkItems.length; i++) {
+              newWorkItems[i]['contactNumber'] = matchedNumber;
+          }
+      }
+    }
 
     if (name === 'quantity') {
-      const qty = Number(value) || 1;
+      const qty = Number(finalValue) || 1;
       let personnel = newWorkItems[index].personnel || [];
       
       if (personnel.length < qty) {
@@ -330,23 +407,17 @@ const WorkOrder = () => {
       newWorkItems[index].personnel = personnel;
     }
 
-    if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue'].includes(name)) {
-        for (let i = 1; i < newWorkItems.length; i++) {
-            newWorkItems[i][name] = value;
-        }
-    }
-
     if (name === 'workMain') {
         newWorkItems[index]['workSub'] = '';
         newWorkItems[index]['customRate'] = '';
         newWorkItems[index]['quantity'] = 1; 
 
-        if (value === 'Two_Camera_Setup') {
+        if (finalValue === 'Two_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
-        } else if (value === 'Three_Camera_Setup') {
+        } else if (finalValue === 'Three_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(5).fill(null).map(() => ({ name: '', number: '' }));
-        } else if (value === 'Storage' || value === '32_GB_Pendrive') {
-            newWorkItems[index]['personnel'] = []; // Clear personnel for storage
+        } else if (finalValue === 'Storage' || finalValue === '32_GB_Pendrive') {
+            newWorkItems[index]['personnel'] = []; 
         } else {
             newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
         }
@@ -359,11 +430,41 @@ const WorkOrder = () => {
       const newWorkItems = [...prev.workItems];
       const updatedPersonnel = [...(newWorkItems[itemIndex].personnel || [])];
       
+      let finalValue = value;
+      if (field === 'number') {
+          finalValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+      }
+      
       if (!updatedPersonnel[personIndex]) {
         updatedPersonnel[personIndex] = { name: '', number: '' };
       }
       
-      updatedPersonnel[personIndex] = { ...updatedPersonnel[personIndex], [field]: value };
+      updatedPersonnel[personIndex] = { ...updatedPersonnel[personIndex], [field]: finalValue };
+
+      if (field === 'name') {
+          let matchedNumber = '';
+          const cleanedValue = finalValue.trim().toLowerCase();
+
+          if (cleanedValue !== '') {
+              const foundDb = historicalPersonnel.find(p => p.name.toLowerCase() === cleanedValue);
+              if (foundDb) {
+                  matchedNumber = foundDb.number.replace(/[^0-9]/g, '').slice(0, 10);
+              } else {
+                  for (const workItem of prev.workItems) {
+                      for (const p of (workItem.personnel || [])) {
+                          if (p.name?.toLowerCase().trim() === cleanedValue && p.number) {
+                              matchedNumber = p.number.replace(/[^0-9]/g, '').slice(0, 10);
+                              break;
+                          }
+                      }
+                      if (matchedNumber) break;
+                  }
+              }
+          }
+          
+          updatedPersonnel[personIndex].number = matchedNumber;
+      }
+
       newWorkItems[itemIndex].personnel = updatedPersonnel;
       return { ...prev, workItems: newWorkItems };
     });
@@ -399,7 +500,6 @@ const WorkOrder = () => {
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
   };
 
-  // Check company to automatically inject "N/A" into PO/NPO for non-ONGC
   const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
   const selectedCompanyNameStr = selectedCompany?.company_name?.toUpperCase() || '';
   const isONGCSelected = selectedCompanyNameStr.includes('ONGC') || 
@@ -415,9 +515,34 @@ const WorkOrder = () => {
       if (!isONGCSelected) {
           payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
               ...item,
-              poNpo: 'N/A' // Satisfies the backend validation silently
+              poNpo: 'N/A' 
           }));
       }
+
+      // --- SAVE NEW TEAM MEMBERS TO SUPABASE ---
+      const newTeamMembers = [];
+      const seenNames = new Set(historicalPersonnel.map(p => p.name.toLowerCase()));
+
+      payloadToSubmit.workItems.forEach(item => {
+          (item.personnel || []).forEach(p => {
+              const pName = p.name?.trim();
+              const pNumber = p.number?.trim();
+              
+              // Only insert if the name doesn't already exist in the database
+              if (pName && pNumber && !seenNames.has(pName.toLowerCase())) {
+                  seenNames.add(pName.toLowerCase());
+                  newTeamMembers.push({ name: pName, number: pNumber });
+              }
+          });
+      });
+
+      if (newTeamMembers.length > 0) {
+          // Upsert prevents duplicate name errors using the UNIQUE constraint
+          await supabase.from('team').upsert(newTeamMembers, { onConflict: 'name' });
+          // Optionally refresh team data in the background
+          fetchTeamData(); 
+      }
+      // -----------------------------------------
 
       if (editData) {
         await API.put(`/workOrders/${formData.id}`, payloadToSubmit);
@@ -505,8 +630,39 @@ const WorkOrder = () => {
                     <Grid item xs={12} sm={6}><TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
-                    <Grid item xs={12} sm={6}><TextField name="contactPerson" label="Contact Person" required fullWidth value={item.contactPerson} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><TextField name="contactNumber" label="Contact Number" required fullWidth value={item.contactNumber} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <Autocomplete
+                        freeSolo
+                        options={Array.from(new Set([
+                            ...historicalContacts.map(c => c.name),
+                            ...formData.workItems.map(wi => wi.contactPerson).filter(Boolean)
+                        ]))}
+                        inputValue={item.contactPerson || ''}
+                        onInputChange={(e, newValue) => handleWorkItemChange(index, { target: { name: 'contactPerson', value: newValue || '' } })}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Contact Person"
+                            required
+                            fullWidth
+                          />
+                        )}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField 
+                        name="contactNumber" 
+                        label="Contact Number" 
+                        required 
+                        fullWidth 
+                        value={item.contactNumber} 
+                        onChange={(e) => handleWorkItemChange(index, e)} 
+                        inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
+                      />
+                    </Grid>
+                    
                     {isONGCSelected && (
                         <Grid item xs={12} sm={6}>
                           <FormControl fullWidth required>
@@ -596,14 +752,25 @@ const WorkOrder = () => {
                     {(item.personnel || [{ name: '', number: '' }]).map((person, pIdx) => (
                       <React.Fragment key={pIdx}>
                         <Grid item xs={12} sm={6}>
-                          <TextField
-                            label={`Photographer/Videographer ${pIdx + 1} Name`}
-                            fullWidth
-                            size="small"
-                            value={person.name || ''}
-                            onChange={(e) => handlePersonnelChange(index, pIdx, 'name', e.target.value)}
+                          <Autocomplete
+                            freeSolo
+                            options={Array.from(new Set([
+                                ...historicalPersonnel.map(p => p.name),
+                                ...formData.workItems.flatMap(wi => (wi.personnel || []).map(p => p.name).filter(Boolean))
+                            ]))}
+                            inputValue={person.name || ''}
+                            onInputChange={(e, newValue) => handlePersonnelChange(index, pIdx, 'name', newValue || '')}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label={`Photographer/Videographer ${pIdx + 1} Name`}
+                                fullWidth
+                                size="small"
+                              />
+                            )}
                           />
                         </Grid>
+                        
                         <Grid item xs={12} sm={6}>
                           <TextField
                             label={`Contact Number`}
@@ -611,6 +778,7 @@ const WorkOrder = () => {
                             size="small"
                             value={person.number || ''}
                             onChange={(e) => handlePersonnelChange(index, pIdx, 'number', e.target.value)}
+                            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
                           />
                         </Grid>
                       </React.Fragment>
