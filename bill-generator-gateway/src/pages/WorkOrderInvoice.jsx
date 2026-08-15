@@ -11,28 +11,90 @@ import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
+// Helper component for editable fields
+const EditableField = ({
+  value,
+  onChange,
+  onBlur,
+  isEditing,
+  setEditing,
+  isReadOnly,
+  multiline = false,
+  minRows = 1,
+  sx = {},
+  textSx = {},
+  fallback = 'N/A'
+}) => {
+  if (isEditing) {
+    return (
+      <TextField
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={() => { setEditing(false); if (onBlur) onBlur(); }}
+        autoFocus
+        size="small"
+        multiline={multiline}
+        minRows={minRows}
+        variant="standard"
+        InputProps={{
+            disableUnderline: true,
+            style: { fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }
+        }}
+        sx={{ ...sx, p: 0, '& .MuiInputBase-root': { p: 0 }, '& .MuiInputBase-input': { p: 0 } }}
+      />
+    );
+  }
+
+  return (
+    <Box
+        component="span"
+        onClick={() => !isReadOnly && setEditing(true)}
+        sx={{
+            cursor: isReadOnly ? 'default' : 'pointer',
+            borderBottom: isReadOnly ? 'none' : '1px dashed transparent',
+            '&:hover': {
+                borderBottom: isReadOnly ? 'none' : '1px dashed #aaa'
+            },
+            ...sx
+        }}
+    >
+      <Typography component="span" variant="body2" sx={textSx}>
+        {value || fallback}
+      </Typography>
+    </Box>
+  );
+};
+
 const WorkOrderInvoice = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const invoiceRef = useRef();
 
-  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate } = location.state || { items: [] };
+  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, poNumber: passedPoNumber } = location.state || { items: [] };
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
+  
+  // Date State
+  const [invoiceDate, setInvoiceDate] = useState(passedInvoiceDate ? new Date(passedInvoiceDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
+  const [editingInvoiceDate, setEditingInvoiceDate] = useState(false);
+
+  // PO Number State
+  const parentOrderPoNumber = selectedItems[0]?.parent?.poNumber || '';
+  const [poNumber, setPoNumber] = useState(passedPoNumber || parentOrderPoNumber || '');
+  const [editingPoNumber, setEditingPoNumber] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [companyDetails, setCompanyDetails] = useState(null);
 
-  const displayDate = passedInvoiceDate
-    ? new Date(passedInvoiceDate).toLocaleDateString('en-GB')
-    : new Date().toLocaleDateString('en-GB');
-
   useEffect(() => {
     setInvoiceNumber(passedInvoiceNumber || selectedItems[0]?.parent?.entryNumber || '');
-  }, [passedInvoiceNumber, selectedItems]);
+    if (passedPoNumber) setPoNumber(passedPoNumber);
+    if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
+  }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
 
   const handleDownload = async () => {
     const input = invoiceRef.current;
@@ -56,6 +118,7 @@ const WorkOrderInvoice = () => {
                 entryNumber: selectedItems[0]?.parent?.entryNumber,
                 vendor: selectedItems[0]?.parent?.vendor
             },
+            poNumber: poNumber,
             company_id: parentOrder.company_id || null,
             company_address: companyDetails ? companyDetails.address : '',
             gstNo: companyDetails ? companyDetails.gst_number : '',
@@ -100,7 +163,6 @@ const WorkOrderInvoice = () => {
     }
   }, [parentOrder]);
 
-  // Updated to pass companyDetails so custom rates factor into the grand total
   const totalAmount = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
   const totalWithGst = totalAmount * 1.18;
   const roundedTotal = Math.round(totalWithGst);
@@ -118,6 +180,9 @@ const WorkOrderInvoice = () => {
 
   const eventDateDetails = Array.from(uniqueEvents.values());
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
+
+  // Helper variable to conditionally render PO logic
+  const isPO = selectedItems[0]?.poNpo === 'PO';
 
   return (
     <Container>
@@ -165,13 +230,45 @@ const WorkOrderInvoice = () => {
                     </Box>
                 )}
              </Typography>
-             <Typography variant="body2">DT: {displayDate}</Typography>
+             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body2" sx={{ mr: 0.5 }}>DT:</Typography>
+                <EditableField
+                  value={invoiceDate}
+                  onChange={setInvoiceDate}
+                  isEditing={editingInvoiceDate}
+                  setEditing={setEditingInvoiceDate}
+                  isReadOnly={isReadOnly}
+                  sx={{ ml: 0.5 }}
+                  textSx={{ fontSize: '0.875rem' }}
+                />
+             </Box>
         </Box>
         <Box sx={{ p: 2, pb: 0 }}>
           <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
-            To,{'\n'}{companyDetails?.address || `M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar, Pokharan Road No. 1, Thane (W) 400 606`}
+            To,{'\n'}{`M/s. ${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar,\nPokharan Road No. 1, Thane (W) - 400606`}
           </Typography>
-          <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', textDecoration: 'underline', mb: 1, mt: 2 }}>Work Order</Typography>
+          
+          {/* Work Order Header with Conditional PO Number */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 3 }}>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', borderBottom: '1.5px solid #000', pb: 0.2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', m: 0 }}>
+                Work Order{isPO ? ' PO No.\u00A0' : ''}
+              </Typography>
+              {isPO && (
+                <EditableField
+                  value={poNumber}
+                  onChange={setPoNumber}
+                  isEditing={editingPoNumber}
+                  setEditing={setEditingPoNumber}
+                  isReadOnly={isReadOnly}
+                  sx={{ '&:hover': { borderBottom: 'none' } }}
+                  textSx={{ fontSize: '1.25rem', fontWeight: 'bold' }}
+                  fallback="Click to set"
+                />
+              )}
+            </Box>
+          </Box>
+
           <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
             The Following Photography Assignment Is Assigned To Your Agency.
           </Typography>
@@ -191,7 +288,6 @@ const WorkOrderInvoice = () => {
               {selectedItems.map((item, idx) => {
               const amount = calculateItemAmount(item, companyDetails);
               
-              // Extract strictly from the company details in the database
               let companyCustomRate = null;
               if (companyDetails?.work_rates) {
                   if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
