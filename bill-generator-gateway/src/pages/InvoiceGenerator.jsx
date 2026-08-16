@@ -5,6 +5,9 @@ import {
   Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import EditIcon from '@mui/icons-material/Edit';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import { getWorkOrders } from '../services/api';
 import API from '../services/api';
 
@@ -97,7 +100,6 @@ const InvoiceGenerator = () => {
     }
 
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
-    // Fallback to _id for MongoDB compatibility if Supabase's id isn't present
     const currentInvoiceId = savedInvoice.id || savedInvoice._id; 
     
     navigate(route, { 
@@ -120,9 +122,7 @@ const InvoiceGenerator = () => {
     });
   };
 
-  // NEW: Handler for editing the core Work Item / Order itself
   const handleEditWorkItem = (parentOrder) => {
-    // Note: Change '/work-order' to whatever your actual route is for the WorkOrder.jsx entry form
     navigate('/work-order', { 
       state: { 
         isEditing: true, 
@@ -296,20 +296,56 @@ const InvoiceGenerator = () => {
                                   <TableCell>{displayPoNpo}</TableCell>
                                   <TableCell>{invoice.parentOrderInfo?.vendor}</TableCell>
                                   <TableCell>
-                                      <ButtonGroup variant="outlined" size="small">
+                                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                                           { (viewingInvoiceType === 'All' ? invoice.types.has('Vendor') : true) && viewingInvoiceType !== 'WorkOrder' &&
                                               <>
-                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}>Vendor Invoice</Button>
-                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'Vendor', true)} color="secondary">Edit Vendor</Button>
+                                                  <Button 
+                                                    variant="contained" 
+                                                    color="primary" 
+                                                    size="small"
+                                                    startIcon={<ReceiptIcon />}
+                                                    onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}
+                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', boxShadow: '0 2px 4px rgba(25, 118, 210, 0.2)' }}
+                                                  >
+                                                      Vendor Invoice
+                                                  </Button>
+                                                  <Button 
+                                                    variant="outlined" 
+                                                    color="primary" 
+                                                    size="small"
+                                                    startIcon={<EditIcon />}
+                                                    onClick={() => handleViewSavedInvoice(invoice, 'Vendor', true)}
+                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', borderWidth: '1.5px', '&:hover': { borderWidth: '1.5px' } }}
+                                                  >
+                                                      Edit Vendor
+                                                  </Button>
                                               </>
                                           }
                                           { (viewingInvoiceType === 'All' ? invoice.types.has('WorkOrder') : true) && viewingInvoiceType !== 'Vendor' &&
                                               <>
-                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}>Work Order Invoice</Button>
-                                                <Button onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder', true)} color="secondary">Edit Work Order</Button>
+                                                  <Button 
+                                                    variant="contained" 
+                                                    color="secondary" 
+                                                    size="small"
+                                                    startIcon={<AssignmentIcon />}
+                                                    onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}
+                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', boxShadow: '0 2px 4px rgba(156, 39, 176, 0.2)' }}
+                                                  >
+                                                      Work Order Invoice
+                                                  </Button>
+                                                  <Button 
+                                                    variant="outlined" 
+                                                    color="secondary" 
+                                                    size="small"
+                                                    startIcon={<EditIcon />}
+                                                    onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder', true)}
+                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', borderWidth: '1.5px', '&:hover': { borderWidth: '1.5px' } }}
+                                                  >
+                                                      Edit Work Order
+                                                  </Button>
                                               </>
                                           }
-                                      </ButtonGroup>
+                                      </Box>
                                   </TableCell>
                               </TableRow>
                             )
