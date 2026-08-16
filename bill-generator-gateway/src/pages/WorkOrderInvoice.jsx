@@ -74,7 +74,7 @@ const WorkOrderInvoice = () => {
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
-  
+
   // Date State
   const [invoiceDate, setInvoiceDate] = useState(passedInvoiceDate ? new Date(passedInvoiceDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
   const [editingInvoiceDate, setEditingInvoiceDate] = useState(false);
@@ -106,6 +106,46 @@ const WorkOrderInvoice = () => {
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     pdf.save(`WorkOrder_${invoiceNumber || 'preview'}.pdf`);
   };
+
+  // --- NEW: Download Word Document ---
+  const handleDownloadWord = () => {
+    const invoiceElement = document.getElementById('generated-invoice');
+    if (!invoiceElement) return;
+
+    const html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Work Order Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; }
+          table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+          th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
+          /* Add specific styles to guide MS Word's layout engine */
+          .word-flex-fallback { display: block; width: 100%; clear: both; }
+          .word-float-left { float: left; width: 50%; }
+          .word-float-right { float: right; width: 50%; text-align: right; }
+        </style>
+      </head>
+      <body>
+        ${invoiceElement.innerHTML}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `WorkOrder_${invoiceNumber || 'preview'}.doc`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  // -----------------------------------
 
   const handleSaveToDatabase = async () => {
     setIsSaving(true);
@@ -195,7 +235,10 @@ const WorkOrderInvoice = () => {
                 </Button>
             )}
             {saveSuccess && (
-                <Button variant="contained" onClick={handleDownload}>Download Invoice</Button>
+                <>
+                    <Button variant="contained" onClick={handleDownload}>Download PDF</Button>
+                    <Button variant="contained" color="info" onClick={handleDownloadWord}>Download Word</Button>
+                </>
             )}
         </Box>
       </Box>

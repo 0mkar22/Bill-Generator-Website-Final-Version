@@ -122,6 +122,7 @@ function VendorInvoice() {
     if (passedGstNo !== undefined) setGstNo(passedGstNo);
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
+  // Download PDF
   const handleDownloadBill = () => {
     const billElement = document.getElementById('generated-bill');
     if (!billElement) return;
@@ -139,6 +140,49 @@ function VendorInvoice() {
         });
     }, 100);
   };
+
+  // --- NEW: Download Word Document ---
+  const handleDownloadWord = () => {
+    const billElement = document.getElementById('generated-bill');
+    if (!billElement) return;
+
+    // Microsoft Word respects basic HTML tags. We bundle the HTML inside a Word-specific XML envelope.
+    const html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Vendor Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; }
+          table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+          th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
+          /* Add specific styles to guide MS Word's layout engine */
+          .word-flex-fallback { display: block; width: 100%; clear: both; }
+          .word-float-left { float: left; width: 50%; }
+          .word-float-right { float: right; width: 50%; text-align: right; }
+        </style>
+      </head>
+      <body>
+        ${billElement.innerHTML}
+      </body>
+      </html>
+    `;
+
+    // Package the HTML string into an MS Word Blob
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `VendorInvoice_${invoiceNumber || 'preview'}.doc`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  // -----------------------------------
 
   const handleSaveToDatabase = async () => {
       setIsSaving(true);
@@ -242,10 +286,16 @@ function VendorInvoice() {
         {saveSuccess && (
           <Alert severity="success" sx={{ mb: 2 }}>
               {isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}
-              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button variant="contained" onClick={handleDownloadBill}>
-                    Download Invoice
+                    Download PDF
                 </Button>
+                
+                {/* NEW BUTTON: Download Word Document */}
+                <Button variant="contained" color="info" onClick={handleDownloadWord}>
+                    Download Word
+                </Button>
+
                 <Button variant="contained" color="secondary" onClick={handleGenerateWorkOrderInvoice}>
                     Generate Work Order Invoice
                 </Button>
