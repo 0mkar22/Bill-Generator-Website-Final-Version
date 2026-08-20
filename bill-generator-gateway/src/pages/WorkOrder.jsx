@@ -12,13 +12,133 @@ import { supabase } from '../supabase';
 import { subWorks, venues, vendors } from '../constants/data';
 import { calculateItemAmount } from '../utils/helpers';
 
-const getDefaultRatesTemplate = () => {
+// --- NEW: Vidhan Mandal Specific Works from Excel ---
+const vidhanMandalWorks = {
+  "पासपोर्ट फोटो एक्सपोझिंग चार्जेस सह": [
+    "फोटो काढून ४ नग स्टॅम्प साईज फोटो प्रिंटीगसह",
+    "फोटो काढून ४ नग पासपोर्ट साईज फोटो प्रिंटीगसह",
+    "फोटो काढून ४ नग व्‍हीसा साईज फोटो प्रिंटींगसह"
+  ],
+  "फोटोग्राफी": [
+    "४ तासापर्यंत डाटा डीव्हीडी, सॉफट कॉपी ई-मेलवर अपलोड करणेसह",
+    "८ तासापर्यंत डाटा डीव्हीडी, सॉफट कॉपी ई-मेलवर अपलोड करणेसह",
+    "१२ तासापर्यंत डाटा डीव्हीडी, सॉफट कॉपी ई-मेलवर अपलोड करणेसह",
+    "मुंबई बाहेर ४ तासापर्यंत डाटा डीव्हीडी, सॉफट कॉपी ई-मेलवर अपलोड करणेसह",
+    "मुंबई बाहेर ८ तासापर्यंत डाटा डीव्हीडी, सॉफट कॉपी ई-मेलवर अपलोड करणेसह",
+    "मुंबई बाहेर १२ तासापर्यंत डाटा डीव्हीडी, सॉफट कॉपी ई-मेलवर अपलोड करणेसह"
+  ],
+  "फोटो प्रिंटिंग": [
+    "५ X १० मेट कॉपी",
+    "५ X १० मेट कॉपी अतिरिक्त फोटो",
+    "६ X 8 मेट कॉपी",
+    "८ X १० मेट कॉपी",
+    "८ X १२ मेट कॉपी",
+    "१० X १२ मेट कॉपी",
+    "१२ X १५ मेट कॉपी",
+    "१२ X १८ मेट कॉपी",
+    "१६ X २० मेट कॉपी",
+    "२० X २४ मेट कॉपी",
+    "२४ X ३० मेट कॉपी"
+  ],
+  "फोटो अल्बम ( रिकामे )": [
+    "५ X ७ साईज अल्बम चार्ज १ X १ ( ४० फोटो )",
+    "५ X ७ साईज अल्बम चार्ज १ X १ ( ६० फोटो )",
+    "५ X ७ साईज अल्बम चार्ज १ X १ ( ८० फोटो )",
+    "५ X ७ साईज अल्बम चार्ज १ X १ ( १०० फोटो )",
+    "५ X ७ साईज अल्बम चार्ज १ X १ (२०० फोटो )",
+    "१२ X ३६ कव्हर पेज सह कारीजम अल्बम",
+    "२५ पाने २०० फोटो  (डिझाईन प्रिंटिंग)",
+    "१२ X ३६ कारीजम अल्बम १ पाने (डिझाईन प्रिंटिंग)",
+    "१२ X ३६ कव्हर पेज सह कारीजम अल्बम २५ पाने फक्त प्रिंटिंग)",
+    "१२ X ३६ कारीजम अल्बम १ पाने फक्त प्रिंटिंग)"
+  ],
+  "व्हिडिओ शुटींग एक्सपोझिंग चार्जेस सह": [
+    "४ तासपर्यंत (एडिटिंग व डेटा डीव्हीडी सह)",
+    "८ तासपर्यंत (एडिटिंग व डेटा डीव्हीडी सह)",
+    "१२ तासपर्यंत (एडिटिंग व डेटा डीव्हीडी सह)",
+    "मुंबई बाहेर ४ तासपर्यंत (एडिटिंग व डेटा डीव्हीडी सह)",
+    "मुंबई बाहेर ८ तासपर्यंत (एडिटिंग व डेटा डीव्हीडी सह)",
+    "मुंबई बाहेर १२ तासपर्यंत (एडिटिंग व डेटा डीव्हीडी सह)"
+  ],
+  "अतिरिक्त डीव्हीडी कॉपी": [
+    "सिंगल डीव्हीडी सेट",
+    "दोन डीव्हीडी सेट",
+    "तीन डीव्हीडी सेट",
+    "चार डीव्हीडी सेट",
+    "पाच डीव्हीडी सेट",
+    "आठ डीव्हीडी सेट",
+    "दहा डीव्हीडी सेट"
+  ],
+  "पेनड्राईव ३.०": [
+    "१६ जी बी",
+    "३२ जी बी",
+    "६४ जी बी",
+    "१२८ जी बी"
+  ],
+  "हार्डडिस्क": [
+    "१ टि. बी.",
+    "२ टि. बी."
+  ],
+  "लाईव्ह व्हिडिओ मिक्सर": [
+    "लाईव्ह व्हिडिओ मिक्सर",
+    "मुंबई बाहेर लाईव्ह व्हिडिओ मिक्सर"
+  ],
+  "स्टुडिओ सेटअप चार्जेस": [
+    "स्टुडिओ सेटअप चार्जेस  (दोन लाईट)",
+    "मुंबई बाहेर स्टुडिओ सेटअप चार्जेस (दोन लाईट)"
+  ],
+  "सन्माननीय सदस्यांचे एकत्रित छायाचित्र पाकीटासाहित": [
+    "सन्माननीय विधानपरिषद सदस्यांचे एकत्रित छायाचित्र (१२ क्ष १५ फोटो साईज व १५ क्ष १८ माउटीग साईज",
+    "सन्माननीय विधानसभा सदस्यांचे एकत्रित छायाचित्र (१८ क्ष २० फोटो साईज व २१ क्ष २४ माउटीग साईज",
+    "सन्माननीय सदस्यांचे एकत्रित छायाचित्र माउटीग सहित (२१  क्ष २४  आकाराचे  माउटीग सहित लाकडी फ्रेम तयार करणे)",
+    "सनबोर्ड फोटो / लमीनेशन प्रिंटिंगसह ( प्रती चौरस फुट)"
+  ],
+  "दिवंगत विधानपरिषद व विधानसभा सदस्य यांच्याकरीत स्मृतिपत्र": [
+    "स्मृतिपत्र (गोल्डन एम्बॉस सहित) १२\" क्ष १८\"",
+    "आकर्षक फ्रेम माऊंटीग सहित १७\" क्ष २३\"",
+    "बंद बॉक्स ( १८\" क्ष २४\" या आकाराचा ) पुरवणे"
+  ],
+  "फोटो लेमिनेशन": [
+    "फोटो सहित लेमिनेशन (लाकडी) प्रती इंच"
+  ],
+  "फोटो फ्रेम": [
+    "१ इंच लाकडी फ्रेम साईज १०\" क्ष १४\"",
+    "१ इंच लाकडी फ्रेम साईज १२\" क्ष १४\"",
+    "१ इंच लाकडी फ्रेम साईज १४\" क्ष १६\"",
+    "२ इंच लाकडी फ्रेम साईज १४\" क्ष २०\"",
+    "२ इंच लाकडी फ्रेम साईज १८\" क्ष २२\"",
+    "२.५ इंच लाकडी फ्रेम साईज २२\" क्ष २६\"",
+    "२.५ इंच लाकडी फ्रेम साईज २७\" क्ष ३३\""
+  ],
+  "बॅनर": [
+    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
+    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
+    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे",
+    "स्टँडीज बॅनर सहित उपलब्घ करून देणे.",
+    "स्टँडीज लिनेल सहित उपलब्घ करून देणे."
+  ]
+};
+
+// Dynamic Template Generator
+const getRatesTemplateForCompany = (companyName = '') => {
+  const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+
+  if (isVidhan) {
+    const rates = {};
+    Object.keys(vidhanMandalWorks).forEach(work => {
+      rates[work] = {};
+      vidhanMandalWorks[work].forEach(sub => {
+        rates[work][sub] = '';
+      });
+    });
+    return rates;
+  }
+
+  // Standard Template
   const baseLocations = ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'];
-  
   const generateCategoryRates = (workMain) => {
     const rates = {};
     const rawSubWorks = subWorks[workMain] || [];
-    
     const hasLocationPrefix = rawSubWorks.some(sub => 
       ['mumbai', 'panvel', 'uran', 'nhava', 'outstation'].some(loc => sub.toLowerCase().includes(loc))
     );
@@ -65,22 +185,34 @@ const WorkOrder = () => {
   const [latestEntry, setLatestEntry] = useState(null);
   const [companies, setCompanies] = useState([]);
   
-  // Historical databases for smart autofill
   const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
   const [historicalContacts, setHistoricalContacts] = useState([]);
   
-  // Modal states
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState(null);
   const [newCompany, setNewCompany] = useState({ 
     company_name: '', 
     address: '', 
     gst_number: '',
-    work_rates: getDefaultRatesTemplate()
+    work_rates: getRatesTemplateForCompany()
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Auto-switch modal template if Vidhan Mandal is typed
+  useEffect(() => {
+    if (!editingCompanyId && isCompanyModalOpen) {
+      const isVidhan = newCompany.company_name.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+      const currentIsVidhan = Object.keys(newCompany.work_rates).includes('फोटोग्राफी');
+      
+      if (isVidhan && !currentIsVidhan) {
+        setNewCompany(prev => ({ ...prev, work_rates: getRatesTemplateForCompany(prev.company_name) }));
+      } else if (!isVidhan && currentIsVidhan) {
+        setNewCompany(prev => ({ ...prev, work_rates: getRatesTemplateForCompany(prev.company_name) }));
+      }
+    }
+  }, [newCompany.company_name, isCompanyModalOpen, editingCompanyId]);
 
   const fetchCompanies = async () => {
     try {
@@ -124,7 +256,6 @@ const WorkOrder = () => {
                 }
                 
                 wItems.forEach(item => {
-                    // Keep Contact Person History extracting from old items
                     if (item.contactPerson && item.contactNumber) {
                         cMap.set(item.contactPerson.trim().toLowerCase(), { 
                             name: item.contactPerson.trim(), 
@@ -202,11 +333,17 @@ const WorkOrder = () => {
   }, [editData]);
 
   const getFilteredSubWorks = (workMain, company) => {
+    const companyName = company?.company_name?.toUpperCase() || '';
+    const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+
+    if (isVidhan && vidhanMandalWorks[workMain]) {
+        return vidhanMandalWorks[workMain];
+    }
+
     if (workMain === 'Storage') {
         return subWorks['Storage'] || ['32GB', '64GB', '128GB', '256GB', '1TB', '2TB'];
     }
 
-    const companyName = company?.company_name?.toUpperCase() || '';
     const isONGC = companyName.includes('ONGC') || 
                    companyName.includes('OIL & NATURAL GAS') || 
                    companyName.includes('OIL AND NATURAL GAS');
@@ -244,7 +381,7 @@ const WorkOrder = () => {
     setEditingCompanyId(null);
     setNewCompany({ 
       company_name: '', address: '', gst_number: '', 
-      work_rates: getDefaultRatesTemplate() 
+      work_rates: getRatesTemplateForCompany() 
     });
     setIsCompanyModalOpen(true);
   };
@@ -255,7 +392,7 @@ const WorkOrder = () => {
     setEditingCompanyId(company.id);
     
     const existingRates = company.work_rates || {};
-    const mergedRates = getDefaultRatesTemplate();
+    const mergedRates = getRatesTemplateForCompany(company.company_name);
     
     for (const key in mergedRates) {
       if (typeof mergedRates[key] === 'object') {
@@ -296,23 +433,27 @@ const WorkOrder = () => {
       const isONGC = companyNameStr.includes('ONGC') || 
                      companyNameStr.includes('OIL & NATURAL GAS') || 
                      companyNameStr.includes('OIL AND NATURAL GAS');
-      
+      const isModalVidhan = companyNameStr.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+
       const allowedLocations = isONGC 
           ? ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'] 
           : ['Mumbai', 'Outstation'];
 
       const cleanedRates = JSON.parse(JSON.stringify(newCompany.work_rates));
 
-      Object.keys(cleanedRates).forEach(category => {
-        if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null && category !== 'Storage') {
-          Object.keys(cleanedRates[category]).forEach(subKey => {
-            const isAllowed = allowedLocations.some(loc => subKey.includes(loc));
-            if (!isAllowed) {
-              delete cleanedRates[category][subKey];
+      // Only filter out locations if it's the standard template
+      if (!isModalVidhan) {
+          Object.keys(cleanedRates).forEach(category => {
+            if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null && category !== 'Storage') {
+              Object.keys(cleanedRates[category]).forEach(subKey => {
+                const isAllowed = allowedLocations.some(loc => subKey.includes(loc));
+                if (!isAllowed) {
+                  delete cleanedRates[category][subKey];
+                }
+              });
             }
           });
-        }
-      });
+      }
 
       const payloadToSave = { ...newCompany, work_rates: cleanedRates };
 
@@ -414,7 +555,8 @@ const WorkOrder = () => {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
         } else if (finalValue === 'Three_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(5).fill(null).map(() => ({ name: '', number: '' }));
-        } else if (finalValue === 'Storage' || finalValue === '32_GB_Pendrive') {
+        } else if (finalValue === 'Storage' || finalValue === '32_GB_Pendrive' || Object.keys(vidhanMandalWorks).includes(finalValue)) {
+            // Mostly disable personnel for standard item types or generic requests 
             newWorkItems[index]['personnel'] = []; 
         } else {
             newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
@@ -631,7 +773,10 @@ const WorkOrder = () => {
           
         </Grid>
 
-        {formData.workItems.map((item, index) => (
+        {formData.workItems.map((item, index) => {
+          const hidePersonnel = ['Storage', '32_GB_Pendrive', 'पेनड्राईव ३.०', 'हार्डडिस्क', 'अतिरिक्त डीव्हीडी कॉपी', 'फोटो फ्रेम', 'फोटो लेमिनेशन', 'बॅनर', 'अतिरिक्त डीव्हीडी कॉपी', 'सन्माननीय सदस्यांचे एकत्रित छायाचित्र पाकीटासाहित', 'दिवंगत विधानपरिषद व विधानसभा सदस्य यांच्याकरीत स्मृतिपत्र'].includes(item.workMain);
+          
+          return (
           <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Work Item #{index + 1}</Typography>
@@ -651,7 +796,7 @@ const WorkOrder = () => {
                     {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
                     
                     {isVidhanMandalSelected ? (
-                      <Grid item xs={12} sm={6}>
+                      <Grid item xs={12} sm={12}>
                         <TextField 
                           name="roomNumber" 
                           label="कक्ष क्रमांक" 
@@ -715,14 +860,22 @@ const WorkOrder = () => {
             <Grid container spacing={2} sx={{ mt: index === 0 ? 1 : 0 }}>
                 <Grid item xs={12} sm={6}>
                     <FormControl fullWidth required>
-                        <InputLabel>Work Name</InputLabel>
-                        <Select name="workMain" value={item.workMain} label="Work Name" onChange={(e) => handleWorkItemChange(index, e)}>
-                            <MenuItem value="Still_Photography">Still Photography</MenuItem>
-                            <MenuItem value="Videography">Videography</MenuItem>
-                            <MenuItem value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>
-                            <MenuItem value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>
-                            <MenuItem value="Live_Telecast">Live Telecast Setup</MenuItem>
-                            <MenuItem value="Storage">Storage</MenuItem>
+                        <InputLabel>{isVidhanMandalSelected ? 'कामाचे स्वरूप' : 'Work Name'}</InputLabel>
+                        <Select name="workMain" value={item.workMain} label={isVidhanMandalSelected ? 'कामाचे स्वरूप' : 'Work Name'} onChange={(e) => handleWorkItemChange(index, e)}>
+                            {isVidhanMandalSelected ? (
+                                Object.keys(vidhanMandalWorks).map(work => (
+                                    <MenuItem key={work} value={work}>{work}</MenuItem>
+                                ))
+                            ) : (
+                                <>
+                                  <MenuItem value="Still_Photography">Still Photography</MenuItem>
+                                  <MenuItem value="Videography">Videography</MenuItem>
+                                  <MenuItem value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>
+                                  <MenuItem value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>
+                                  <MenuItem value="Live_Telecast">Live Telecast Setup</MenuItem>
+                                  <MenuItem value="Storage">Storage</MenuItem>
+                                </>
+                            )}
                             <MenuItem value="Others">Others</MenuItem>
                         </Select>
                     </FormControl>
@@ -734,8 +887,8 @@ const WorkOrder = () => {
                 ) : (
                     <Grid item xs={12} sm={6}>
                         <FormControl fullWidth required={!!item.workMain} disabled={!item.workMain}>
-                            <InputLabel>Work Subcategory</InputLabel>
-                            <Select name="workSub" value={item.workSub} label="Work Subcategory" onChange={(e) => handleWorkItemChange(index, e)}>
+                            <InputLabel>{isVidhanMandalSelected ? 'कामाचे प्रकार' : 'Work Subcategory'}</InputLabel>
+                            <Select name="workSub" value={item.workSub} label={isVidhanMandalSelected ? 'कामाचे प्रकार' : 'Work Subcategory'} onChange={(e) => handleWorkItemChange(index, e)}>
                                 {getFilteredSubWorks(item.workMain, selectedCompany).map(sub => (
                                     <MenuItem key={sub} value={sub}>{sub.replaceAll('_', ' ')}</MenuItem>
                                 ))}
@@ -746,7 +899,7 @@ const WorkOrder = () => {
                 <Grid item xs={12} sm={6}>
                     <TextField 
                         name="quantity" 
-                        label="Quantity" 
+                        label={isVidhanMandalSelected ? 'नग' : 'Quantity'} 
                         type="number" 
                         required 
                         fullWidth 
@@ -768,7 +921,7 @@ const WorkOrder = () => {
                         />
                     ) : (
                         <TextField 
-                            label="Amount" 
+                            label={isVidhanMandalSelected ? 'रकम' : 'Amount'} 
                             type="text" 
                             fullWidth 
                             value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
@@ -777,7 +930,7 @@ const WorkOrder = () => {
                     )}
                 </Grid>
 
-                {item.workMain !== 'Storage' && item.workMain !== '32_GB_Pendrive' && (
+                {!hidePersonnel && (
                   <React.Fragment>
                     <Grid item xs={12}>
                       <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Assigned Personnel</Typography>
@@ -820,7 +973,7 @@ const WorkOrder = () => {
                 )}
             </Grid>
           </Paper>
-        ))}
+        )})}
 
         <Button type="button" startIcon={<AddCircleOutlineIcon />} onClick={addWorkItem} sx={{ mt: 2 }}>
           Add Another Item
