@@ -122,7 +122,6 @@ function VendorInvoice() {
     if (passedGstNo !== undefined) setGstNo(passedGstNo);
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
-  // Download PDF
   const handleDownloadBill = () => {
     const billElement = document.getElementById('generated-bill');
     if (!billElement) return;
@@ -249,10 +248,8 @@ function VendorInvoice() {
     }
   }, [parentOrder, passedRecipient, passedGstNo]);
 
-  // GST Calculation Logic
   const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
   
-  // Detect if address is outside Maharashtra based on 6-digit pin code
   const addressString = (companyDetails?.address || parentOrder?.companyDetails?.address || recipient || '').toLowerCase();
   const pincodeMatch = addressString.match(/\b\d{6}\b/);
   const isIGST = pincodeMatch && !pincodeMatch[0].startsWith('4') && !addressString.includes('maharashtra');
@@ -264,7 +261,6 @@ function VendorInvoice() {
   const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
   const rounded = Math.round(total);
 
-  // Vidhan Mandal condition to change to Marathi Text 
   const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   return (
@@ -465,10 +461,10 @@ function VendorInvoice() {
             <TableRow sx={{ borderBottom: '1px solid #000' }}>
               <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
               <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
-              <TableCell sx={boldHeaderCellStyle}>Quantity</TableCell>
+              <TableCell sx={boldHeaderCellStyle}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
               <TableCell sx={boldHeaderCellStyle}>HSN Code</TableCell>
               <TableCell sx={boldRightAlignedCellStyle}>Rate Rs.</TableCell>
-              <TableCell sx={boldRightAlignedCellStyle}>Amount Rs.</TableCell>
+              <TableCell sx={boldRightAlignedCellStyle}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -495,12 +491,11 @@ function VendorInvoice() {
                   <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
                   <TableCell sx={tableCellStyle}>
                     <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>
-                      {/* APPLY MARATHI STRINGS IF APPLICABLE */}
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
-                      <span style={{ fontWeight: 'bold' }}>Work Type:</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
-                      {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>Location and Duration:</span>} {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
+                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
+                      {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : 'Location and Duration:'}</span>} {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ ...tableCellStyle, textAlign: 'center' }}>{quantity}</TableCell>
