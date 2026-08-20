@@ -11,7 +11,6 @@ import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 
-// Helper component for editable fields
 const EditableField = ({
   value,
   onChange,
@@ -107,7 +106,6 @@ const WorkOrderInvoice = () => {
     pdf.save(`WorkOrder_${invoiceNumber || 'preview'}.pdf`);
   };
 
-  // --- NEW: Download Word Document ---
   const handleDownloadWord = () => {
     const invoiceElement = document.getElementById('generated-invoice');
     if (!invoiceElement) return;
@@ -121,7 +119,6 @@ const WorkOrderInvoice = () => {
           body { font-family: Arial, sans-serif; }
           table { border-collapse: collapse; width: 100%; margin-top: 10px; }
           th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
-          /* Add specific styles to guide MS Word's layout engine */
           .word-flex-fallback { display: block; width: 100%; clear: both; }
           .word-float-left { float: left; width: 50%; }
           .word-float-right { float: right; width: 50%; text-align: right; }
@@ -145,7 +142,6 @@ const WorkOrderInvoice = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  // -----------------------------------
 
   const handleSaveToDatabase = async () => {
     setIsSaving(true);
@@ -221,8 +217,9 @@ const WorkOrderInvoice = () => {
   const eventDateDetails = Array.from(uniqueEvents.values());
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
 
-  // Helper variable to conditionally render PO logic
+  // Helper variables
   const isPO = selectedItems[0]?.poNpo === 'PO';
+  const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   return (
     <Container>
@@ -245,7 +242,6 @@ const WorkOrderInvoice = () => {
       {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}</Alert>}
 
       <Paper ref={invoiceRef} id="generated-invoice" className="invoice-container" sx={{ p: 0, border: '2px solid #000' }}>
-        {/* Updated Header Box with display: 'flex' and flexDirection: 'column' */}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
           <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
           <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
@@ -352,10 +348,11 @@ const WorkOrderInvoice = () => {
                     <TableCell sx={{ border: '1px solid #000' }}>
                       <Typography variant="body2" component="div">{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
                       <>
+                          {/* APPLY MARATHI STRINGS IN THE TABLE */}
                           <Typography variant="body2" component="div">{item.workSub && `Duration : ${item.workSub.replaceAll('_', ' ')}`}</Typography>
-                          <Typography variant="body2" component="div">{`dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
-                          <Typography variant="body2" component="div">{`For ${item.eventName}`}</Typography>
-                          <Typography variant="body2" component="div">{`at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
+                          <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                          <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
+                          <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
                       </>
                     </TableCell>
                     <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{quantity}</TableCell>
@@ -400,19 +397,19 @@ const WorkOrderInvoice = () => {
             <Table size="small" sx={{ border: '1px solid #000' }}>
               <TableBody>
                 <TableRow>
-                  <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold' }}>Event</TableCell>
+                  <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव' : 'Event'}</TableCell>
                   <TableCell sx={{ border: '1px solid #000' }}>
                     {selectedItems.every(item => 
                         item.eventName === selectedItems[0].eventName && 
                         item.eventVenue === selectedItems[0].eventVenue && 
                         item.customVenue === selectedItems[0].customVenue
                     ) 
-                      ? `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` 
-                      : 'For Various events at various places.'}
+                      ? (isVidhanMandal ? `कामाचे नांव ${selectedItems[0].eventName} कामाचे स्थळ ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` : `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}`) 
+                      : (isVidhanMandal ? 'विविध ठिकाणी विविध कार्यक्रमांसाठी.' : 'For Various events at various places.')}
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>Date</TableCell>
+                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</TableCell>
                   <TableCell sx={{ border: '1px solid #000' }}>
                     {uniqueDates.join(', ')}
                   </TableCell>

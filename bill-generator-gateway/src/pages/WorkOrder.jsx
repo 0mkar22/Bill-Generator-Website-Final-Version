@@ -56,7 +56,7 @@ const WorkOrder = () => {
     company_id: '',
     workItems: [
       { 
-        eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', 
+        eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
         workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
         personnel: [{ name: '', number: '' }]
       }
@@ -92,7 +92,6 @@ const WorkOrder = () => {
     }
   };
 
-  // --- NEW: Fetch strictly from the team table ---
   const fetchTeamData = async () => {
     try {
       const { data, error } = await supabase.from('team').select('*');
@@ -102,7 +101,6 @@ const WorkOrder = () => {
       console.error("Failed to fetch team data:", error);
     }
   };
-  // -----------------------------------------------
   
   const fetchLatestEntry = async () => {
     try {
@@ -145,7 +143,7 @@ const WorkOrder = () => {
   useEffect(() => {
     fetchCompanies();
     fetchLatestEntry();
-    fetchTeamData(); // Call the new team fetcher
+    fetchTeamData(); 
 
     if (editData) {
       let parsedItems = [];
@@ -157,7 +155,7 @@ const WorkOrder = () => {
 
       if (parsedItems.length === 0) {
         parsedItems = [{ 
-          eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', 
+          eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
           workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
           personnel: [{ name: '', number: '' }]
         }];
@@ -361,7 +359,7 @@ const WorkOrder = () => {
     
     newWorkItems[index][name] = finalValue;
 
-    if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue'].includes(name)) {
+    if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue', 'roomNumber'].includes(name)) {
         for (let i = 1; i < newWorkItems.length; i++) {
             newWorkItems[i][name] = finalValue;
         }
@@ -483,6 +481,7 @@ const WorkOrder = () => {
               eventVenue: firstItem.eventVenue,
               contactPerson: firstItem.contactPerson,
               contactNumber: firstItem.contactNumber,
+              roomNumber: firstItem.roomNumber || '',
               customVenue: firstItem.customVenue,
               workMain: '',
               workSub: '',
@@ -506,6 +505,8 @@ const WorkOrder = () => {
                          selectedCompanyNameStr.includes('OIL & NATURAL GAS') || 
                          selectedCompanyNameStr.includes('OIL AND NATURAL GAS');
 
+  const isVidhanMandalSelected = selectedCompany?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -519,7 +520,19 @@ const WorkOrder = () => {
           }));
       }
 
-      // --- SAVE NEW TEAM MEMBERS TO SUPABASE ---
+      if (isVidhanMandalSelected) {
+          payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
+              ...item,
+              contactPerson: '',
+              contactNumber: ''
+          }));
+      } else {
+          payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
+              ...item,
+              roomNumber: ''
+          }));
+      }
+
       const newTeamMembers = [];
       const seenNames = new Set(historicalPersonnel.map(p => p.name.toLowerCase()));
 
@@ -528,7 +541,6 @@ const WorkOrder = () => {
               const pName = p.name?.trim();
               const pNumber = p.number?.trim();
               
-              // Only insert if the name doesn't already exist in the database
               if (pName && pNumber && !seenNames.has(pName.toLowerCase())) {
                   seenNames.add(pName.toLowerCase());
                   newTeamMembers.push({ name: pName, number: pNumber });
@@ -537,12 +549,9 @@ const WorkOrder = () => {
       });
 
       if (newTeamMembers.length > 0) {
-          // Upsert prevents duplicate name errors using the UNIQUE constraint
           await supabase.from('team').upsert(newTeamMembers, { onConflict: 'name' });
-          // Optionally refresh team data in the background
           fetchTeamData(); 
       }
-      // -----------------------------------------
 
       if (editData) {
         await API.put(`/workOrders/${formData.id}`, payloadToSubmit);
@@ -553,7 +562,7 @@ const WorkOrder = () => {
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
-          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', personnel: [{ name: '', number: '' }] }]
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();
       }
@@ -584,7 +593,17 @@ const WorkOrder = () => {
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
               <InputLabel>Select Company</InputLabel>
-              <Select name="company_id" value={formData.company_id} label="Select Company" onChange={handleMainChange}>
+              <Select 
+                name="company_id" 
+                value={formData.company_id} 
+                label="Select Company" 
+                onChange={handleMainChange}
+                renderValue={(selectedId) => {
+                  if (!selectedId) return '';
+                  const selectedComp = companies.find(c => c.id === selectedId);
+                  return selectedComp ? selectedComp.company_name : '';
+                }}
+              >
                 <MenuItem value="" onClick={handleOpenAddCompany}>
                   <em>+ Add New Company</em>
                 </MenuItem>
@@ -625,43 +644,58 @@ const WorkOrder = () => {
 
             {index === 0 && (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid item xs={12} sm={6}><TextField name="eventName" label="Event Name" required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>Event Venue</InputLabel><Select name="eventVenue" value={item.eventVenue} label="Event Venue" onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
-                    <Grid item xs={12} sm={6}><TextField name="eventDate" label="Event Date" type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
+                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={item.eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
                     
-                    <Grid item xs={12} sm={6}>
-                      <Autocomplete
-                        freeSolo
-                        options={Array.from(new Set([
-                            ...historicalContacts.map(c => c.name),
-                            ...formData.workItems.map(wi => wi.contactPerson).filter(Boolean)
-                        ]))}
-                        inputValue={item.contactPerson || ''}
-                        onInputChange={(e, newValue) => handleWorkItemChange(index, { target: { name: 'contactPerson', value: newValue || '' } })}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Contact Person"
-                            required
-                            fullWidth
+                    {isVidhanMandalSelected ? (
+                      <Grid item xs={12} sm={6}>
+                        <TextField 
+                          name="roomNumber" 
+                          label="कक्ष क्रमांक" 
+                          required 
+                          fullWidth 
+                          value={item.roomNumber || ''} 
+                          onChange={(e) => handleWorkItemChange(index, e)} 
+                        />
+                      </Grid>
+                    ) : (
+                      <>
+                        <Grid item xs={12} sm={6}>
+                          <Autocomplete
+                            freeSolo
+                            options={Array.from(new Set([
+                                ...historicalContacts.map(c => c.name),
+                                ...formData.workItems.map(wi => wi.contactPerson).filter(Boolean)
+                            ]))}
+                            inputValue={item.contactPerson || ''}
+                            onInputChange={(e, newValue) => handleWorkItemChange(index, { target: { name: 'contactPerson', value: newValue || '' } })}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="Contact Person"
+                                required
+                                fullWidth
+                              />
+                            )}
                           />
-                        )}
-                      />
-                    </Grid>
-                    
-                    <Grid item xs={12} sm={6}>
-                      <TextField 
-                        name="contactNumber" 
-                        label="Contact Number" 
-                        required 
-                        fullWidth 
-                        value={item.contactNumber} 
-                        onChange={(e) => handleWorkItemChange(index, e)} 
-                        inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
-                      />
-                    </Grid>
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <TextField 
+                            name="contactNumber" 
+                            label="Contact Number" 
+                            required 
+                            fullWidth 
+                            value={item.contactNumber} 
+                            onChange={(e) => handleWorkItemChange(index, e)} 
+                            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
+                          />
+                        </Grid>
+                      </>
+                    )}
                     
                     {isONGCSelected && (
                         <Grid item xs={12} sm={6}>
@@ -743,7 +777,6 @@ const WorkOrder = () => {
                     )}
                 </Grid>
 
-                {/* --- DYNAMIC PERSONNEL FIELDS --- */}
                 {item.workMain !== 'Storage' && item.workMain !== '32_GB_Pendrive' && (
                   <React.Fragment>
                     <Grid item xs={12}>
@@ -785,7 +818,6 @@ const WorkOrder = () => {
                     ))}
                   </React.Fragment>
                 )}
-                {/* --- END PERSONNEL FIELDS --- */}
             </Grid>
           </Paper>
         ))}
