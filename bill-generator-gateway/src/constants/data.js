@@ -25,6 +25,7 @@ export const venues = [
   'JW Marriott,  Juhu, Mumbai - 400 049',
   'Hotel Taj Lands End, Bandstand, Bandra (w) Mumbai 400050',
   'Aurika Hotel, Near T2 Terminal, Mumbai',
+  'महाराष्ट्र विधानमंडळ सचिवालय, विधान भवन, मुंबई ४०००३२',
   'Others'
 ];
 

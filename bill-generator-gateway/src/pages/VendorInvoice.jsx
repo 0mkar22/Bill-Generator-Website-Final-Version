@@ -141,12 +141,10 @@ function VendorInvoice() {
     }, 100);
   };
 
-  // --- NEW: Download Word Document ---
   const handleDownloadWord = () => {
     const billElement = document.getElementById('generated-bill');
     if (!billElement) return;
 
-    // Microsoft Word respects basic HTML tags. We bundle the HTML inside a Word-specific XML envelope.
     const html = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -156,7 +154,6 @@ function VendorInvoice() {
           body { font-family: Arial, sans-serif; }
           table { border-collapse: collapse; width: 100%; margin-top: 10px; }
           th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
-          /* Add specific styles to guide MS Word's layout engine */
           .word-flex-fallback { display: block; width: 100%; clear: both; }
           .word-float-left { float: left; width: 50%; }
           .word-float-right { float: right; width: 50%; text-align: right; }
@@ -168,7 +165,6 @@ function VendorInvoice() {
       </html>
     `;
 
-    // Package the HTML string into an MS Word Blob
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -178,11 +174,9 @@ function VendorInvoice() {
     document.body.appendChild(link);
     link.click();
     
-    // Clean up
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  // -----------------------------------
 
   const handleSaveToDatabase = async () => {
       setIsSaving(true);
@@ -270,6 +264,9 @@ function VendorInvoice() {
   const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
   const rounded = Math.round(total);
 
+  // Vidhan Mandal condition to change to Marathi Text 
+  const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -291,7 +288,6 @@ function VendorInvoice() {
                     Download PDF
                 </Button>
                 
-                {/* NEW BUTTON: Download Word Document */}
                 <Button variant="contained" color="info" onClick={handleDownloadWord}>
                     Download Word
                 </Button>
@@ -499,9 +495,10 @@ function VendorInvoice() {
                   <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
                   <TableCell sx={tableCellStyle}>
                     <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>
-                      <span style={{ fontWeight: 'bold' }}>Event Date:</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
-                      <span style={{ fontWeight: 'bold' }}>Event Name:</span> {item.eventName}<br />
-                      <span style={{ fontWeight: 'bold' }}>Venue:</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
+                      {/* APPLY MARATHI STRINGS IF APPLICABLE */}
+                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
+                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
                       <span style={{ fontWeight: 'bold' }}>Work Type:</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
                       {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>Location and Duration:</span>} {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
                     </Typography>
