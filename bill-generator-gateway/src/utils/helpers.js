@@ -10,24 +10,18 @@ export const calculateItemAmount = (item, companyDetails = null) => {
         }
 
         if (workRates && item.workMain) {
-            // Legacy support for old invoices
             if (item.workMain === '32_GB_Pendrive') {
                 companyCustomRate = workRates[item.workMain];
             } else {
                 const categoryRates = workRates[item.workMain];
-                
                 if (categoryRates && item.workSub) {
                     if (categoryRates[item.workSub] !== undefined) {
                         companyCustomRate = categoryRates[item.workSub];
                     } else {
-                        // FUZZY MATCH
                         const normalize = (str) => (str || '').toLowerCase().replace(/[_ ]/g, '');
                         const normalizedTarget = normalize(item.workSub);
                         const matchedKey = Object.keys(categoryRates).find(k => normalize(k) === normalizedTarget);
-                        
-                        if (matchedKey) {
-                            companyCustomRate = categoryRates[matchedKey];
-                        }
+                        if (matchedKey) companyCustomRate = categoryRates[matchedKey];
                     }
                 }
             }
@@ -38,7 +32,31 @@ export const calculateItemAmount = (item, companyDetails = null) => {
                         ? Number(companyCustomRate) 
                         : 0;
 
-    const quantity = item.quantity || 1;
+    const quantity = Number(item.quantity) || 1;
+
+    const bannerSubs = [
+        "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
+        "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
+        "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
+    ];
+
+    if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
+        let totalArea = 0;
+        if (item.dimensions && Array.isArray(item.dimensions) && item.dimensions.length > 0) {
+            item.dimensions.forEach(dim => {
+                const l = Number(dim.length) || 0;
+                const b = Number(dim.breadth) || 0;
+                const q = Number(dim.qty) || 1;
+                totalArea += (l * b * q);
+            });
+        } else {
+            const l = Number(item.length) || 0;
+            const b = Number(item.breadth) || 0;
+            totalArea = l * b * quantity;
+        }
+        return totalArea * finalRate;
+    }
+
     return finalRate * quantity;
 };
 

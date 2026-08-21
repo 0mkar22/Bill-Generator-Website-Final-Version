@@ -12,6 +12,12 @@ import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks } from '../constants/data';
 import { calculateItemAmount } from '../utils/helpers';
 
+const bannerSubs = [
+  "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
+  "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
+  "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
+];
+
 const getRatesTemplateForCompany = (companyName = '') => {
   const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
 
@@ -69,6 +75,7 @@ const WorkOrder = () => {
       { 
         eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
         workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
+        dimensions: [{ length: '', breadth: '', qty: 1 }],
         personnel: [{ name: '', number: '' }]
       }
     ]
@@ -178,6 +185,7 @@ const WorkOrder = () => {
         parsedItems = [{ 
           eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
           workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
+          dimensions: [{ length: '', breadth: '', qty: 1 }],
           personnel: [{ name: '', number: '' }]
         }];
       } else {
@@ -198,7 +206,17 @@ const WorkOrder = () => {
           } else if (personnel.length > targetPersonnelCount) {
             personnel = personnel.slice(0, targetPersonnelCount);
           }
-          return { ...item, personnel };
+
+          let dimensions = item.dimensions || [];
+          if (dimensions.length === 0 && (item.length || item.breadth)) {
+            dimensions = [{ length: item.length || '', breadth: item.breadth || '', qty: qty }];
+          }
+
+          return { 
+              ...item, 
+              dimensions,
+              personnel 
+          };
         });
       }
 
@@ -425,7 +443,6 @@ const WorkOrder = () => {
     if (name === 'quantity') {
       const qty = Number(finalValue) || 1;
       
-      // Only scale personnel boxes if it's NOT a fixed-crew setup
       if (!['Two_Camera_Setup', 'Three_Camera_Setup', 'लाईव्ह व्हिडिओ मिक्सर'].includes(newWorkItems[index].workMain)) {
           let personnel = newWorkItems[index].personnel || [];
           if (personnel.length < qty) {
@@ -439,10 +456,18 @@ const WorkOrder = () => {
       }
     }
 
+    if (name === 'workSub') {
+        if (finalValue === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(finalValue)) {
+            newWorkItems[index].dimensions = [{ length: '', breadth: '', qty: 1 }];
+            newWorkItems[index].quantity = 1;
+        }
+    }
+
     if (name === 'workMain') {
         newWorkItems[index]['workSub'] = '';
         newWorkItems[index]['customRate'] = '';
         newWorkItems[index]['quantity'] = 1; 
+        newWorkItems[index]['dimensions'] = [{ length: '', breadth: '', qty: 1 }];
 
         if (finalValue === 'Two_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
@@ -457,6 +482,48 @@ const WorkOrder = () => {
         }
     }
     setFormData(prev => ({ ...prev, workItems: newWorkItems }));
+  };
+
+  const handleDimensionChange = (itemIndex, dimIndex, field, value) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const updatedDims = [...(newWorkItems[itemIndex].dimensions || [])];
+      
+      if (!updatedDims[dimIndex]) {
+        updatedDims[dimIndex] = { length: '', breadth: '', qty: 1 };
+      }
+      
+      updatedDims[dimIndex] = { ...updatedDims[dimIndex], [field]: value };
+      newWorkItems[itemIndex].dimensions = updatedDims;
+
+      // Automatically sync the top-level quantity sum
+      const totalQty = updatedDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
+      newWorkItems[itemIndex].quantity = totalQty > 0 ? totalQty : 1;
+      
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const addDimensionRow = (itemIndex) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      newWorkItems[itemIndex].dimensions = [...(newWorkItems[itemIndex].dimensions || []), { length: '', breadth: '', qty: 1 }];
+      const totalQty = newWorkItems[itemIndex].dimensions.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
+      newWorkItems[itemIndex].quantity = totalQty > 0 ? totalQty : 1;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const removeDimensionRow = (itemIndex, dimIndex) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const newDims = [...newWorkItems[itemIndex].dimensions];
+      newDims.splice(dimIndex, 1);
+      newWorkItems[itemIndex].dimensions = newDims;
+      const totalQty = newDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
+      newWorkItems[itemIndex].quantity = totalQty > 0 ? totalQty : 1;
+      return { ...prev, workItems: newWorkItems };
+    });
   };
 
   const handlePersonnelChange = (itemIndex, personIndex, field, value) => {
@@ -524,6 +591,7 @@ const WorkOrder = () => {
               quantity: 1,
               customWorkMain: '',
               customRate: '',
+              dimensions: [{ length: '', breadth: '', qty: 1 }],
               personnel: [{ name: '', number: '' }] 
           }
       ]
@@ -598,7 +666,7 @@ const WorkOrder = () => {
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
-          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', personnel: [{ name: '', number: '' }] }]
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();
       }
@@ -670,6 +738,11 @@ const WorkOrder = () => {
         {formData.workItems.map((item, index) => {
           const hidePersonnel = noPersonnelWorks.includes(item.workMain);
           
+          const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
+          const isBannerArea = bannerSubs.includes(item.workSub);
+          const requiresDimensions = isLamination || isBannerArea;
+          const unitLabel = isLamination ? 'इंच (inches)' : 'फूट (feet)';
+
           return (
           <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -800,7 +873,7 @@ const WorkOrder = () => {
                         value={item.quantity} 
                         onChange={(e) => handleWorkItemChange(index, e)} 
                         InputProps={{ inputProps: { min: 1 } }} 
-                        disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain)}
+                        disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || requiresDimensions}
                     />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -823,6 +896,55 @@ const WorkOrder = () => {
                         />
                     )}
                 </Grid>
+
+                {requiresDimensions && (item.dimensions || []).map((dim, dIdx) => (
+                  <Grid item xs={12} key={dIdx}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 2, border: '1px dashed #ccc', borderRadius: 1, bgcolor: 'rgba(0,0,0,0.02)' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>आकार {dIdx + 1} (Dimensions):</Typography>
+                      <TextField 
+                        label={`लांबी (L in ${unitLabel.split(' ')[1].replace(')','')})`} 
+                        type="number" 
+                        required 
+                        size="small"
+                        value={dim.length || ''} 
+                        onChange={(e) => handleDimensionChange(index, dIdx, 'length', e.target.value)} 
+                        InputProps={{ inputProps: { min: 0 } }} 
+                        sx={{ width: '130px' }}
+                      />
+                      <Typography sx={{ fontWeight: 'bold' }}>X</Typography>
+                      <TextField 
+                        label={`रुंदी (B in ${unitLabel.split(' ')[1].replace(')','')})`} 
+                        type="number" 
+                        required 
+                        size="small"
+                        value={dim.breadth || ''} 
+                        onChange={(e) => handleDimensionChange(index, dIdx, 'breadth', e.target.value)} 
+                        InputProps={{ inputProps: { min: 0 } }} 
+                        sx={{ width: '130px' }}
+                      />
+                      <TextField 
+                        label={`नग (Qty)`} 
+                        type="number" 
+                        required 
+                        size="small"
+                        value={dim.qty || ''} 
+                        onChange={(e) => handleDimensionChange(index, dIdx, 'qty', e.target.value)} 
+                        InputProps={{ inputProps: { min: 1 } }} 
+                        sx={{ width: '90px', ml: 1 }}
+                      />
+                      <Typography variant="body2" sx={{ ml: 1, flex: 1 }}>in {unitLabel}</Typography>
+                      
+                      <IconButton color="primary" onClick={() => addDimensionRow(index)}>
+                        <AddCircleOutlineIcon />
+                      </IconButton>
+                      {item.dimensions.length > 1 && (
+                        <IconButton color="error" onClick={() => removeDimensionRow(index, dIdx)}>
+                          <RemoveCircleOutlineIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </Grid>
+                ))}
 
                 {!hidePersonnel && (
                   <React.Fragment>
