@@ -74,11 +74,9 @@ const WorkOrderInvoice = () => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
 
-  // Date State
   const [invoiceDate, setInvoiceDate] = useState(passedInvoiceDate ? new Date(passedInvoiceDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
   const [editingInvoiceDate, setEditingInvoiceDate] = useState(false);
 
-  // PO Number State
   const parentOrderPoNumber = selectedItems[0]?.parent?.poNumber || '';
   const [poNumber, setPoNumber] = useState(passedPoNumber || parentOrderPoNumber || '');
   const [editingPoNumber, setEditingPoNumber] = useState(false);
@@ -217,9 +215,14 @@ const WorkOrderInvoice = () => {
   const eventDateDetails = Array.from(uniqueEvents.values());
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
 
-  // Helper variables
   const isPO = selectedItems[0]?.poNpo === 'PO';
   const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+
+  const bannerSubs = [
+    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
+    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
+    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
+  ];
 
   return (
     <Container>
@@ -317,10 +320,10 @@ const WorkOrderInvoice = () => {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Sr.<br />No.</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Work</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Qty.</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
                 <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Rate</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>Amount<br />(Rs.)</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center' }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -341,25 +344,48 @@ const WorkOrderInvoice = () => {
                             : 0;
 
               const quantity = item.quantity || 1;
+
+              let dimensionsText = '';
+              if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
+                  const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
+                  const unit = isLamination ? 'इंच' : 'फूट';
+                  const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
+                  
+                  if (item.dimensions && item.dimensions.length > 0) {
+                      let totalArea = 0;
+                      const dimsStr = item.dimensions.map(d => {
+                          const l = Number(d.length) || 0; 
+                          const b = Number(d.breadth) || 0;
+                          const q = Number(d.qty) || 1;
+                          totalArea += (l * b * q);
+                          return `${l}x${b} (${q} नग)`;
+                      }).join(', ');
+                      dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
+                  } else if (item.length && item.breadth) {
+                      dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
+                  }
+              }
                 
-                return (
-                  <TableRow key={item.id || idx}>
-                    <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{idx + 1}</TableCell>
-                    <TableCell sx={{ border: '1px solid #000' }}>
-                      <Typography variant="body2" component="div">{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
-                      <>
-                          {/* APPLY MARATHI STRINGS IN THE TABLE */}
-                          <Typography variant="body2" component="div">{item.workSub && `Duration : ${item.workSub.replaceAll('_', ' ')}`}</Typography>
-                          <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
-                          <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
-                          <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
-                      </>
-                    </TableCell>
-                    <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{quantity}</TableCell>
-                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{rate.toLocaleString('en-IN')}</TableCell>
-                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{amount.toLocaleString('en-IN')}</TableCell>
-                  </TableRow>
-                );
+              return (
+                <TableRow key={item.id || idx}>
+                  <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{idx + 1}</TableCell>
+                  <TableCell sx={{ border: '1px solid #000' }}>
+                    <Typography variant="body2" component="div">{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
+                    <>
+                        <Typography variant="body2" component="div">
+                            {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`)}
+                            {dimensionsText}
+                        </Typography>
+                        <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                        <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
+                        <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
+                    </>
+                  </TableCell>
+                  <TableCell sx={{ border: '1px solid #000', textAlign: 'center' }}>{quantity}</TableCell>
+                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{rate.toLocaleString('en-IN')}</TableCell>
+                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>{amount.toLocaleString('en-IN')}</TableCell>
+                </TableRow>
+              );
               })}
             </TableBody>
           </Table>

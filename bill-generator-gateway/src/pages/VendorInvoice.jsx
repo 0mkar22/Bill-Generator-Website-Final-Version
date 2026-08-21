@@ -263,6 +263,12 @@ function VendorInvoice() {
 
   const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
+  const bannerSubs = [
+    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
+    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
+    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
+  ];
+
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -485,6 +491,27 @@ function VendorInvoice() {
                             : 0;
 
               const quantity = item.quantity || 1;
+
+              let dimensionsText = '';
+              if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
+                  const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
+                  const unit = isLamination ? 'इंच' : 'फूट';
+                  const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
+                  
+                  if (item.dimensions && item.dimensions.length > 0) {
+                      let totalArea = 0;
+                      const dimsStr = item.dimensions.map(d => {
+                          const l = Number(d.length) || 0; 
+                          const b = Number(d.breadth) || 0;
+                          const q = Number(d.qty) || 1;
+                          totalArea += (l * b * q);
+                          return `${l}x${b} (${q} नग)`;
+                      }).join(', ');
+                      dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
+                  } else if (item.length && item.breadth) {
+                      dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
+                  }
+              }
               
               return (
                 <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000' }}>
@@ -495,7 +522,10 @@ function VendorInvoice() {
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
-                      {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : 'Location and Duration:'}</span>} {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
+                      
+                      {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : 'Location and Duration:'}</span>} 
+                      {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
+                      {dimensionsText}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ ...tableCellStyle, textAlign: 'center' }}>{quantity}</TableCell>
