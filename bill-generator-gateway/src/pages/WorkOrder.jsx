@@ -425,6 +425,7 @@ const WorkOrder = () => {
     if (name === 'quantity') {
       const qty = Number(finalValue) || 1;
       
+      // Only scale personnel boxes if it's NOT a fixed-crew setup
       if (!['Two_Camera_Setup', 'Three_Camera_Setup', 'लाईव्ह व्हिडिओ मिक्सर'].includes(newWorkItems[index].workMain)) {
           let personnel = newWorkItems[index].personnel || [];
           if (personnel.length < qty) {
@@ -945,7 +946,7 @@ const WorkOrder = () => {
                   
                   <Grid container spacing={2}>
                     {subKeys.map(subKey => (
-                      <Grid item xs={12} sm={6} key={subKey}>
+                      <Grid item xs={12} key={subKey}>
                         <TextField
                           label={`${subKey.replaceAll('_', ' ')} Rate`}
                           type="number"
