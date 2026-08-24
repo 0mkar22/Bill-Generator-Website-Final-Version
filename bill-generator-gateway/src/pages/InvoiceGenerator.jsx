@@ -10,15 +10,27 @@ import EditIcon from '@mui/icons-material/Edit';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import { getWorkOrders } from '../services/api';
 import API from '../services/api';
+import { supabase } from '../supabase';
 
 const InvoiceGenerator = () => {
   const [workItems, setWorkItems] = useState([]);
   const [selected, setSelected] = useState({});
   const [savedInvoices, setSavedInvoices] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const navigate = useNavigate();
   const [viewingInvoiceType, setViewingInvoiceType] = useState('All');
   const [vendorFilter, setVendorFilter] = useState('All Vendors');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
+
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase.from('companies').select('*');
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error("Failed to fetch companies:", error);
+    }
+  };
 
   const fetchWorkItems = async () => {
     try {
@@ -56,9 +68,16 @@ const InvoiceGenerator = () => {
   };
 
   useEffect(() => {
+    fetchCompanies();
     fetchWorkItems();
     fetchSavedInvoices();
   }, []);
+
+  const isONGCCompany = (companyId, fallbackName = '') => {
+      const company = companies.find(c => c.id === companyId);
+      const nameStr = (company?.company_name || fallbackName || '').toUpperCase();
+      return nameStr.includes('ONGC') || nameStr.includes('OIL & NATURAL GAS') || nameStr.includes('OIL AND NATURAL GAS');
+  };
 
   const invoiceStatusMap = useMemo(() => {
     const statusMap = {};
@@ -163,6 +182,9 @@ const InvoiceGenerator = () => {
       return invoices;
   }, [savedInvoices, viewingInvoiceType, vendorFilter]);
 
+  const selectedItemsList = getSelectedItems();
+  const showWorkOrderBtn = selectedItemsList.length === 0 || isONGCCompany(selectedItemsList[0].parent.company_id);
+
   return (
     <Container>
       <Paper sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
@@ -226,15 +248,17 @@ const InvoiceGenerator = () => {
           >
             Preview Vendor Invoice
           </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={() => handleGenerate('WorkOrder')}
-            sx={{ minWidth: '200px' }}
-          >
-            Preview Work Order Invoice
-          </Button>
+          {showWorkOrderBtn && (
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={() => handleGenerate('WorkOrder')}
+              sx={{ minWidth: '200px' }}
+            >
+              Preview Work Order Invoice
+            </Button>
+          )}
         </Box>
       </Paper>
 
@@ -287,6 +311,8 @@ const InvoiceGenerator = () => {
                             const uniqueEventNames = [...new Set(eventNames)];
                             const displayEventName = uniqueEventNames.join(' and ') || 'N/A';
                             const displayPoNpo = workItems.find(item => invItems.includes(item.id))?.poNpo || 'N/A';
+                            
+                            const isInvoiceONGC = isONGCCompany(invoice.company_id, invoice.recipient);
 
                             return (
                               <TableRow key={invoice.invoiceNumber || invoice.id || i}>
@@ -321,7 +347,7 @@ const InvoiceGenerator = () => {
                                                   </Button>
                                               </>
                                           }
-                                          { (viewingInvoiceType === 'All' ? invoice.types.has('WorkOrder') : true) && viewingInvoiceType !== 'Vendor' &&
+                                          { (viewingInvoiceType === 'All' ? invoice.types.has('WorkOrder') : true) && viewingInvoiceType !== 'Vendor' && isInvoiceONGC &&
                                               <>
                                                   <Button 
                                                     variant="contained" 

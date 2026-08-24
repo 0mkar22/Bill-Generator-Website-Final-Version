@@ -263,6 +263,11 @@ function VendorInvoice() {
 
   const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
+  const companyNameStr = (companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient || '').toUpperCase();
+  const isONGC = companyNameStr.includes('ONGC') || 
+                 companyNameStr.includes('OIL & NATURAL GAS') || 
+                 companyNameStr.includes('OIL AND NATURAL GAS');
+
   const bannerSubs = [
     "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
     "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
@@ -294,9 +299,11 @@ function VendorInvoice() {
                     Download Word
                 </Button>
 
-                <Button variant="contained" color="secondary" onClick={handleGenerateWorkOrderInvoice}>
-                    Generate Work Order Invoice
-                </Button>
+                {isONGC && (
+                  <Button variant="contained" color="secondary" onClick={handleGenerateWorkOrderInvoice}>
+                      Generate Work Order Invoice
+                  </Button>
+                )}
             </Box>
         </Alert>
       )}
