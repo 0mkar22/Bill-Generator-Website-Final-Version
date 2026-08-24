@@ -850,6 +850,7 @@ const WorkOrder = () => {
             )}
 
             <Grid container spacing={2} sx={{ mt: index === 0 ? 1 : 0 }}>
+                {/* --- 1. Work Name --- */}
                 <Grid item xs={12} sm={6}>
                     <FormControl fullWidth required>
                         <InputLabel>{isVidhanMandalSelected ? 'कामाचे स्वरूप' : 'Work Name'}</InputLabel>
@@ -872,6 +873,8 @@ const WorkOrder = () => {
                         </Select>
                     </FormControl>
                 </Grid>
+
+                {/* --- 2. Work Subcategory --- */}
                 {item.workMain === 'Others' ? (
                     <Grid item xs={12} sm={6}>
                         <TextField name="customWorkMain" label="Custom Work Name" required fullWidth value={item.customWorkMain} onChange={(e) => handleWorkItemChange(index, e)} />
@@ -888,41 +891,8 @@ const WorkOrder = () => {
                         </FormControl>
                     </Grid>
                 )}
-                <Grid item xs={12} sm={6}>
-                    <TextField 
-                        name="quantity" 
-                        label={isVidhanMandalSelected ? 'एकूण नग (Total Qty)' : 'Quantity'} 
-                        type="number" 
-                        required 
-                        fullWidth 
-                        value={item.quantity} 
-                        onChange={(e) => handleWorkItemChange(index, e)} 
-                        InputProps={{ inputProps: { min: 1 } }} 
-                        // Lock the top quantity box if dimensions control the actual item count
-                        disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || requiresDimensions}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                    {item.workMain === 'Others' ? (
-                        <TextField 
-                            name="customRate" 
-                            label="Custom Rate / Amount (Rs.)" 
-                            type="number" 
-                            fullWidth 
-                            value={item.customRate || ''} 
-                            onChange={(e) => handleWorkItemChange(index, e)} 
-                        />
-                    ) : (
-                        <TextField 
-                            label={isVidhanMandalSelected ? 'रकम' : 'Amount'} 
-                            type="text" 
-                            fullWidth 
-                            value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
-                            InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
-                        />
-                    )}
-                </Grid>
 
+                {/* --- 3. Dimension Rows (If Applicable) --- */}
                 {requiresDimensions && (item.dimensions || []).map((dim, dIdx) => {
                   const l = Number(dim.length) || 0;
                   const b = Number(dim.breadth) || 0;
@@ -980,7 +950,7 @@ const WorkOrder = () => {
                   </Grid>
                 )})}
                 
-                {/* --- NEW: Grand Total Area Display --- */}
+                {/* --- 4. Total Area Display (If Applicable) --- */}
                 {requiresDimensions && (
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1, pr: 3 }}>
@@ -991,6 +961,44 @@ const WorkOrder = () => {
                   </Grid>
                 )}
 
+                {/* --- 5. Total Quantity --- */}
+                <Grid item xs={12} sm={6}>
+                    <TextField 
+                        name="quantity" 
+                        label={isVidhanMandalSelected ? 'एकूण नग (Total Qty)' : 'Quantity'} 
+                        type="number" 
+                        required 
+                        fullWidth 
+                        value={item.quantity} 
+                        onChange={(e) => handleWorkItemChange(index, e)} 
+                        InputProps={{ inputProps: { min: 1 } }} 
+                        disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || requiresDimensions}
+                    />
+                </Grid>
+
+                {/* --- 6. Total Amount --- */}
+                <Grid item xs={12} sm={6}>
+                    {item.workMain === 'Others' ? (
+                        <TextField 
+                            name="customRate" 
+                            label="Custom Rate / Amount (Rs.)" 
+                            type="number" 
+                            fullWidth 
+                            value={item.customRate || ''} 
+                            onChange={(e) => handleWorkItemChange(index, e)} 
+                        />
+                    ) : (
+                        <TextField 
+                            label={isVidhanMandalSelected ? 'रकम' : 'Amount'} 
+                            type="text" 
+                            fullWidth 
+                            value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                            InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
+                        />
+                    )}
+                </Grid>
+
+                {/* --- 7. Assigned Personnel --- */}
                 {!hidePersonnel && (
                   <React.Fragment>
                     <Grid item xs={12}>
