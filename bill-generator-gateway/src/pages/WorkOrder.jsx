@@ -454,12 +454,22 @@ const WorkOrder = () => {
           }
           newWorkItems[index].personnel = personnel;
       }
+
+      if (newWorkItems[index].workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(newWorkItems[index].workSub)) {
+          // Keep at least one box present to hold the total quantity
+          let dims = newWorkItems[index].dimensions || [];
+          if (dims.length === 0) {
+              dims = [{ length: '', breadth: '', qty: qty }];
+          } else if (dims.length === 1) {
+              dims[0].qty = qty;
+          }
+          newWorkItems[index].dimensions = dims;
+      }
     }
 
     if (name === 'workSub') {
         if (finalValue === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(finalValue)) {
-            newWorkItems[index].dimensions = [{ length: '', breadth: '', qty: 1 }];
-            newWorkItems[index].quantity = 1;
+            newWorkItems[index].dimensions = [{ length: '', breadth: '', qty: newWorkItems[index].quantity || 1 }];
         }
     }
 
@@ -487,19 +497,21 @@ const WorkOrder = () => {
   const handleDimensionChange = (itemIndex, dimIndex, field, value) => {
     setFormData(prev => {
       const newWorkItems = [...prev.workItems];
-      const updatedDims = [...(newWorkItems[itemIndex].dimensions || [])];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const updatedDims = [...(currentItem.dimensions || [])];
       
       if (!updatedDims[dimIndex]) {
         updatedDims[dimIndex] = { length: '', breadth: '', qty: 1 };
       }
       
       updatedDims[dimIndex] = { ...updatedDims[dimIndex], [field]: value };
-      newWorkItems[itemIndex].dimensions = updatedDims;
+      currentItem.dimensions = updatedDims;
 
       // Automatically sync the top-level quantity sum
       const totalQty = updatedDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
-      newWorkItems[itemIndex].quantity = totalQty > 0 ? totalQty : 1;
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
       
+      newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
   };
@@ -507,9 +519,13 @@ const WorkOrder = () => {
   const addDimensionRow = (itemIndex) => {
     setFormData(prev => {
       const newWorkItems = [...prev.workItems];
-      newWorkItems[itemIndex].dimensions = [...(newWorkItems[itemIndex].dimensions || []), { length: '', breadth: '', qty: 1 }];
-      const totalQty = newWorkItems[itemIndex].dimensions.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
-      newWorkItems[itemIndex].quantity = totalQty > 0 ? totalQty : 1;
+      const currentItem = { ...newWorkItems[itemIndex] };
+      currentItem.dimensions = [...(currentItem.dimensions || []), { length: '', breadth: '', qty: 1 }];
+      
+      const totalQty = currentItem.dimensions.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
+      
+      newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
   };
@@ -517,11 +533,15 @@ const WorkOrder = () => {
   const removeDimensionRow = (itemIndex, dimIndex) => {
     setFormData(prev => {
       const newWorkItems = [...prev.workItems];
-      const newDims = [...newWorkItems[itemIndex].dimensions];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const newDims = [...currentItem.dimensions];
       newDims.splice(dimIndex, 1);
-      newWorkItems[itemIndex].dimensions = newDims;
+      currentItem.dimensions = newDims;
+      
       const totalQty = newDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
-      newWorkItems[itemIndex].quantity = totalQty > 0 ? totalQty : 1;
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
+      
+      newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
   };
@@ -529,7 +549,8 @@ const WorkOrder = () => {
   const handlePersonnelChange = (itemIndex, personIndex, field, value) => {
     setFormData(prev => {
       const newWorkItems = [...prev.workItems];
-      const updatedPersonnel = [...(newWorkItems[itemIndex].personnel || [])];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const updatedPersonnel = [...(currentItem.personnel || [])];
       
       let finalValue = value;
       if (field === 'number') {
@@ -566,7 +587,8 @@ const WorkOrder = () => {
           updatedPersonnel[personIndex].number = matchedNumber;
       }
 
-      newWorkItems[itemIndex].personnel = updatedPersonnel;
+      currentItem.personnel = updatedPersonnel;
+      newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
   };
@@ -742,6 +764,9 @@ const WorkOrder = () => {
           const isBannerArea = bannerSubs.includes(item.workSub);
           const requiresDimensions = isLamination || isBannerArea;
           const unitLabel = isLamination ? 'इंच (inches)' : 'फूट (feet)';
+          const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
+          
+          const totalCalculatedArea = (item.dimensions || []).reduce((sum, dim) => sum + ((Number(dim.length) || 0) * (Number(dim.breadth) || 0) * (Number(dim.qty) || 1)), 0);
 
           return (
           <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
@@ -866,13 +891,14 @@ const WorkOrder = () => {
                 <Grid item xs={12} sm={6}>
                     <TextField 
                         name="quantity" 
-                        label={isVidhanMandalSelected ? 'नग' : 'Quantity'} 
+                        label={isVidhanMandalSelected ? 'एकूण नग (Total Qty)' : 'Quantity'} 
                         type="number" 
                         required 
                         fullWidth 
                         value={item.quantity} 
                         onChange={(e) => handleWorkItemChange(index, e)} 
                         InputProps={{ inputProps: { min: 1 } }} 
+                        // Lock the top quantity box if dimensions control the actual item count
                         disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || requiresDimensions}
                     />
                 </Grid>
@@ -897,7 +923,13 @@ const WorkOrder = () => {
                     )}
                 </Grid>
 
-                {requiresDimensions && (item.dimensions || []).map((dim, dIdx) => (
+                {requiresDimensions && (item.dimensions || []).map((dim, dIdx) => {
+                  const l = Number(dim.length) || 0;
+                  const b = Number(dim.breadth) || 0;
+                  const q = Number(dim.qty) || 1;
+                  const area = l * b * q;
+
+                  return (
                   <Grid item xs={12} key={dIdx}>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 2, border: '1px dashed #ccc', borderRadius: 1, bgcolor: 'rgba(0,0,0,0.02)' }}>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>आकार {dIdx + 1} (Dimensions):</Typography>
@@ -932,7 +964,9 @@ const WorkOrder = () => {
                         InputProps={{ inputProps: { min: 1 } }} 
                         sx={{ width: '90px', ml: 1 }}
                       />
-                      <Typography variant="body2" sx={{ ml: 1, flex: 1 }}>in {unitLabel}</Typography>
+                      <Typography variant="body2" sx={{ ml: 1, flex: 1, color: '#1976d2', fontWeight: 'bold' }}>
+                        = {area} {sqUnit}
+                      </Typography>
                       
                       <IconButton color="primary" onClick={() => addDimensionRow(index)}>
                         <AddCircleOutlineIcon />
@@ -944,7 +978,18 @@ const WorkOrder = () => {
                       )}
                     </Box>
                   </Grid>
-                ))}
+                )})}
+                
+                {/* --- NEW: Grand Total Area Display --- */}
+                {requiresDimensions && (
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1, pr: 3 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                        एकूण आकार (Total Area): {totalCalculatedArea} {sqUnit}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
 
                 {!hidePersonnel && (
                   <React.Fragment>
