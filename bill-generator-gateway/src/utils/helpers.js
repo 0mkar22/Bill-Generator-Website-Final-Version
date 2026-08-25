@@ -1,3 +1,14 @@
+export const convertMarathiToEnglishNumbers = (input) => {
+    if (input === null || input === undefined) return '';
+    const marathiDigits = {
+      '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
+      '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
+    };
+    return String(input)
+      .replace(/[०-९]/g, match => marathiDigits[match])
+      .replace(/[^0-9.]/g, ''); 
+};
+
 export const calculateItemAmount = (item, companyDetails = null) => {
     let companyCustomRate = null;
     
