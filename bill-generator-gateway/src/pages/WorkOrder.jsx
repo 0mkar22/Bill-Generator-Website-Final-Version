@@ -10,7 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import API, { getWorkOrders, createWorkOrder } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks } from '../constants/data';
-import { calculateItemAmount } from '../utils/helpers';
+import { calculateItemAmount, convertMarathiToEnglishNumbers } from '../utils/helpers';
 
 const bannerSubs = [
   "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
@@ -399,13 +399,15 @@ const WorkOrder = () => {
 
   const handleWorkItemChange = (index, e) => {
     const { name, value } = e.target;
-    const newWorkItems = [...formData.workItems];
-    
     let finalValue = value;
-    if (name === 'contactNumber') {
-        finalValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+
+    if (['quantity', 'customRate'].includes(name)) {
+      finalValue = convertMarathiToEnglishNumbers(value);
+    } else if (name === 'contactNumber') {
+      finalValue = convertMarathiToEnglishNumbers(value).slice(0, 10);
     }
-    
+
+    const newWorkItems = [...formData.workItems];
     newWorkItems[index][name] = finalValue;
 
     if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue', 'roomNumber'].includes(name)) {
@@ -494,6 +496,7 @@ const WorkOrder = () => {
   };
 
   const handleDimensionChange = (itemIndex, dimIndex, field, value) => {
+    const safeValue = convertMarathiToEnglishNumbers(value);
     setFormData(prev => {
       const newWorkItems = [...prev.workItems];
       const currentItem = { ...newWorkItems[itemIndex] };
@@ -503,7 +506,7 @@ const WorkOrder = () => {
         updatedDims[dimIndex] = { length: '', breadth: '', qty: 1 };
       }
       
-      updatedDims[dimIndex] = { ...updatedDims[dimIndex], [field]: value };
+      updatedDims[dimIndex] = { ...updatedDims[dimIndex], [field]: safeValue };
       currentItem.dimensions = updatedDims;
 
       const totalQty = updatedDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
@@ -552,7 +555,7 @@ const WorkOrder = () => {
       
       let finalValue = value;
       if (field === 'number') {
-          finalValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+          finalValue = convertMarathiToEnglishNumbers(value).slice(0, 10);
       }
       
       if (!updatedPersonnel[personIndex]) {
@@ -831,9 +834,10 @@ const WorkOrder = () => {
                             label="Contact Number" 
                             required 
                             fullWidth 
+                            type="text"
+                            inputProps={{ inputMode: 'numeric' }}
                             value={item.contactNumber} 
                             onChange={(e) => handleWorkItemChange(index, e)} 
-                            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
                           />
                         </Grid>
                       </>
@@ -897,10 +901,9 @@ const WorkOrder = () => {
                     </Grid>
                 )}
 
-                {/* --- DYNAMIC SECTION: Renders Dimensions & Aligned Summary OR Default Inputs --- */}
+                {/* --- 3. Dimension Rows (If Applicable) --- */}
                 {requiresDimensions ? (
                   <>
-                    {/* DIMENSION ROWS */}
                     {(item.dimensions || []).map((dim, dIdx) => {
                       const l = Number(dim.length) || 0;
                       const b = Number(dim.breadth) || 0;
@@ -917,24 +920,24 @@ const WorkOrder = () => {
                                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>आकार {dIdx + 1}:</Typography>
                                     <TextField 
-                                      label={`L (${unitLabel.split(' ')[1].replace(')','')})`} 
-                                      type="number" 
+                                      label={`लांबी (${unitLabel.split(' ')[1].replace(')','')})`} 
+                                      type="text"
+                                      inputProps={{ inputMode: 'numeric' }}
                                       required 
                                       size="small"
                                       value={dim.length || ''} 
                                       onChange={(e) => handleDimensionChange(index, dIdx, 'length', e.target.value)} 
-                                      InputProps={{ inputProps: { min: 0 } }} 
                                       sx={{ width: '80px' }}
                                     />
                                     <Typography sx={{ fontWeight: 'bold' }}>X</Typography>
                                     <TextField 
-                                      label={`B (${unitLabel.split(' ')[1].replace(')','')})`} 
-                                      type="number" 
+                                      label={`रुंदी (${unitLabel.split(' ')[1].replace(')','')})`} 
+                                      type="text"
+                                      inputProps={{ inputMode: 'numeric' }}
                                       required 
                                       size="small"
                                       value={dim.breadth || ''} 
                                       onChange={(e) => handleDimensionChange(index, dIdx, 'breadth', e.target.value)} 
-                                      InputProps={{ inputProps: { min: 0 } }} 
                                       sx={{ width: '80px' }}
                                     />
                                   </Box>
@@ -944,13 +947,13 @@ const WorkOrder = () => {
                                 <Grid item xs={12} sm={2}>
                                     <TextField 
                                       label="नग (Qty)" 
-                                      type="number" 
+                                      type="text"
+                                      inputProps={{ inputMode: 'numeric' }}
                                       required 
                                       size="small"
                                       fullWidth
                                       value={dim.qty || ''} 
                                       onChange={(e) => handleDimensionChange(index, dIdx, 'qty', e.target.value)} 
-                                      InputProps={{ inputProps: { min: 1 } }} 
                                     />
                                 </Grid>
 
@@ -997,7 +1000,8 @@ const WorkOrder = () => {
                                     <TextField 
                                         name="quantity" 
                                         label={isVidhanMandalSelected ? 'एकूण नग' : 'Total Qty'} 
-                                        type="number" 
+                                        type="text"
+                                        inputProps={{ inputMode: 'numeric' }}
                                         required 
                                         fullWidth 
                                         size="small"
@@ -1035,12 +1039,12 @@ const WorkOrder = () => {
                         <TextField 
                             name="quantity" 
                             label={isVidhanMandalSelected ? 'नग' : 'Quantity'} 
-                            type="number" 
+                            type="text"
+                            inputProps={{ inputMode: 'numeric' }}
                             required 
                             fullWidth 
                             value={item.quantity} 
                             onChange={(e) => handleWorkItemChange(index, e)} 
-                            InputProps={{ inputProps: { min: 1 } }} 
                             disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain)}
                         />
                     </Grid>
@@ -1049,7 +1053,8 @@ const WorkOrder = () => {
                             <TextField 
                                 name="customRate" 
                                 label="Custom Rate / Amount (Rs.)" 
-                                type="number" 
+                                type="text"
+                                inputProps={{ inputMode: 'numeric' }}
                                 fullWidth 
                                 value={item.customRate || ''} 
                                 onChange={(e) => handleWorkItemChange(index, e)} 
@@ -1100,9 +1105,10 @@ const WorkOrder = () => {
                             label={`Contact Number`}
                             fullWidth
                             size="small"
+                            type="text"
+                            inputProps={{ inputMode: 'numeric' }}
                             value={person.number || ''}
                             onChange={(e) => handlePersonnelChange(index, pIdx, 'number', e.target.value)}
-                            inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
                           />
                         </Grid>
                       </React.Fragment>
@@ -1193,7 +1199,8 @@ const WorkOrder = () => {
                       <Grid item xs={12} key={subKey}>
                         <TextField
                           label={`${subKey.replaceAll('_', ' ')} Rate`}
-                          type="number"
+                          type="text"
+                          inputProps={{ inputMode: 'numeric' }}
                           fullWidth
                           variant="outlined"
                           size="small"
@@ -1211,7 +1218,8 @@ const WorkOrder = () => {
                   key={key}
                   margin="dense"
                   label={`${key.replaceAll('_', ' ')} Rate`}
-                  type="number"
+                  type="text"
+                  inputProps={{ inputMode: 'numeric' }}
                   fullWidth
                   variant="outlined"
                   size="small"
