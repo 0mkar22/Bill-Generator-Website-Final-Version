@@ -10,13 +10,24 @@ import EditIcon from '@mui/icons-material/Edit';
 import API, { getWorkOrders, createWorkOrder } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks } from '../constants/data';
-import { calculateItemAmount, convertMarathiToEnglishNumbers } from '../utils/helpers';
+import { calculateItemAmount } from '../utils/helpers';
 
 const bannerSubs = [
   "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
   "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
   "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
 ];
+
+const convertMarathiToEnglishNumbers = (input) => {
+  if (input === null || input === undefined) return '';
+  const marathiDigits = {
+    '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
+    '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
+  };
+  return String(input)
+    .replace(/[०-९]/g, match => marathiDigits[match])
+    .replace(/[^0-9.]/g, ''); 
+};
 
 const getRatesTemplateForCompany = (companyName = '') => {
   const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
@@ -76,6 +87,7 @@ const WorkOrder = () => {
         eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
         workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
         dimensions: [{ length: '', breadth: '', qty: 1 }],
+        assemblyType: '', memberName: '',
         personnel: [{ name: '', number: '' }]
       }
     ]
@@ -186,6 +198,7 @@ const WorkOrder = () => {
           eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
           workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
           dimensions: [{ length: '', breadth: '', qty: 1 }],
+          assemblyType: '', memberName: '',
           personnel: [{ name: '', number: '' }]
         }];
       } else {
@@ -215,6 +228,8 @@ const WorkOrder = () => {
           return { 
               ...item, 
               dimensions,
+              assemblyType: item.assemblyType || '',
+              memberName: item.memberName || '',
               personnel 
           };
         });
@@ -479,6 +494,8 @@ const WorkOrder = () => {
         newWorkItems[index]['customRate'] = '';
         newWorkItems[index]['quantity'] = 1; 
         newWorkItems[index]['dimensions'] = [{ length: '', breadth: '', qty: 1 }];
+        newWorkItems[index]['assemblyType'] = '';
+        newWorkItems[index]['memberName'] = '';
 
         if (finalValue === 'Two_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
@@ -615,6 +632,8 @@ const WorkOrder = () => {
               customWorkMain: '',
               customRate: '',
               dimensions: [{ length: '', breadth: '', qty: 1 }],
+              assemblyType: '', 
+              memberName: '',
               personnel: [{ name: '', number: '' }] 
           }
       ]
@@ -689,7 +708,7 @@ const WorkOrder = () => {
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
-          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], personnel: [{ name: '', number: '' }] }]
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], assemblyType: '', memberName: '', personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();
       }
@@ -901,6 +920,36 @@ const WorkOrder = () => {
                     </Grid>
                 )}
 
+                {/* --- 2.5 Optional Assembly Type Fields --- */}
+                {item.workMain === 'दिवंगत विधानपरिषद व विधानसभा सदस्य यांच्याकरीत स्मृतिपत्र' && (
+                  <>
+                    <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth required>
+                            <InputLabel>सभागृह</InputLabel>
+                            <Select
+                                name="assemblyType"
+                                value={item.assemblyType || ''}
+                                label="सभागृह"
+                                onChange={(e) => handleWorkItemChange(index, e)}
+                            >
+                                <MenuItem value="विधानपरिषद">विधानपरिषद</MenuItem>
+                                <MenuItem value="विधानसभा">विधानसभा</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <TextField
+                            name="memberName"
+                            label="सदस्याचे नाव"
+                            required
+                            fullWidth
+                            value={item.memberName || ''}
+                            onChange={(e) => handleWorkItemChange(index, e)}
+                        />
+                    </Grid>
+                  </>
+                )}
+
                 {/* --- 3. Dimension Rows (If Applicable) --- */}
                 {requiresDimensions ? (
                   <>
@@ -992,7 +1041,7 @@ const WorkOrder = () => {
                     <Grid item xs={12}>
                         <Box sx={{ px: 2, py: 1 }}>
                             <Grid container spacing={2} alignItems="center">
-                                {/* Spacer matching LxB */}
+                                {/* Spacer matching LxB length */}
                                 <Grid item xs={12} sm={4}></Grid>
 
                                 {/* Total Quantity */}
