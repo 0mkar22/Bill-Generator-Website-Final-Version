@@ -214,7 +214,6 @@ const WorkOrder = () => {
             dimensions = [{ length: item.length || '', breadth: item.breadth || '', qty: qty }];
           }
 
-          // Migrate old assembly data format to the new grouped format
           let assemblyDetails = item.assemblyDetails || [];
           if (assemblyDetails.length > 0 && assemblyDetails[0].memberName !== undefined) {
              const grouped = {};
@@ -615,6 +614,9 @@ const WorkOrder = () => {
       updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
       currentItem.assemblyDetails = updatedAssembly;
       
+      const totalQty = updatedAssembly.reduce((sum, group) => sum + group.members.length, 0);
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
+      
       newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
@@ -631,6 +633,9 @@ const WorkOrder = () => {
       updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
       currentItem.assemblyDetails = updatedAssembly;
       
+      const totalQty = updatedAssembly.reduce((sum, group) => sum + group.members.length, 0);
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
+      
       newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
@@ -641,6 +646,10 @@ const WorkOrder = () => {
       const newWorkItems = [...prev.workItems];
       const currentItem = { ...newWorkItems[itemIndex] };
       currentItem.assemblyDetails = [...(currentItem.assemblyDetails || []), { assemblyType: '', members: [''] }];
+      
+      const totalQty = currentItem.assemblyDetails.reduce((sum, group) => sum + group.members.length, 0);
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
+      
       newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
@@ -653,6 +662,10 @@ const WorkOrder = () => {
       const newAssembly = [...currentItem.assemblyDetails];
       newAssembly.splice(groupIndex, 1);
       currentItem.assemblyDetails = newAssembly;
+      
+      const totalQty = newAssembly.reduce((sum, group) => sum + group.members.length, 0);
+      currentItem.quantity = totalQty > 0 ? totalQty : 1;
+      
       newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
@@ -875,6 +888,8 @@ const WorkOrder = () => {
           
           const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
           const isBannerArea = bannerSubs.includes(item.workSub);
+          const isAssemblyWork = item.workMain === 'दिवंगत विधानपरिषद व विधानसभा सदस्य यांच्याकरीत स्मृतिपत्र';
+          
           const requiresDimensions = isLamination || isBannerArea;
           const unitLabel = isLamination ? 'इंच (inches)' : 'फूट (feet)';
           const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
@@ -1014,12 +1029,16 @@ const WorkOrder = () => {
                 )}
 
                 {/* --- 2.5 Dynamic Assembly/Member Fields --- */}
-                {item.workMain === 'दिवंगत विधानपरिषद व विधानसभा सदस्य यांच्याकरीत स्मृतिपत्र' && (
+                {isAssemblyWork && (
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>सदस्यांचा तपशील (Member Details)</Typography>
-                    {(item.assemblyDetails || []).map((assemblyGroup, gIdx) => (
+                    {(item.assemblyDetails || []).map((assemblyGroup, gIdx) => {
+                      const groupQty = assemblyGroup.members.length;
+                      const groupAmount = groupQty * currentRate;
+
+                      return (
                       <Box key={gIdx} sx={{ p: 2, mb: 2, border: '1px solid #ddd', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.5)' }}>
-                          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
                               <Typography variant="body1" sx={{ fontWeight: 'bold' }}>सभागृह (Assembly):</Typography>
                               <FormControl sx={{ minWidth: 200 }} size="small" required>
                                   <Select
@@ -1069,8 +1088,19 @@ const WorkOrder = () => {
                                   </Grid>
                               ))}
                           </Grid>
+                          
+                          {/* PLACED SUB-TOTAL HERE */}
+                          <Box sx={{ display: 'flex', mt: 2, pt: 1, borderTop: '1px dashed #ccc', justifyContent: 'flex-end', gap: 4 }}>
+                              <Typography variant="subtitle1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                  एकूण नग (Total Qty): {groupQty}
+                              </Typography>
+                              <Typography variant="subtitle1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                  रक्कम (Amount): ₹ {groupAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </Typography>
+                          </Box>
+                          
                       </Box>
-                    ))}
+                    )})}
                     <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => addAssemblyGroup(index)} sx={{ mt: 1 }}>
                         Add Another Assembly Group
                     </Button>
@@ -1214,14 +1244,14 @@ const WorkOrder = () => {
                     <Grid item xs={12} sm={6}>
                         <TextField 
                             name="quantity" 
-                            label={isVidhanMandalSelected ? 'नग' : 'Quantity'} 
+                            label={isVidhanMandalSelected ? (isAssemblyWork ? 'एकूण नग (Total Qty)' : 'नग') : 'Quantity'} 
                             type="text"
                             inputProps={{ inputMode: 'numeric' }}
                             required 
                             fullWidth 
                             value={item.quantity} 
                             onChange={(e) => handleWorkItemChange(index, e)} 
-                            disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain)}
+                            disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || isAssemblyWork}
                         />
                     </Grid>
                     <Grid item xs={12} sm={6}>
