@@ -10,24 +10,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import API, { getWorkOrders, createWorkOrder } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks } from '../constants/data';
-import { calculateItemAmount } from '../utils/helpers';
+import { calculateItemAmount, convertMarathiToEnglishNumbers } from '../utils/helpers';
 
 const bannerSubs = [
   "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
   "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
   "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
 ];
-
-const convertMarathiToEnglishNumbers = (input) => {
-  if (input === null || input === undefined) return '';
-  const marathiDigits = {
-    '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
-    '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
-  };
-  return String(input)
-    .replace(/[०-९]/g, match => marathiDigits[match])
-    .replace(/[^0-9.]/g, ''); 
-};
 
 const getRatesTemplateForCompany = (companyName = '') => {
   const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
@@ -87,7 +76,7 @@ const WorkOrder = () => {
         eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
         workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
         dimensions: [{ length: '', breadth: '', qty: 1 }],
-        assemblyType: '', memberName: '',
+        assemblyDetails: [{ assemblyType: '', members: [''] }],
         personnel: [{ name: '', number: '' }]
       }
     ]
@@ -198,7 +187,7 @@ const WorkOrder = () => {
           eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '',
           workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '',
           dimensions: [{ length: '', breadth: '', qty: 1 }],
-          assemblyType: '', memberName: '',
+          assemblyDetails: [{ assemblyType: '', members: [''] }],
           personnel: [{ name: '', number: '' }]
         }];
       } else {
@@ -225,11 +214,28 @@ const WorkOrder = () => {
             dimensions = [{ length: item.length || '', breadth: item.breadth || '', qty: qty }];
           }
 
+          // Migrate old assembly data format to the new grouped format
+          let assemblyDetails = item.assemblyDetails || [];
+          if (assemblyDetails.length > 0 && assemblyDetails[0].memberName !== undefined) {
+             const grouped = {};
+             assemblyDetails.forEach(ad => {
+                 const type = ad.assemblyType || '';
+                 if(!grouped[type]) grouped[type] = [];
+                 if(ad.memberName) grouped[type].push(ad.memberName);
+             });
+             assemblyDetails = Object.keys(grouped).map(type => ({ assemblyType: type, members: grouped[type].length ? grouped[type] : [''] }));
+          } else if (assemblyDetails.length === 0) {
+             if (item.assemblyType || item.memberName) {
+                 assemblyDetails = [{ assemblyType: item.assemblyType || '', members: [item.memberName || ''] }];
+             } else {
+                 assemblyDetails = [{ assemblyType: '', members: [''] }];
+             }
+          }
+
           return { 
               ...item, 
               dimensions,
-              assemblyType: item.assemblyType || '',
-              memberName: item.memberName || '',
+              assemblyDetails,
               personnel 
           };
         });
@@ -494,8 +500,7 @@ const WorkOrder = () => {
         newWorkItems[index]['customRate'] = '';
         newWorkItems[index]['quantity'] = 1; 
         newWorkItems[index]['dimensions'] = [{ length: '', breadth: '', qty: 1 }];
-        newWorkItems[index]['assemblyType'] = '';
-        newWorkItems[index]['memberName'] = '';
+        newWorkItems[index]['assemblyDetails'] = [{ assemblyType: '', members: [''] }];
 
         if (finalValue === 'Two_Camera_Setup') {
             newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
@@ -559,6 +564,95 @@ const WorkOrder = () => {
       const totalQty = newDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
       currentItem.quantity = totalQty > 0 ? totalQty : 1;
       
+      newWorkItems[itemIndex] = currentItem;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  // --- ASSEMBLY & MEMBER DYNAMIC HANDLERS ---
+  const handleAssemblyTypeChange = (itemIndex, groupIndex, value) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
+      
+      if (!updatedAssembly[groupIndex]) {
+        updatedAssembly[groupIndex] = { assemblyType: '', members: [''] };
+      }
+      
+      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], assemblyType: value };
+      currentItem.assemblyDetails = updatedAssembly;
+      
+      newWorkItems[itemIndex] = currentItem;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const handleMemberNameChange = (itemIndex, groupIndex, memberIndex, value) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
+      const updatedMembers = [...(updatedAssembly[groupIndex].members || [''])];
+      
+      updatedMembers[memberIndex] = value;
+      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
+      currentItem.assemblyDetails = updatedAssembly;
+      
+      newWorkItems[itemIndex] = currentItem;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const addMemberRow = (itemIndex, groupIndex) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
+      const updatedMembers = [...(updatedAssembly[groupIndex].members || [])];
+      
+      updatedMembers.push('');
+      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
+      currentItem.assemblyDetails = updatedAssembly;
+      
+      newWorkItems[itemIndex] = currentItem;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const removeMemberRow = (itemIndex, groupIndex, memberIndex) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
+      const updatedMembers = [...(updatedAssembly[groupIndex].members || [])];
+      
+      updatedMembers.splice(memberIndex, 1);
+      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
+      currentItem.assemblyDetails = updatedAssembly;
+      
+      newWorkItems[itemIndex] = currentItem;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const addAssemblyGroup = (itemIndex) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      currentItem.assemblyDetails = [...(currentItem.assemblyDetails || []), { assemblyType: '', members: [''] }];
+      newWorkItems[itemIndex] = currentItem;
+      return { ...prev, workItems: newWorkItems };
+    });
+  };
+
+  const removeAssemblyGroup = (itemIndex, groupIndex) => {
+    setFormData(prev => {
+      const newWorkItems = [...prev.workItems];
+      const currentItem = { ...newWorkItems[itemIndex] };
+      const newAssembly = [...currentItem.assemblyDetails];
+      newAssembly.splice(groupIndex, 1);
+      currentItem.assemblyDetails = newAssembly;
       newWorkItems[itemIndex] = currentItem;
       return { ...prev, workItems: newWorkItems };
     });
@@ -632,8 +726,7 @@ const WorkOrder = () => {
               customWorkMain: '',
               customRate: '',
               dimensions: [{ length: '', breadth: '', qty: 1 }],
-              assemblyType: '', 
-              memberName: '',
+              assemblyDetails: [{ assemblyType: '', members: [''] }],
               personnel: [{ name: '', number: '' }] 
           }
       ]
@@ -708,7 +801,7 @@ const WorkOrder = () => {
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
           entryNumber: '', eventDate: '', vendor: '', company_id: '',
-          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], assemblyType: '', memberName: '', personnel: [{ name: '', number: '' }] }]
+          workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], assemblyDetails: [{ assemblyType: '', members: [''] }], personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();
       }
@@ -920,34 +1013,68 @@ const WorkOrder = () => {
                     </Grid>
                 )}
 
-                {/* --- 2.5 Optional Assembly Type Fields --- */}
+                {/* --- 2.5 Dynamic Assembly/Member Fields --- */}
                 {item.workMain === 'दिवंगत विधानपरिषद व विधानसभा सदस्य यांच्याकरीत स्मृतिपत्र' && (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth required>
-                            <InputLabel>सभागृह</InputLabel>
-                            <Select
-                                name="assemblyType"
-                                value={item.assemblyType || ''}
-                                label="सभागृह"
-                                onChange={(e) => handleWorkItemChange(index, e)}
-                            >
-                                <MenuItem value="विधानपरिषद">विधानपरिषद</MenuItem>
-                                <MenuItem value="विधानसभा">विधानसभा</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            name="memberName"
-                            label="सदस्याचे नाव"
-                            required
-                            fullWidth
-                            value={item.memberName || ''}
-                            onChange={(e) => handleWorkItemChange(index, e)}
-                        />
-                    </Grid>
-                  </>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>सदस्यांचा तपशील (Member Details)</Typography>
+                    {(item.assemblyDetails || []).map((assemblyGroup, gIdx) => (
+                      <Box key={gIdx} sx={{ p: 2, mb: 2, border: '1px solid #ddd', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.5)' }}>
+                          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>सभागृह (Assembly):</Typography>
+                              <FormControl sx={{ minWidth: 200 }} size="small" required>
+                                  <Select
+                                      value={assemblyGroup.assemblyType || ''}
+                                      displayEmpty
+                                      onChange={(e) => handleAssemblyTypeChange(index, gIdx, e.target.value)}
+                                  >
+                                      <MenuItem value="" disabled>निवडा (Select)</MenuItem>
+                                      <MenuItem value="विधानपरिषद">विधानपरिषद</MenuItem>
+                                      <MenuItem value="विधानसभा">विधानसभा</MenuItem>
+                                  </Select>
+                              </FormControl>
+                              
+                              <Box sx={{ flex: 1, textAlign: 'right' }}>
+                                 {item.assemblyDetails.length > 1 && (
+                                    <Button color="error" size="small" onClick={() => removeAssemblyGroup(index, gIdx)}>
+                                        Remove Assembly Group
+                                    </Button>
+                                 )}
+                              </Box>
+                          </Box>
+                          
+                          <Divider sx={{ mb: 2 }} />
+                          
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>सदस्यांची नावे (Member Names):</Typography>
+                          <Grid container spacing={2}>
+                              {(assemblyGroup.members || ['']).map((member, mIdx) => (
+                                  <Grid item xs={12} sm={6} md={4} key={mIdx}>
+                                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                          <TextField
+                                              label={`सदस्य ${mIdx + 1} (Member ${mIdx + 1})`}
+                                              required
+                                              size="small"
+                                              fullWidth
+                                              value={member || ''}
+                                              onChange={(e) => handleMemberNameChange(index, gIdx, mIdx, e.target.value)}
+                                          />
+                                          <IconButton color="primary" onClick={() => addMemberRow(index, gIdx)} sx={{ p: 0.5 }}>
+                                            <AddCircleOutlineIcon />
+                                          </IconButton>
+                                          {assemblyGroup.members.length > 1 && (
+                                            <IconButton color="error" onClick={() => removeMemberRow(index, gIdx, mIdx)} sx={{ p: 0.5 }}>
+                                              <RemoveCircleOutlineIcon />
+                                            </IconButton>
+                                          )}
+                                      </Box>
+                                  </Grid>
+                              ))}
+                          </Grid>
+                      </Box>
+                    ))}
+                    <Button variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => addAssemblyGroup(index)} sx={{ mt: 1 }}>
+                        Add Another Assembly Group
+                    </Button>
+                  </Grid>
                 )}
 
                 {/* --- 3. Dimension Rows (If Applicable) --- */}
