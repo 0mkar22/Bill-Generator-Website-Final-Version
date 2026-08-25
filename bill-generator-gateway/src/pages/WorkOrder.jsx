@@ -456,7 +456,6 @@ const WorkOrder = () => {
       }
 
       if (newWorkItems[index].workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(newWorkItems[index].workSub)) {
-          // Keep at least one box present to hold the total quantity
           let dims = newWorkItems[index].dimensions || [];
           if (dims.length === 0) {
               dims = [{ length: '', breadth: '', qty: qty }];
@@ -507,7 +506,6 @@ const WorkOrder = () => {
       updatedDims[dimIndex] = { ...updatedDims[dimIndex], [field]: value };
       currentItem.dimensions = updatedDims;
 
-      // Automatically sync the top-level quantity sum
       const totalQty = updatedDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
       currentItem.quantity = totalQty > 0 ? totalQty : 1;
       
@@ -768,6 +766,13 @@ const WorkOrder = () => {
           
           const totalCalculatedArea = (item.dimensions || []).reduce((sum, dim) => sum + ((Number(dim.length) || 0) * (Number(dim.breadth) || 0) * (Number(dim.qty) || 1)), 0);
 
+          let currentRate = 0;
+          if (item.workMain === 'Others') {
+              currentRate = Number(item.customRate) || 0;
+          } else if (selectedCompany?.work_rates && selectedCompany.work_rates[item.workMain]) {
+              currentRate = Number(selectedCompany.work_rates[item.workMain][item.workSub]) || 0;
+          }
+
           return (
           <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -892,111 +897,175 @@ const WorkOrder = () => {
                     </Grid>
                 )}
 
-                {/* --- 3. Dimension Rows (If Applicable) --- */}
-                {requiresDimensions && (item.dimensions || []).map((dim, dIdx) => {
-                  const l = Number(dim.length) || 0;
-                  const b = Number(dim.breadth) || 0;
-                  const q = Number(dim.qty) || 1;
-                  const area = l * b * q;
+                {/* --- DYNAMIC SECTION: Renders Dimensions & Aligned Summary OR Default Inputs --- */}
+                {requiresDimensions ? (
+                  <>
+                    {/* DIMENSION ROWS */}
+                    {(item.dimensions || []).map((dim, dIdx) => {
+                      const l = Number(dim.length) || 0;
+                      const b = Number(dim.breadth) || 0;
+                      const q = Number(dim.qty) || 1;
+                      const area = l * b * q;
+                      const rowAmount = area * currentRate;
 
-                  return (
-                  <Grid item xs={12} key={dIdx}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 2, border: '1px dashed #ccc', borderRadius: 1, bgcolor: 'rgba(0,0,0,0.02)' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>आकार {dIdx + 1} (Dimensions):</Typography>
-                      <TextField 
-                        label={`लांबी (L in ${unitLabel.split(' ')[1].replace(')','')})`} 
-                        type="number" 
-                        required 
-                        size="small"
-                        value={dim.length || ''} 
-                        onChange={(e) => handleDimensionChange(index, dIdx, 'length', e.target.value)} 
-                        InputProps={{ inputProps: { min: 0 } }} 
-                        sx={{ width: '130px' }}
-                      />
-                      <Typography sx={{ fontWeight: 'bold' }}>X</Typography>
-                      <TextField 
-                        label={`रुंदी (B in ${unitLabel.split(' ')[1].replace(')','')})`} 
-                        type="number" 
-                        required 
-                        size="small"
-                        value={dim.breadth || ''} 
-                        onChange={(e) => handleDimensionChange(index, dIdx, 'breadth', e.target.value)} 
-                        InputProps={{ inputProps: { min: 0 } }} 
-                        sx={{ width: '130px' }}
-                      />
-                      <TextField 
-                        label={`नग (Qty)`} 
-                        type="number" 
-                        required 
-                        size="small"
-                        value={dim.qty || ''} 
-                        onChange={(e) => handleDimensionChange(index, dIdx, 'qty', e.target.value)} 
-                        InputProps={{ inputProps: { min: 1 } }} 
-                        sx={{ width: '90px', ml: 1 }}
-                      />
-                      <Typography variant="body2" sx={{ ml: 1, flex: 1, color: '#1976d2', fontWeight: 'bold' }}>
-                        = {area} {sqUnit}
-                      </Typography>
-                      
-                      <IconButton color="primary" onClick={() => addDimensionRow(index)}>
-                        <AddCircleOutlineIcon />
-                      </IconButton>
-                      {item.dimensions.length > 1 && (
-                        <IconButton color="error" onClick={() => removeDimensionRow(index, dIdx)}>
-                          <RemoveCircleOutlineIcon />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Grid>
-                )})}
-                
-                {/* --- 4. Total Area Display (If Applicable) --- */}
-                {requiresDimensions && (
-                  <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1, pr: 3 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
-                        एकूण आकार (Total Area): {totalCalculatedArea} {sqUnit}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                )}
+                      return (
+                        <Grid item xs={12} key={dIdx}>
+                          <Box sx={{ p: 2, border: '1px dashed #ccc', borderRadius: 1, bgcolor: 'rgba(0,0,0,0.02)' }}>
+                            <Grid container spacing={2} alignItems="center">
+                                {/* L x B */}
+                                <Grid item xs={12} sm={4}>
+                                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>आकार {dIdx + 1}:</Typography>
+                                    <TextField 
+                                      label={`L (${unitLabel.split(' ')[1].replace(')','')})`} 
+                                      type="number" 
+                                      required 
+                                      size="small"
+                                      value={dim.length || ''} 
+                                      onChange={(e) => handleDimensionChange(index, dIdx, 'length', e.target.value)} 
+                                      InputProps={{ inputProps: { min: 0 } }} 
+                                      sx={{ width: '80px' }}
+                                    />
+                                    <Typography sx={{ fontWeight: 'bold' }}>X</Typography>
+                                    <TextField 
+                                      label={`B (${unitLabel.split(' ')[1].replace(')','')})`} 
+                                      type="number" 
+                                      required 
+                                      size="small"
+                                      value={dim.breadth || ''} 
+                                      onChange={(e) => handleDimensionChange(index, dIdx, 'breadth', e.target.value)} 
+                                      InputProps={{ inputProps: { min: 0 } }} 
+                                      sx={{ width: '80px' }}
+                                    />
+                                  </Box>
+                                </Grid>
 
-                {/* --- 5. Total Quantity --- */}
-                <Grid item xs={12} sm={6}>
-                    <TextField 
-                        name="quantity" 
-                        label={isVidhanMandalSelected ? 'एकूण नग (Total Qty)' : 'Quantity'} 
-                        type="number" 
-                        required 
-                        fullWidth 
-                        value={item.quantity} 
-                        onChange={(e) => handleWorkItemChange(index, e)} 
-                        InputProps={{ inputProps: { min: 1 } }} 
-                        disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || requiresDimensions}
-                    />
-                </Grid>
+                                {/* Individual Qty */}
+                                <Grid item xs={12} sm={2}>
+                                    <TextField 
+                                      label="नग (Qty)" 
+                                      type="number" 
+                                      required 
+                                      size="small"
+                                      fullWidth
+                                      value={dim.qty || ''} 
+                                      onChange={(e) => handleDimensionChange(index, dIdx, 'qty', e.target.value)} 
+                                      InputProps={{ inputProps: { min: 1 } }} 
+                                    />
+                                </Grid>
 
-                {/* --- 6. Total Amount --- */}
-                <Grid item xs={12} sm={6}>
-                    {item.workMain === 'Others' ? (
+                                {/* Individual Area */}
+                                <Grid item xs={12} sm={3}>
+                                    <Typography variant="body1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                        = {area} {sqUnit}
+                                    </Typography>
+                                </Grid>
+
+                                {/* Amount & Buttons */}
+                                <Grid item xs={12} sm={3}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="body1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                        (₹ {rowAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                    </Typography>
+                                    <Box>
+                                      <IconButton color="primary" onClick={() => addDimensionRow(index)}>
+                                        <AddCircleOutlineIcon />
+                                      </IconButton>
+                                      {item.dimensions.length > 1 && (
+                                        <IconButton color="error" onClick={() => removeDimensionRow(index, dIdx)}>
+                                          <RemoveCircleOutlineIcon />
+                                        </IconButton>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                            </Grid>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+
+                    {/* ALIGNED SUMMARY ROW */}
+                    <Grid item xs={12}>
+                        <Box sx={{ px: 2, py: 1 }}>
+                            <Grid container spacing={2} alignItems="center">
+                                {/* Spacer matching LxB */}
+                                <Grid item xs={12} sm={4}></Grid>
+
+                                {/* Total Quantity */}
+                                <Grid item xs={12} sm={2}>
+                                    <TextField 
+                                        name="quantity" 
+                                        label={isVidhanMandalSelected ? 'एकूण नग' : 'Total Qty'} 
+                                        type="number" 
+                                        required 
+                                        fullWidth 
+                                        size="small"
+                                        value={item.quantity} 
+                                        InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
+                                    />
+                                </Grid>
+
+                                {/* Total Area */}
+                                <Grid item xs={12} sm={3}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                                        एकूण: {totalCalculatedArea} {sqUnit}
+                                    </Typography>
+                                </Grid>
+
+                                {/* Total Amount */}
+                                <Grid item xs={12} sm={3}>
+                                    <TextField 
+                                        label={isVidhanMandalSelected ? 'एकूण रक्कम' : 'Total Amount'} 
+                                        type="text" 
+                                        fullWidth 
+                                        size="small"
+                                        value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                        InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5', fontWeight: 'bold' } }} 
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Grid>
+                  </>
+                ) : (
+                  /* STANDARD LAYOUT FOR NON-DIMENSION ITEMS */
+                  <>
+                    <Grid item xs={12} sm={6}>
                         <TextField 
-                            name="customRate" 
-                            label="Custom Rate / Amount (Rs.)" 
+                            name="quantity" 
+                            label={isVidhanMandalSelected ? 'नग' : 'Quantity'} 
                             type="number" 
+                            required 
                             fullWidth 
-                            value={item.customRate || ''} 
+                            value={item.quantity} 
                             onChange={(e) => handleWorkItemChange(index, e)} 
+                            InputProps={{ inputProps: { min: 1 } }} 
+                            disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain)}
                         />
-                    ) : (
-                        <TextField 
-                            label={isVidhanMandalSelected ? 'रकम' : 'Amount'} 
-                            type="text" 
-                            fullWidth 
-                            value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
-                            InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
-                        />
-                    )}
-                </Grid>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        {item.workMain === 'Others' ? (
+                            <TextField 
+                                name="customRate" 
+                                label="Custom Rate / Amount (Rs.)" 
+                                type="number" 
+                                fullWidth 
+                                value={item.customRate || ''} 
+                                onChange={(e) => handleWorkItemChange(index, e)} 
+                            />
+                        ) : (
+                            <TextField 
+                                label={isVidhanMandalSelected ? 'रकम' : 'Amount'} 
+                                type="text" 
+                                fullWidth 
+                                value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
+                            />
+                        )}
+                    </Grid>
+                  </>
+                )}
 
                 {/* --- 7. Assigned Personnel --- */}
                 {!hidePersonnel && (
