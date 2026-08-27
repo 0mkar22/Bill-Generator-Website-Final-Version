@@ -124,10 +124,21 @@ function VendorInvoice() {
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
   const handleDownloadBill = () => {
-    const billElement = document.getElementById('generated-bill');
-    if (!billElement) return;
+    const originalElement = document.getElementById('generated-bill');
+    if (!originalElement) return;
     
-    // Sanitize invoice number for filename (remove illegal characters)
+    // Clone the element and append to body to completely bypass viewport/overflow cropping
+    const clone = originalElement.cloneNode(true);
+    clone.style.width = '900px';
+    clone.style.minWidth = '900px';
+    clone.style.position = 'absolute';
+    clone.style.top = '0';
+    clone.style.left = '0';
+    clone.style.zIndex = '-9999';
+    clone.style.margin = '0';
+    document.body.appendChild(clone);
+
+    // Sanitize invoice number for filename
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
     const filename = `VendorInvoice_${safeInvoiceNumber}.pdf`;
 
@@ -135,21 +146,13 @@ function VendorInvoice() {
       const opt = {
         margin: [5, 5, 5, 5],
         filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          logging: false,
-          windowWidth: 1200
-        },
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       
-      // Add a temporary class to ensure it's not hidden or truncated
-      billElement.classList.add('pdf-bill-large');
-      
-      html2pdf.default().from(billElement).set(opt).save().then(() => {
-        billElement.classList.remove('pdf-bill-large');
+      html2pdf.default().from(clone).set(opt).save().then(() => {
+        document.body.removeChild(clone);
       });
     });
   };
