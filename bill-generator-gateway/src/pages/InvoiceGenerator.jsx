@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container, Paper, Typography, Box, Button, Checkbox,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ButtonGroup,
-  Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert
+  Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert, TablePagination, TextField, InputAdornment
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ReceiptIcon from '@mui/icons-material/Receipt';
@@ -21,6 +21,14 @@ const InvoiceGenerator = () => {
   const [viewingInvoiceType, setViewingInvoiceType] = useState('All');
   const [vendorFilter, setVendorFilter] = useState('All Vendors');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
+
+  // Pagination & Search state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [savedPage, setSavedPage] = useState(0);
+  const [savedRowsPerPage, setSavedRowsPerPage] = useState(10);
 
   const fetchCompanies = async () => {
     try {
@@ -191,17 +199,42 @@ const InvoiceGenerator = () => {
   const selectedItemsList = getSelectedItems();
   const showWorkOrderBtn = selectedItemsList.length === 0 || isONGCCompany(selectedItemsList[0].parent.company_id);
 
+  const activeEntryNumber = selectedItemsList.length > 0 ? selectedItemsList[0].parent.entryNumber : null;
+
+  const filteredWorkItems = workItems.filter(item => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (item.eventName || '').toLowerCase().includes(term) ||
+      (item.poNpo || '').toLowerCase().includes(term) ||
+      (item.parent?.entryNumber?.toString() || '').includes(term) ||
+      (item.workMain || '').toLowerCase().includes(term)
+    );
+  });
+
+  const paginatedWorkItems = filteredWorkItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const paginatedSavedInvoices = filteredSavedInvoices.slice(savedPage * savedRowsPerPage, savedPage * savedRowsPerPage + savedRowsPerPage);
+
   return (
     <Container>
       <Paper sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
         <Typography variant="h4" gutterBottom align="center">
           Generate Invoice
         </Typography>
-        <Typography variant="body1" align="center" sx={{ mb: 3 }}>
-          Select the work items you want to include in the invoice.
-        </Typography>
-
-        <TableContainer>
+          <Typography variant="body1" align="center" sx={{ mb: 3 }}>
+            Select work items from the same event to generate a consolidated invoice.
+          </Typography>
+          
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <TextField
+              size="small"
+              placeholder="Search by event, PO, or entry number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ width: '300px' }}
+            />
+          </Box>
+          <TableContainer>
           <Table>
             <TableHead>
                 <TableRow>
@@ -216,34 +249,63 @@ const InvoiceGenerator = () => {
                 </TableRow>
             </TableHead>
             <TableBody>
-              {workItems.map((item) => {
+              {paginatedWorkItems.map((item) => {
                 const hasVendorInvoice = invoiceStatusMap[item.id]?.Vendor || false;
                 const hasWorkOrderInvoice = invoiceStatusMap[item.id]?.WorkOrder || false;
+                
+                const isSelected = !!selected[item.id];
+                const isSameEntryNumber = activeEntryNumber !== null && item.parent.entryNumber === activeEntryNumber;
+                const isDisabled = activeEntryNumber !== null && !isSameEntryNumber;
+                const isHighlighted = isSameEntryNumber && !isSelected;
+
                 return (
-                    <TableRow key={item.id} hover >
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                            checked={!!selected[item.id]}
-                            onChange={() => handleSelect(item.id)}
-                        />
-                      </TableCell>
-                      <TableCell>{item.parent.entryNumber}</TableCell>
-                      <TableCell align="center">
-                        <Checkbox checked={hasVendorInvoice} disabled />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Checkbox checked={hasWorkOrderInvoice} disabled />
-                      </TableCell>
-                      <TableCell>{item.eventName}</TableCell>
-                      <TableCell>{item.poNpo}</TableCell>
-                      <TableCell>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
-                    </TableRow>
-                )
+                  <TableRow 
+                    key={item.id} 
+                    hover 
+                    sx={{ 
+                      bgcolor: isSelected ? 'rgba(25, 118, 210, 0.15)' : (isHighlighted ? 'rgba(76, 175, 80, 0.1)' : 'inherit'),
+                      opacity: isDisabled ? 0.5 : 1
+                    }}
+                  >
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                          checked={isSelected}
+                          onChange={() => handleSelect(item.id)}
+                          disabled={isDisabled}
+                          color={isSameEntryNumber ? "success" : "primary"}
+                      />
+                    </TableCell>
+                    <TableCell>{item.parent.entryNumber}</TableCell>
+                    <TableCell align="center">
+                      <Checkbox checked={hasVendorInvoice} disabled />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Checkbox checked={hasWorkOrderInvoice} disabled />
+                    </TableCell>
+                    <TableCell>{item.eventName}</TableCell>
+                    <TableCell>{item.poNpo}</TableCell>
+                    <TableCell>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
+                  </TableRow>
+                );
               })}
+              {paginatedWorkItems.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">No items found.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={filteredWorkItems.length}
+          page={page}
+          onPageChange={(e, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
           <Button
             variant="contained"
@@ -311,7 +373,7 @@ const InvoiceGenerator = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredSavedInvoices.map((invoice, i) => {
+                        {paginatedSavedInvoices.map((invoice, i) => {
                             const invItems = Array.isArray(invoice.workItems) ? invoice.workItems : [];
                             const eventNames = workItems.filter(item => invItems.includes(item.id)).map(item => item.eventName);
                             const uniqueEventNames = [...new Set(eventNames)];

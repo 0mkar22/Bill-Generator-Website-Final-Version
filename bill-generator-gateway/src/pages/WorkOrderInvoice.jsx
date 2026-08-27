@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Button, Container, CircularProgress, Alert, TextField, Snackbar
+  Button, Container, CircularProgress, Alert, TextField, Snackbar, Backdrop
 } from '@mui/material';
 
 import './WorkOrderInvoice.css';
@@ -85,6 +85,7 @@ const WorkOrderInvoice = () => {
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isGenerating, setIsGenerating] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
 
   useEffect(() => {
@@ -97,6 +98,7 @@ const WorkOrderInvoice = () => {
     const originalElement = document.getElementById('generated-invoice');
     if (!originalElement) return;
 
+    setIsGenerating(true);
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
     const filename = `WorkOrder_${safeInvoiceNumber}.pdf`;
 
@@ -116,6 +118,10 @@ const WorkOrderInvoice = () => {
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
           pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
           pdf.save(filename);
+          setIsGenerating(false);
+        }).catch(err => {
+          console.error(err);
+          setIsGenerating(false);
         });
       });
     });
@@ -467,6 +473,11 @@ const WorkOrderInvoice = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1, display: 'flex', flexDirection: 'column', gap: 2 }} open={isGenerating}>
+        <CircularProgress color="inherit" />
+        <Typography variant="h6">Generating PDF... Please wait.</Typography>
+      </Backdrop>
     </Container>
   );
 };

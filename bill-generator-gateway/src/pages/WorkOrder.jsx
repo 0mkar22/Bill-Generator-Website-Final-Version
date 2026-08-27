@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete, Switch, FormControlLabel
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete, Switch, FormControlLabel, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import API, { getWorkOrders, createWorkOrder, getCompanies, getTeam, createCompany, updateCompany, upsertTeam } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks, bannerSubs } from '../constants/data';
@@ -90,6 +91,7 @@ const WorkOrder = () => {
   
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState(null);
+  const [expandedItem, setExpandedItem] = useState(0);
   const [newCompany, setNewCompany] = useState({ 
     company_name: '', 
     address: '', 
@@ -564,18 +566,24 @@ const WorkOrder = () => {
           }
 
           return (
-          <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">Work Item #{index + 1}</Typography>
-              {formData.workItems.length > 1 && (
-                <IconButton type="button" onClick={() => removeWorkItem(index)} color="error">
-                  <RemoveCircleOutlineIcon />
-                </IconButton>
-              )}
-            </Box>
-
-            {index === 0 && (
-                <Grid container spacing={2} sx={{ mt: 1 }}>
+          <Accordion 
+            key={index} 
+            expanded={expandedItem === index} 
+            onChange={(e, isExpanded) => setExpandedItem(isExpanded ? index : false)}
+            sx={{ mt: 3, bgcolor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.5)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)', '&:before': { display: 'none' } }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <Typography variant="h6">Work Item #{index + 1} {item.eventName ? `- ${item.eventName}` : ''}</Typography>
+                {formData.workItems.length > 1 && (
+                  <IconButton type="button" onClick={(e) => { e.stopPropagation(); removeWorkItem(index); }} color="error">
+                    <RemoveCircleOutlineIcon />
+                  </IconButton>
+                )}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.6)' }}>
+              <Grid container spacing={3}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={item.eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
@@ -982,10 +990,11 @@ const WorkOrder = () => {
                   </React.Fragment>
                 )}
             </Grid>
-          </Paper>
+            </AccordionDetails>
+          </Accordion>
         )})}
 
-        <Button type="button" startIcon={<AddCircleOutlineIcon />} onClick={addWorkItem} sx={{ mt: 2 }}>
+        <Button type="button" startIcon={<AddCircleOutlineIcon />} onClick={() => { addWorkItem(); setExpandedItem(formData.workItems.length); }} sx={{ mt: 2 }}>
           Add Another Item
         </Button>
 
