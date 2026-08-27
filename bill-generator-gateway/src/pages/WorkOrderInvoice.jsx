@@ -4,13 +4,13 @@ import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, Container, CircularProgress, Alert, TextField, Snackbar
 } from '@mui/material';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+
 import './WorkOrderInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
+import { useReactToPrint } from 'react-to-print';
 
 const EditableField = ({
   value,
@@ -94,16 +94,20 @@ const WorkOrderInvoice = () => {
     if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
   }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
 
-  const handleDownload = async () => {
-    const input = invoiceRef.current;
-    const canvas = await html2canvas(input, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`WorkOrder_${invoiceNumber || 'preview'}.pdf`);
-  };
+  const handleDownload = useReactToPrint({
+    contentRef: invoiceRef,
+    documentTitle: `WorkOrder_${invoiceNumber || 'preview'}`,
+    pageStyle: `
+      @page { size: A4 portrait; margin: 10mm; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; }
+        #generated-invoice {
+          border: none !important;
+          margin: 0 !important;
+        }
+      }
+    `,
+  });
 
   const handleDownloadWord = () => {
     const invoiceElement = document.getElementById('generated-invoice');

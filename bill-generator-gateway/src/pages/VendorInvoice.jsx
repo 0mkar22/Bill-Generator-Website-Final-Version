@@ -4,13 +4,13 @@ import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
   Button, TextField, Container, CircularProgress, Alert, Snackbar
 } from '@mui/material';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+
 import './VendorInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
+import { useReactToPrint } from 'react-to-print';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
@@ -76,6 +76,7 @@ function VendorInvoice() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const invoiceRef = useRef();
   const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
 
   const [isSaving, setIsSaving] = useState(false);
@@ -123,23 +124,20 @@ function VendorInvoice() {
     if (passedGstNo !== undefined) setGstNo(passedGstNo);
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
-  const handleDownloadBill = () => {
-    const billElement = document.getElementById('generated-bill');
-    if (!billElement) return;
-    billElement.classList.add('pdf-bill-large');
-    setTimeout(() => {
-      html2canvas(billElement, { scale: 2.5, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' })
-        .then(canvas => {
-            const imgData = canvas.toDataURL('image/png', 1.0);
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`VendorInvoice_${invoiceNumber || 'preview'}.pdf`);
-            billElement.classList.remove('pdf-bill-large');
-        });
-    }, 100);
-  };
+  const handleDownloadBill = useReactToPrint({
+    contentRef: invoiceRef,
+    documentTitle: `VendorInvoice_${invoiceNumber || 'preview'}`,
+    pageStyle: `
+      @page { size: A4 portrait; margin: 10mm; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; }
+        #generated-bill {
+          border: none !important;
+          margin: 0 !important;
+        }
+      }
+    `,
+  });
 
   const handleDownloadWord = () => {
     const billElement = document.getElementById('generated-bill');
@@ -306,7 +304,7 @@ function VendorInvoice() {
         </Alert>
       )}
 
-      <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+      <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
         
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
