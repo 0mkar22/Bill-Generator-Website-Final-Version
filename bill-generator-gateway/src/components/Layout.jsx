@@ -77,7 +77,7 @@ const Layout = ({ children }) => {
               <MenuIcon />
             </IconButton>
           )}
-          <img src="/logo.PNG" alt="Company Logo" style={{ width: '100%', maxWidth: '200px', height: 'auto', margin: '0 auto', display: 'block',marginBottom: '20px' }} />  
+          <img src="/logo.PNG" alt="Company Logo" className="app-bar-logo" style={{ height: '40px', marginRight: '16px' }} />
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontSize: '1.4rem' }}>
             Bill Generator
           </Typography>
@@ -97,7 +97,7 @@ const Layout = ({ children }) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', borderRight: '1px solid rgba(255,255,255,0.2)' } }}
+          PaperProps={{ sx: { borderRight: '1px solid rgba(255,255,255,0.4)' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -109,7 +109,7 @@ const Layout = ({ children }) => {
       ) : (
         <Drawer
           variant="permanent"
-          PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', borderRight: '1px solid rgba(255,255,255,0.2)' } }}
+          PaperProps={{ sx: { borderRight: '1px solid rgba(255,255,255,0.4)' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,

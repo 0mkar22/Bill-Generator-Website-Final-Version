@@ -2,21 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete, Switch, FormControlLabel, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
-import API, { getWorkOrders, createWorkOrder } from '../services/api';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import API, { getWorkOrders, createWorkOrder, getCompanies, getTeam, createCompany, updateCompany, upsertTeam } from '../services/api';
 import { supabase } from '../supabase';
-import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks } from '../constants/data';
+import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks, bannerSubs } from '../constants/data';
 import { calculateItemAmount, convertMarathiToEnglishNumbers } from '../utils/helpers';
-
-const bannerSubs = [
-  "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
-  "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
-  "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
-];
+import { useWorkOrderForm } from '../hooks/useWorkOrderForm';
 
 const getRatesTemplateForCompany = (companyName = '') => {
   const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
@@ -66,7 +62,18 @@ const WorkOrder = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const editData = location.state?.editData;
-  const [formData, setFormData] = useState({
+  const [latestEntry, setLatestEntry] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  
+  const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
+  const [historicalContacts, setHistoricalContacts] = useState([]);
+
+  const {
+      formData, setFormData, handleMainChange, handleWorkItemChange, handleDimensionChange,
+      addDimensionRow, removeDimensionRow, handleAssemblyTypeChange, handleMemberNameChange,
+      addMemberRow, removeMemberRow, addAssemblyGroup, removeAssemblyGroup, handlePersonnelChange,
+      addWorkItem, removeWorkItem
+  } = useWorkOrderForm({
     entryNumber: '',
     eventDate: '',
     vendor: '',
@@ -80,19 +87,18 @@ const WorkOrder = () => {
         personnel: [{ name: '', number: '' }]
       }
     ]
-  });
-  const [latestEntry, setLatestEntry] = useState(null);
-  const [companies, setCompanies] = useState([]);
-  
-  const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
-  const [historicalContacts, setHistoricalContacts] = useState([]);
+  }, historicalContacts, historicalPersonnel);
   
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState(null);
+  const [expandedItem, setExpandedItem] = useState(0);
   const [newCompany, setNewCompany] = useState({ 
     company_name: '', 
     address: '', 
-    gst_number: '',
+    gst_number: '', 
+    is_govt_client: false,
+    requires_po_number: false,
+    uses_marathi_labels: false,
     work_rates: getRatesTemplateForCompany()
   });
 
@@ -114,9 +120,8 @@ const WorkOrder = () => {
 
   const fetchCompanies = async () => {
     try {
-      const { data, error } = await supabase.from('companies').select('*');
-      if (error) throw error;
-      setCompanies(data || []);
+      const response = await getCompanies();
+      setCompanies(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch companies:", error);
     }
@@ -124,9 +129,8 @@ const WorkOrder = () => {
 
   const fetchTeamData = async () => {
     try {
-      const { data, error } = await supabase.from('team').select('*');
-      if (error) throw error;
-      setHistoricalPersonnel(data || []);
+      const response = await getTeam();
+      setHistoricalPersonnel(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch team data:", error);
     }
@@ -263,7 +267,7 @@ const WorkOrder = () => {
 
   const getFilteredSubWorks = (workMain, company) => {
     const companyName = company?.company_name?.toUpperCase() || '';
-    const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+    const isVidhan = company?.uses_marathi_labels === true || companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
 
     if (isVidhan && vidhanMandalWorks[workMain]) {
         return vidhanMandalWorks[workMain];
@@ -273,7 +277,7 @@ const WorkOrder = () => {
         return subWorks['Storage'] || ['32GB', '64GB', '128GB', '256GB', '1TB', '2TB'];
     }
 
-    const isONGC = companyName.includes('ONGC') || 
+    const isONGC = company?.requires_po_number === true || companyName.includes('ONGC') || 
                    companyName.includes('OIL & NATURAL GAS') || 
                    companyName.includes('OIL AND NATURAL GAS');
 
@@ -359,10 +363,10 @@ const WorkOrder = () => {
     if (e) e.preventDefault();
     try {
       const companyNameStr = newCompany.company_name?.toUpperCase() || '';
-      const isONGC = companyNameStr.includes('ONGC') || 
+      const isONGC = newCompany.requires_po_number === true || companyNameStr.includes('ONGC') || 
                      companyNameStr.includes('OIL & NATURAL GAS') || 
                      companyNameStr.includes('OIL AND NATURAL GAS');
-      const isModalVidhan = companyNameStr.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+      const isModalVidhan = newCompany.uses_marathi_labels === true || companyNameStr.includes('महाराष्ट्र विधान मंडळ सचिवालय');
 
       const allowedLocations = isONGC 
           ? ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'] 
@@ -386,22 +390,17 @@ const WorkOrder = () => {
       const payloadToSave = { ...newCompany, work_rates: cleanedRates };
 
       if (editingCompanyId) {
-        const { data, error } = await supabase
-          .from('companies')
-          .update(payloadToSave)
-          .eq('id', editingCompanyId)
-          .select();
+        const response = await updateCompany(editingCompanyId, payloadToSave);
+        const data = response.data.data;
         
-        if (error) throw error;
-        
-        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? data[0] : c));
+        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? data : c));
         setSnackbar({ open: true, message: 'Company updated successfully!', severity: 'success' });
       } else {
-        const { data, error } = await supabase.from('companies').insert([payloadToSave]).select();
-        if (error) throw error;
+        const response = await createCompany(payloadToSave);
+        const data = response.data.data;
         
-        setCompanies(prev => [...prev, data[0]]);
-        setFormData(prev => ({ ...prev, company_id: data[0].id }));
+        setCompanies(prev => [...prev, data]);
+        setFormData(prev => ({ ...prev, company_id: data.id }));
         setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
       }
       
@@ -412,352 +411,15 @@ const WorkOrder = () => {
     }
   };
 
-  const handleMainChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
 
-  const handleWorkItemChange = (index, e) => {
-    const { name, value } = e.target;
-    let finalValue = value;
-
-    if (['quantity', 'customRate'].includes(name)) {
-      finalValue = convertMarathiToEnglishNumbers(value);
-    } else if (name === 'contactNumber') {
-      finalValue = convertMarathiToEnglishNumbers(value).slice(0, 10);
-    }
-
-    const newWorkItems = [...formData.workItems];
-    newWorkItems[index][name] = finalValue;
-
-    if (index === 0 && ['eventName', 'poNpo', 'eventTime', 'eventVenue', 'contactPerson', 'contactNumber', 'customVenue', 'roomNumber'].includes(name)) {
-        for (let i = 1; i < newWorkItems.length; i++) {
-            newWorkItems[i][name] = finalValue;
-        }
-    }
-
-    if (name === 'contactPerson') {
-      let matchedNumber = '';
-      const cleanedValue = finalValue.trim().toLowerCase();
-
-      if (cleanedValue !== '') {
-          const foundDb = historicalContacts.find(c => c.name.toLowerCase() === cleanedValue);
-          if (foundDb) {
-              matchedNumber = foundDb.number.replace(/[^0-9]/g, '').slice(0, 10);
-          } else {
-              for (const workItem of formData.workItems) {
-                  if (workItem.contactPerson?.toLowerCase().trim() === cleanedValue && workItem.contactNumber) {
-                      matchedNumber = workItem.contactNumber.replace(/[^0-9]/g, '').slice(0, 10);
-                      break;
-                  }
-              }
-          }
-      }
-      
-      newWorkItems[index]['contactNumber'] = matchedNumber;
-      if (index === 0) {
-          for (let i = 1; i < newWorkItems.length; i++) {
-              newWorkItems[i]['contactNumber'] = matchedNumber;
-          }
-      }
-    }
-
-    if (name === 'quantity') {
-      const qty = Number(finalValue) || 1;
-      
-      if (!['Two_Camera_Setup', 'Three_Camera_Setup', 'लाईव्ह व्हिडिओ मिक्सर'].includes(newWorkItems[index].workMain)) {
-          let personnel = newWorkItems[index].personnel || [];
-          if (personnel.length < qty) {
-            for (let i = personnel.length; i < qty; i++) {
-              personnel.push({ name: '', number: '' });
-            }
-          } else if (personnel.length > qty) {
-            personnel = personnel.slice(0, qty);
-          }
-          newWorkItems[index].personnel = personnel;
-      }
-
-      if (newWorkItems[index].workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(newWorkItems[index].workSub)) {
-          let dims = newWorkItems[index].dimensions || [];
-          if (dims.length === 0) {
-              dims = [{ length: '', breadth: '', qty: qty }];
-          } else if (dims.length === 1) {
-              dims[0].qty = qty;
-          }
-          newWorkItems[index].dimensions = dims;
-      }
-    }
-
-    if (name === 'workSub') {
-        if (finalValue === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(finalValue)) {
-            newWorkItems[index].dimensions = [{ length: '', breadth: '', qty: newWorkItems[index].quantity || 1 }];
-        }
-    }
-
-    if (name === 'workMain') {
-        newWorkItems[index]['workSub'] = '';
-        newWorkItems[index]['customRate'] = '';
-        newWorkItems[index]['quantity'] = 1; 
-        newWorkItems[index]['dimensions'] = [{ length: '', breadth: '', qty: 1 }];
-        newWorkItems[index]['assemblyDetails'] = [{ assemblyType: '', members: [''] }];
-
-        if (finalValue === 'Two_Camera_Setup') {
-            newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
-        } else if (finalValue === 'Three_Camera_Setup') {
-            newWorkItems[index]['personnel'] = Array(5).fill(null).map(() => ({ name: '', number: '' }));
-        } else if (finalValue === 'लाईव्ह व्हिडिओ मिक्सर') {
-            newWorkItems[index]['personnel'] = Array(2).fill(null).map(() => ({ name: '', number: '' }));
-        } else if (noPersonnelWorks.includes(finalValue)) {
-            newWorkItems[index]['personnel'] = []; 
-        } else {
-            newWorkItems[index]['personnel'] = [{ name: '', number: '' }];
-        }
-    }
-    setFormData(prev => ({ ...prev, workItems: newWorkItems }));
-  };
-
-  const handleDimensionChange = (itemIndex, dimIndex, field, value) => {
-    const safeValue = convertMarathiToEnglishNumbers(value);
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const updatedDims = [...(currentItem.dimensions || [])];
-      
-      if (!updatedDims[dimIndex]) {
-        updatedDims[dimIndex] = { length: '', breadth: '', qty: 1 };
-      }
-      
-      updatedDims[dimIndex] = { ...updatedDims[dimIndex], [field]: safeValue };
-      currentItem.dimensions = updatedDims;
-
-      const totalQty = updatedDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const addDimensionRow = (itemIndex) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      currentItem.dimensions = [...(currentItem.dimensions || []), { length: '', breadth: '', qty: 1 }];
-      
-      const totalQty = currentItem.dimensions.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const removeDimensionRow = (itemIndex, dimIndex) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const newDims = [...currentItem.dimensions];
-      newDims.splice(dimIndex, 1);
-      currentItem.dimensions = newDims;
-      
-      const totalQty = newDims.reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  // --- ASSEMBLY & MEMBER DYNAMIC HANDLERS ---
-  const handleAssemblyTypeChange = (itemIndex, groupIndex, value) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
-      
-      if (!updatedAssembly[groupIndex]) {
-        updatedAssembly[groupIndex] = { assemblyType: '', members: [''] };
-      }
-      
-      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], assemblyType: value };
-      currentItem.assemblyDetails = updatedAssembly;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const handleMemberNameChange = (itemIndex, groupIndex, memberIndex, value) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
-      const updatedMembers = [...(updatedAssembly[groupIndex].members || [''])];
-      
-      updatedMembers[memberIndex] = value;
-      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
-      currentItem.assemblyDetails = updatedAssembly;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const addMemberRow = (itemIndex, groupIndex) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
-      const updatedMembers = [...(updatedAssembly[groupIndex].members || [])];
-      
-      updatedMembers.push('');
-      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
-      currentItem.assemblyDetails = updatedAssembly;
-      
-      const totalQty = updatedAssembly.reduce((sum, group) => sum + group.members.length, 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const removeMemberRow = (itemIndex, groupIndex, memberIndex) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const updatedAssembly = [...(currentItem.assemblyDetails || [])];
-      const updatedMembers = [...(updatedAssembly[groupIndex].members || [])];
-      
-      updatedMembers.splice(memberIndex, 1);
-      updatedAssembly[groupIndex] = { ...updatedAssembly[groupIndex], members: updatedMembers };
-      currentItem.assemblyDetails = updatedAssembly;
-      
-      const totalQty = updatedAssembly.reduce((sum, group) => sum + group.members.length, 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const addAssemblyGroup = (itemIndex) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      currentItem.assemblyDetails = [...(currentItem.assemblyDetails || []), { assemblyType: '', members: [''] }];
-      
-      const totalQty = currentItem.assemblyDetails.reduce((sum, group) => sum + group.members.length, 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const removeAssemblyGroup = (itemIndex, groupIndex) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const newAssembly = [...currentItem.assemblyDetails];
-      newAssembly.splice(groupIndex, 1);
-      currentItem.assemblyDetails = newAssembly;
-      
-      const totalQty = newAssembly.reduce((sum, group) => sum + group.members.length, 0);
-      currentItem.quantity = totalQty > 0 ? totalQty : 1;
-      
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const handlePersonnelChange = (itemIndex, personIndex, field, value) => {
-    setFormData(prev => {
-      const newWorkItems = [...prev.workItems];
-      const currentItem = { ...newWorkItems[itemIndex] };
-      const updatedPersonnel = [...(currentItem.personnel || [])];
-      
-      let finalValue = value;
-      if (field === 'number') {
-          finalValue = convertMarathiToEnglishNumbers(value).slice(0, 10);
-      }
-      
-      if (!updatedPersonnel[personIndex]) {
-        updatedPersonnel[personIndex] = { name: '', number: '' };
-      }
-      
-      updatedPersonnel[personIndex] = { ...updatedPersonnel[personIndex], [field]: finalValue };
-
-      if (field === 'name') {
-          let matchedNumber = '';
-          const cleanedValue = finalValue.trim().toLowerCase();
-
-          if (cleanedValue !== '') {
-              const foundDb = historicalPersonnel.find(p => p.name.toLowerCase() === cleanedValue);
-              if (foundDb) {
-                  matchedNumber = foundDb.number.replace(/[^0-9]/g, '').slice(0, 10);
-              } else {
-                  for (const workItem of prev.workItems) {
-                      for (const p of (workItem.personnel || [])) {
-                          if (p.name?.toLowerCase().trim() === cleanedValue && p.number) {
-                              matchedNumber = p.number.replace(/[^0-9]/g, '').slice(0, 10);
-                              break;
-                          }
-                      }
-                      if (matchedNumber) break;
-                  }
-              }
-          }
-          
-          updatedPersonnel[personIndex].number = matchedNumber;
-      }
-
-      currentItem.personnel = updatedPersonnel;
-      newWorkItems[itemIndex] = currentItem;
-      return { ...prev, workItems: newWorkItems };
-    });
-  };
-
-  const addWorkItem = () => {
-    const firstItem = formData.workItems[0];
-    setFormData(prev => ({
-      ...prev,
-      workItems: [
-          ...prev.workItems,
-          {
-              eventName: firstItem.eventName,
-              poNpo: firstItem.poNpo,
-              eventTime: firstItem.eventTime,
-              eventVenue: firstItem.eventVenue,
-              contactPerson: firstItem.contactPerson,
-              contactNumber: firstItem.contactNumber,
-              roomNumber: firstItem.roomNumber || '',
-              customVenue: firstItem.customVenue,
-              workMain: '',
-              workSub: '',
-              quantity: 1,
-              customWorkMain: '',
-              customRate: '',
-              dimensions: [{ length: '', breadth: '', qty: 1 }],
-              assemblyDetails: [{ assemblyType: '', members: [''] }],
-              personnel: [{ name: '', number: '' }] 
-          }
-      ]
-    }));
-  };
-
-  const removeWorkItem = (index) => {
-    const newWorkItems = formData.workItems.filter((_, i) => i !== index);
-    setFormData(prev => ({ ...prev, workItems: newWorkItems }));
-  };
 
   const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
   const selectedCompanyNameStr = selectedCompany?.company_name?.toUpperCase() || '';
-  const isONGCSelected = selectedCompanyNameStr.includes('ONGC') || 
+  const isONGCSelected = selectedCompany?.requires_po_number === true || selectedCompanyNameStr.includes('ONGC') || 
                          selectedCompanyNameStr.includes('OIL & NATURAL GAS') || 
                          selectedCompanyNameStr.includes('OIL AND NATURAL GAS');
 
-  const isVidhanMandalSelected = selectedCompany?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+  const isVidhanMandalSelected = selectedCompany?.uses_marathi_labels === true || selectedCompany?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -801,7 +463,7 @@ const WorkOrder = () => {
       });
 
       if (newTeamMembers.length > 0) {
-          await supabase.from('team').upsert(newTeamMembers, { onConflict: 'name' });
+          await upsertTeam(newTeamMembers);
           fetchTeamData(); 
       }
 
@@ -829,7 +491,7 @@ const WorkOrder = () => {
   };
 
   return (
-    <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
+    <Container component={Paper} sx={{ p: 4, mt: 4 }}>
       <Typography variant="h4" gutterBottom align="center">{editData ? 'Edit Event Data' : 'Event Data Entry'}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
@@ -904,18 +566,24 @@ const WorkOrder = () => {
           }
 
           return (
-          <Paper key={index} sx={{ p: 2, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">Work Item #{index + 1}</Typography>
-              {formData.workItems.length > 1 && (
-                <IconButton type="button" onClick={() => removeWorkItem(index)} color="error">
-                  <RemoveCircleOutlineIcon />
-                </IconButton>
-              )}
-            </Box>
-
-            {index === 0 && (
-                <Grid container spacing={2} sx={{ mt: 1 }}>
+          <Accordion 
+            key={index} 
+            expanded={expandedItem === index} 
+            onChange={(e, isExpanded) => setExpandedItem(isExpanded ? index : false)}
+            sx={{ mt: 3 }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <Typography variant="h6">Work Item #{index + 1} {item.eventName ? `- ${item.eventName}` : ''}</Typography>
+                {formData.workItems.length > 1 && (
+                  <IconButton type="button" onClick={(e) => { e.stopPropagation(); removeWorkItem(index); }} color="error">
+                    <RemoveCircleOutlineIcon />
+                  </IconButton>
+                )}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 2 }}>
+              <Grid container spacing={3}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={item.eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
@@ -982,8 +650,7 @@ const WorkOrder = () => {
                         </Grid>
                     )}
                     <Grid item xs={12}><Divider>Work Details</Divider></Grid>
-                </Grid>
-            )}
+                  </Grid>
 
             <Grid container spacing={2} sx={{ mt: index === 0 ? 1 : 0 }}>
                 {/* --- 1. Work Name --- */}
@@ -1322,10 +989,11 @@ const WorkOrder = () => {
                   </React.Fragment>
                 )}
             </Grid>
-          </Paper>
+            </AccordionDetails>
+          </Accordion>
         )})}
 
-        <Button type="button" startIcon={<AddCircleOutlineIcon />} onClick={addWorkItem} sx={{ mt: 2 }}>
+        <Button type="button" startIcon={<AddCircleOutlineIcon />} onClick={() => { addWorkItem(); setExpandedItem(formData.workItems.length); }} sx={{ mt: 2 }}>
           Add Another Item
         </Button>
 
@@ -1385,6 +1053,22 @@ const WorkOrder = () => {
             onChange={(e) => setNewCompany({...newCompany, gst_number: e.target.value})}
           />
           
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1, p: 2, bgcolor: 'rgba(0,0,0,0.03)', borderRadius: 1 }}>
+            <Typography variant="subtitle2" color="text.secondary">Client Specific Settings</Typography>
+            <FormControlLabel
+              control={<Switch checked={newCompany.is_govt_client || false} onChange={(e) => setNewCompany({...newCompany, is_govt_client: e.target.checked})} color="primary" />}
+              label="Is Government Client (Requires special handling)"
+            />
+            <FormControlLabel
+              control={<Switch checked={newCompany.requires_po_number || false} onChange={(e) => setNewCompany({...newCompany, requires_po_number: e.target.checked})} color="primary" />}
+              label="Requires PO Number (Mandatory PO fields on invoice)"
+            />
+            <FormControlLabel
+              control={<Switch checked={newCompany.uses_marathi_labels || false} onChange={(e) => setNewCompany({...newCompany, uses_marathi_labels: e.target.checked})} color="primary" />}
+              label="Uses Marathi Labels (Translates invoice fields to Marathi)"
+            />
+          </Box>
+
           <Divider sx={{ my: 3 }} />
           <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Custom Work Rates</Typography>
           

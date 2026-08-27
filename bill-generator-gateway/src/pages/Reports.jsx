@@ -13,6 +13,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import API from '../services/api';
 import { calculateItemAmount } from '../utils/helpers';
+import { getCompanies } from '../services/api';
 import { supabase } from '../supabase';
 
 const Reports = () => {
@@ -33,6 +34,7 @@ const Reports = () => {
     const itemsPerPage = 10;
     const [monthFilter, setMonthFilter] = useState('');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [fetchedCompaniesList, setFetchedCompaniesList] = useState([]);
 
     const fetchWorkOrders = async () => {
         try {
@@ -41,8 +43,9 @@ const Reports = () => {
 
             let fetchedCompanies = [];
             try {
-                const { data: companyData } = await supabase.from('companies').select('*');
-                fetchedCompanies = companyData || [];
+                const response = await getCompanies();
+                fetchedCompanies = response.data.data || [];
+                setFetchedCompaniesList(fetchedCompanies);
             } catch (err) {
                 console.warn("Could not fetch companies, proceeding without names.", err);
             }
@@ -275,6 +278,10 @@ const Reports = () => {
         const sortedItems = getSortedItems();
         
         const ongcItems = sortedItems.filter(item => {
+            const company = fetchedCompaniesList.find(c => c.company_name === item.companyName);
+            if (company && company.requires_po_number !== undefined) {
+                return company.requires_po_number === true;
+            }
             const companyNameStr = (item.companyName || '').toUpperCase();
             return companyNameStr.includes('ONGC') || 
                    companyNameStr.includes('OIL & NATURAL GAS') || 
@@ -446,7 +453,7 @@ const Reports = () => {
 
     return (
         <Container maxWidth="xl">
-            <Paper sx={{ p: 3, mt: 3, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
+            <Paper sx={{ p: 3, mt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                     <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')}>Back</Button>
                     <Typography variant="h4" sx={{ flexGrow: 1, textAlign: 'center' }}>Work Orders Report</Typography>

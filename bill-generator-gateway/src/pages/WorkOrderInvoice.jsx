@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Button, Container, CircularProgress, Alert, TextField, Snackbar
+  Button, Container, CircularProgress, Alert, TextField, Snackbar, Backdrop
 } from '@mui/material';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+
 import './WorkOrderInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
+import { bannerSubs } from '../constants/data';
 
 const EditableField = ({
   value,
@@ -85,6 +85,7 @@ const WorkOrderInvoice = () => {
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isGenerating, setIsGenerating] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
 
   useEffect(() => {
@@ -93,15 +94,37 @@ const WorkOrderInvoice = () => {
     if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
   }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
 
-  const handleDownload = async () => {
-    const input = invoiceRef.current;
-    const canvas = await html2canvas(input, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`WorkOrder_${invoiceNumber || 'preview'}.pdf`);
+  const handleDownload = () => {
+    const originalElement = document.getElementById('generated-invoice');
+    if (!originalElement) return;
+
+    setIsGenerating(true);
+    const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
+    const filename = `WorkOrder_${safeInvoiceNumber}.pdf`;
+
+    import('html2canvas').then(({ default: html2canvas }) => {
+      import('jspdf').then(({ jsPDF }) => {
+        html2canvas(originalElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          windowWidth: 1000,
+          width: 900,
+          scrollY: -window.scrollY
+        }).then((canvas) => {
+          const imgData = canvas.toDataURL('image/jpeg', 1.0);
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(filename);
+          setIsGenerating(false);
+        }).catch(err => {
+          console.error(err);
+          setIsGenerating(false);
+        });
+      });
+    });
   };
 
   const handleDownloadWord = () => {
@@ -189,9 +212,9 @@ const WorkOrderInvoice = () => {
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
-      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
-        .then(({ data }) => {
-          if (data) setCompanyDetails(data);
+      API.get('/companies/' + parentOrder.company_id)
+        .then(response => {
+          if (response.data.data) setCompanyDetails(response.data.data);
         })
         .catch(console.error);
     }
@@ -216,13 +239,7 @@ const WorkOrderInvoice = () => {
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
 
   const isPO = selectedItems[0]?.poNpo === 'PO';
-  const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
-
-  const bannerSubs = [
-    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
-  ];
+  const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   return (
     <Container>
@@ -244,7 +261,7 @@ const WorkOrderInvoice = () => {
       </Box>
       {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}</Alert>}
 
-      <Paper ref={invoiceRef} id="generated-invoice" className="invoice-container" sx={{ p: 0, border: '2px solid #000' }}>
+      <Paper ref={invoiceRef} id="generated-invoice" className="invoice-container" sx={{ p: 0, border: '2px solid #000', width: '900px', minWidth: '900px', margin: '0 auto' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
           <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
           <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
@@ -456,6 +473,11 @@ const WorkOrderInvoice = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1, display: 'flex', flexDirection: 'column', gap: 2 }} open={isGenerating}>
+        <CircularProgress color="inherit" />
+        <Typography variant="h6">Generating PDF... Please wait.</Typography>
+      </Backdrop>
     </Container>
   );
 };

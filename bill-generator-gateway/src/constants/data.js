@@ -10,6 +10,12 @@ export const subWorks = {
   "Others": []
 };
 
+export const bannerSubs = [
+  "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
+  "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
+  "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
+];
+
 export const venues = [
   'NBP Green Heights, BKC, Bandra (East), Mumbai - 400051',
   'Vasudhara Bhavan, Western Express Highway, Bandra (East), Mumbai – 400051',
