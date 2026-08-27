@@ -6,6 +6,7 @@
     width: 900px !important;
     max-width: 900px !important;
     margin: 0 auto !important;
+    overflow: visible !important;
 }
 .invoice-header {
     text-align: center;
