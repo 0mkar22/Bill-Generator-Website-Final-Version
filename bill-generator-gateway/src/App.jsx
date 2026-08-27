@@ -17,6 +17,87 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
   },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(255, 255, 255, 0.35)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.6)',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.6)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+          backgroundImage: 'none',
+        },
+      },
+    },
+    MuiAccordion: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(255, 255, 255, 0.25)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: 'none',
+          '&:before': {
+            display: 'none',
+          },
+          '&.Mui-expanded': {
+            margin: '16px 0',
+          },
+        },
+      },
+    },
+    MuiAccordionDetails: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'none',
+            borderRadius: '8px',
+            transition: 'background-color 0.2s',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.85)',
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'rgba(255, 255, 255, 1)',
+            },
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          borderRadius: '8px',
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+          },
+          '&.Mui-focused': {
+            backgroundColor: 'rgba(255, 255, 255, 1)',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+        },
+      },
+    },
+  },
 });
 
 function App() {
@@ -76,7 +157,7 @@ function App() {
     return (
       <ThemeProvider theme={theme}>
       <Container maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '80vh' }}>
-        <Paper elevation={4} sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 2, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
+        <Paper sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 2 }}>
           <Box sx={{ textAlign: 'center', mb: 2 }}>
             <img src="/logo.PNG" alt="Company Logo" style={{ width: '100%', maxWidth: '250px', height: 'auto', margin: '0 auto', display: 'block',marginBottom: '20px' }} />
             <Typography variant="h4" component="h1" fontWeight="bold">

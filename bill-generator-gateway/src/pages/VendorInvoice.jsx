@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
-  Button, TextField, Container, CircularProgress, Alert, Snackbar
+  Button, TextField, Container, CircularProgress, Alert, Snackbar, Backdrop
 } from '@mui/material';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+
 import './VendorInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
+import { bannerSubs } from '../constants/data';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
@@ -75,12 +75,14 @@ function VendorInvoice() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const invoiceRef = useRef();
   const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isGenerating, setIsGenerating] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
 
   const [recipient, setRecipient] = useState('');
@@ -123,21 +125,36 @@ function VendorInvoice() {
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
   const handleDownloadBill = () => {
-    const billElement = document.getElementById('generated-bill');
-    if (!billElement) return;
-    billElement.classList.add('pdf-bill-large');
-    setTimeout(() => {
-      html2canvas(billElement, { scale: 2.5, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' })
-        .then(canvas => {
-            const imgData = canvas.toDataURL('image/png', 1.0);
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`VendorInvoice_${invoiceNumber || 'preview'}.pdf`);
-            billElement.classList.remove('pdf-bill-large');
+    const originalElement = document.getElementById('generated-bill');
+    if (!originalElement) return;
+    
+    setIsGenerating(true);
+    const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
+    const filename = `VendorInvoice_${safeInvoiceNumber}.pdf`;
+
+    import('html2canvas').then(({ default: html2canvas }) => {
+      import('jspdf').then(({ jsPDF }) => {
+        html2canvas(originalElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          windowWidth: 1000, 
+          width: 900,
+          scrollY: -window.scrollY 
+        }).then((canvas) => {
+          const imgData = canvas.toDataURL('image/jpeg', 1.0);
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(filename);
+          setIsGenerating(false);
+        }).catch(err => {
+          console.error(err);
+          setIsGenerating(false);
         });
-    }, 100);
+      });
+    });
   };
 
   const handleDownloadWord = () => {
@@ -234,8 +251,9 @@ function VendorInvoice() {
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
-      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
-        .then(({ data }) => {
+      API.get('/companies/' + parentOrder.company_id)
+        .then(response => {
+          const data = response.data.data;
           if (data) {
             setCompanyDetails(data);
             if (passedRecipient === undefined) {
@@ -261,18 +279,14 @@ function VendorInvoice() {
   const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
   const rounded = Math.round(total);
 
-  const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+  const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   const companyNameStr = (companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient || '').toUpperCase();
-  const isONGC = companyNameStr.includes('ONGC') || 
+  const isONGC = companyDetails?.requires_po_number === true || parentOrder?.companyDetails?.requires_po_number === true || companyNameStr.includes('ONGC') || 
                  companyNameStr.includes('OIL & NATURAL GAS') || 
                  companyNameStr.includes('OIL AND NATURAL GAS');
 
-  const bannerSubs = [
-    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
-  ];
+
 
   return (
     <Container>
@@ -308,7 +322,7 @@ function VendorInvoice() {
         </Alert>
       )}
 
-      <Paper id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+      <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto' }}>
         
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -339,9 +353,11 @@ function VendorInvoice() {
                 <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
               </Box>
               
-              <Box sx={{ textAlign: 'right', mt: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#333' }}>
-                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,<br />
+              <Box sx={{ textAlign: 'right', mt: 1, width: '100%' }}>
+                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#333' }}>
+                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#333' }}>
                   Thane (W) 400 606 &nbsp;&nbsp; E-mail : bhogtevijay@gmail.com
                 </Typography>
               </Box>
@@ -453,7 +469,7 @@ function VendorInvoice() {
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Place Of Supply :</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 1 }}>Mumbai</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
                 <EditableField
                   value={serviceDescription}
@@ -462,7 +478,7 @@ function VendorInvoice() {
                   setEditing={setEditingServiceDescription}
                   isReadOnly={isReadOnly}
                   sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
-                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'normal', wordBreak: 'break-word' }}
                 />
               </Box>
             </Box>
@@ -644,6 +660,11 @@ function VendorInvoice() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1, display: 'flex', flexDirection: 'column', gap: 2 }} open={isGenerating}>
+        <CircularProgress color="inherit" />
+        <Typography variant="h6">Generating PDF... Please wait.</Typography>
+      </Backdrop>
     </Container>
   );
 }

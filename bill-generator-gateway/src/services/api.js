@@ -17,4 +17,11 @@ API.interceptors.request.use(async (config) => {
 export const createWorkOrder = (workOrderData) => API.post('/workOrders', workOrderData);
 export const getWorkOrders = () => API.get('/workOrders');
 
+export const getCompanies = () => API.get('/companies');
+export const createCompany = (data) => API.post('/companies', data);
+export const updateCompany = (id, data) => API.put(`/companies/${id}`, data);
+
+export const getTeam = () => API.get('/team');
+export const upsertTeam = (data) => API.post('/team', data);
+
 export default API;
