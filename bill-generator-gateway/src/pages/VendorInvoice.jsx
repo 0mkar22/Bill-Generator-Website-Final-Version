@@ -10,7 +10,6 @@ import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
-import { useReactToPrint } from 'react-to-print';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
@@ -124,20 +123,31 @@ function VendorInvoice() {
     if (passedGstNo !== undefined) setGstNo(passedGstNo);
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
-  const handleDownloadBill = useReactToPrint({
-    contentRef: invoiceRef,
-    documentTitle: `VendorInvoice_${invoiceNumber || 'preview'}`,
-    pageStyle: `
-      @page { size: A4 portrait; margin: 10mm; }
-      @media print {
-        body { -webkit-print-color-adjust: exact; }
-        #generated-bill {
-          border: none !important;
-          margin: 0 !important;
-        }
-      }
-    `,
-  });
+  const handleDownloadBill = () => {
+    const billElement = document.getElementById('generated-bill');
+    if (!billElement) return;
+    
+    // Sanitize invoice number for filename (remove illegal characters)
+    const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
+    const filename = `VendorInvoice_${safeInvoiceNumber}.pdf`;
+
+    import('html2pdf.js').then((html2pdf) => {
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      // Add a temporary class to ensure it's not hidden or truncated
+      billElement.classList.add('pdf-bill-large');
+      
+      html2pdf.default().from(billElement).set(opt).save().then(() => {
+        billElement.classList.remove('pdf-bill-large');
+      });
+    });
+  };
 
   const handleDownloadWord = () => {
     const billElement = document.getElementById('generated-bill');

@@ -10,7 +10,6 @@ import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
-import { useReactToPrint } from 'react-to-print';
 
 const EditableField = ({
   value,
@@ -94,20 +93,26 @@ const WorkOrderInvoice = () => {
     if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
   }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
 
-  const handleDownload = useReactToPrint({
-    contentRef: invoiceRef,
-    documentTitle: `WorkOrder_${invoiceNumber || 'preview'}`,
-    pageStyle: `
-      @page { size: A4 portrait; margin: 10mm; }
-      @media print {
-        body { -webkit-print-color-adjust: exact; }
-        #generated-invoice {
-          border: none !important;
-          margin: 0 !important;
-        }
-      }
-    `,
-  });
+  const handleDownload = () => {
+    const invoiceElement = document.getElementById('generated-invoice');
+    if (!invoiceElement) return;
+
+    // Sanitize invoice number for filename (remove illegal characters)
+    const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
+    const filename = `WorkOrder_${safeInvoiceNumber}.pdf`;
+
+    import('html2pdf.js').then((html2pdf) => {
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      html2pdf.default().from(invoiceElement).set(opt).save();
+    });
+  };
 
   const handleDownloadWord = () => {
     const invoiceElement = document.getElementById('generated-invoice');
