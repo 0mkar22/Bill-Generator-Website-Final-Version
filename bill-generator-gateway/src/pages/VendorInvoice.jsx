@@ -345,9 +345,11 @@ function VendorInvoice() {
                 <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
               </Box>
               
-              <Box sx={{ textAlign: 'right', mt: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#333' }}>
-                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,<br />
+              <Box sx={{ textAlign: 'right', mt: 1, width: '100%' }}>
+                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#333' }}>
+                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#333' }}>
                   Thane (W) 400 606 &nbsp;&nbsp; E-mail : bhogtevijay@gmail.com
                 </Typography>
               </Box>
@@ -459,7 +461,7 @@ function VendorInvoice() {
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Place Of Supply :</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 1 }}>Mumbai</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
                 <EditableField
                   value={serviceDescription}
@@ -468,7 +470,7 @@ function VendorInvoice() {
                   setEditing={setEditingServiceDescription}
                   isReadOnly={isReadOnly}
                   sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
-                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'normal', wordBreak: 'break-word' }}
                 />
               </Box>
             </Box>
