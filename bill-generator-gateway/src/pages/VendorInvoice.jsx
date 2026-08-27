@@ -286,7 +286,7 @@ function VendorInvoice() {
 
 
   return (
-    <Container>
+    <Container sx={{ overflowX: 'auto' }}>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -319,7 +319,7 @@ function VendorInvoice() {
         </Alert>
       )}
 
-      <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+      <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto' }}>
         
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
