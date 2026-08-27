@@ -1,5 +1,7 @@
 .pdf-bill-large {
-    font-size: 2.2rem; /* Larger font size for PDF generation */
+    width: 900px !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
 }
 .invoice-container {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;

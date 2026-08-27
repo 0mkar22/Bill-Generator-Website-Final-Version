@@ -133,7 +133,7 @@ function VendorInvoice() {
 
     import('html2pdf.js').then((html2pdf) => {
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [5, 5, 5, 5],
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },

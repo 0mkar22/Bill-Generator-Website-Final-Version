@@ -103,14 +103,17 @@ const WorkOrderInvoice = () => {
 
     import('html2pdf.js').then((html2pdf) => {
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [5, 5, 5, 5],
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       
-      html2pdf.default().from(invoiceElement).set(opt).save();
+      invoiceElement.classList.add('pdf-bill-large');
+      html2pdf.default().from(invoiceElement).set(opt).save().then(() => {
+        invoiceElement.classList.remove('pdf-bill-large');
+      });
     });
   };
 
