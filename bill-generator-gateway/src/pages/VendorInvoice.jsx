@@ -10,6 +10,7 @@ import './VendorInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
+import { bannerSubs } from '../constants/data';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
@@ -269,11 +270,7 @@ function VendorInvoice() {
                  companyNameStr.includes('OIL & NATURAL GAS') || 
                  companyNameStr.includes('OIL AND NATURAL GAS');
 
-  const bannerSubs = [
-    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
-  ];
+
 
   return (
     <Container>
