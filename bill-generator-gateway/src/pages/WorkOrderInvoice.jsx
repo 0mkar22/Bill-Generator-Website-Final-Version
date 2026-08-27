@@ -97,26 +97,27 @@ const WorkOrderInvoice = () => {
     const originalElement = document.getElementById('generated-invoice');
     if (!originalElement) return;
 
-    // Sanitize invoice number for filename
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
     const filename = `WorkOrder_${safeInvoiceNumber}.pdf`;
 
-    import('html2pdf.js').then((html2pdf) => {
-      const opt = {
-        margin: [5, 5, 5, 5],
-        filename: filename,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
+    import('html2canvas').then(({ default: html2canvas }) => {
+      import('jspdf').then(({ jsPDF }) => {
+        html2canvas(originalElement, {
+          scale: 2,
+          useCORS: true,
           logging: false,
-          windowWidth: 1200,
-          width: 900
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      html2pdf.default().from(originalElement).set(opt).save();
+          windowWidth: 1000,
+          width: 900,
+          scrollY: -window.scrollY
+        }).then((canvas) => {
+          const imgData = canvas.toDataURL('image/jpeg', 1.0);
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(filename);
+        });
+      });
     });
   };
 
