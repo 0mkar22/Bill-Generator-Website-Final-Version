@@ -216,7 +216,7 @@ const WorkOrderInvoice = () => {
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
 
   const isPO = selectedItems[0]?.poNpo === 'PO';
-  const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+  const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   const bannerSubs = [
     "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",

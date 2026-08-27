@@ -261,7 +261,7 @@ const WorkOrder = () => {
 
   const getFilteredSubWorks = (workMain, company) => {
     const companyName = company?.company_name?.toUpperCase() || '';
-    const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+    const isVidhan = company?.uses_marathi_labels === true || companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
 
     if (isVidhan && vidhanMandalWorks[workMain]) {
         return vidhanMandalWorks[workMain];
@@ -271,7 +271,7 @@ const WorkOrder = () => {
         return subWorks['Storage'] || ['32GB', '64GB', '128GB', '256GB', '1TB', '2TB'];
     }
 
-    const isONGC = companyName.includes('ONGC') || 
+    const isONGC = company?.requires_po_number === true || companyName.includes('ONGC') || 
                    companyName.includes('OIL & NATURAL GAS') || 
                    companyName.includes('OIL AND NATURAL GAS');
 
@@ -357,10 +357,10 @@ const WorkOrder = () => {
     if (e) e.preventDefault();
     try {
       const companyNameStr = newCompany.company_name?.toUpperCase() || '';
-      const isONGC = companyNameStr.includes('ONGC') || 
+      const isONGC = newCompany.requires_po_number === true || companyNameStr.includes('ONGC') || 
                      companyNameStr.includes('OIL & NATURAL GAS') || 
                      companyNameStr.includes('OIL AND NATURAL GAS');
-      const isModalVidhan = companyNameStr.includes('महाराष्ट्र विधान मंडळ सचिवालय');
+      const isModalVidhan = newCompany.uses_marathi_labels === true || companyNameStr.includes('महाराष्ट्र विधान मंडळ सचिवालय');
 
       const allowedLocations = isONGC 
           ? ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'] 
@@ -746,11 +746,11 @@ const WorkOrder = () => {
 
   const selectedCompany = companies.find(c => c.id === formData.company_id) || null;
   const selectedCompanyNameStr = selectedCompany?.company_name?.toUpperCase() || '';
-  const isONGCSelected = selectedCompanyNameStr.includes('ONGC') || 
+  const isONGCSelected = selectedCompany?.requires_po_number === true || selectedCompanyNameStr.includes('ONGC') || 
                          selectedCompanyNameStr.includes('OIL & NATURAL GAS') || 
                          selectedCompanyNameStr.includes('OIL AND NATURAL GAS');
 
-  const isVidhanMandalSelected = selectedCompany?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+  const isVidhanMandalSelected = selectedCompany?.uses_marathi_labels === true || selectedCompany?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
