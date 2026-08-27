@@ -97,7 +97,7 @@ const Layout = ({ children }) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', borderRight: '1px solid rgba(255,255,255,0.2)' } }}
+          PaperProps={{ sx: { borderRight: '1px solid rgba(255,255,255,0.4)' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -109,7 +109,7 @@ const Layout = ({ children }) => {
       ) : (
         <Drawer
           variant="permanent"
-          PaperProps={{ sx: { bgcolor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', borderRight: '1px solid rgba(255,255,255,0.2)' } }}
+          PaperProps={{ sx: { borderRight: '1px solid rgba(255,255,255,0.4)' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,

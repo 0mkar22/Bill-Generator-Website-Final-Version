@@ -491,7 +491,7 @@ const WorkOrder = () => {
   };
 
   return (
-    <Container component={Paper} sx={{ p: 4, mt: 4, bgcolor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)' }}>
+    <Container component={Paper} sx={{ p: 4, mt: 4 }}>
       <Typography variant="h4" gutterBottom align="center">{editData ? 'Edit Event Data' : 'Event Data Entry'}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
@@ -570,7 +570,7 @@ const WorkOrder = () => {
             key={index} 
             expanded={expandedItem === index} 
             onChange={(e, isExpanded) => setExpandedItem(isExpanded ? index : false)}
-            sx={{ mt: 3, bgcolor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.5)', boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)', '&:before': { display: 'none' } }}
+            sx={{ mt: 3 }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ display: 'flex', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -582,7 +582,7 @@ const WorkOrder = () => {
                 )}
               </Box>
             </AccordionSummary>
-            <AccordionDetails sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.6)' }}>
+            <AccordionDetails sx={{ p: 2 }}>
               <Grid container spacing={3}>
                     <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
                     <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={item.eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
