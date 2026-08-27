@@ -650,8 +650,7 @@ const WorkOrder = () => {
                         </Grid>
                     )}
                     <Grid item xs={12}><Divider>Work Details</Divider></Grid>
-                </Grid>
-            )}
+                  </Grid>
 
             <Grid container spacing={2} sx={{ mt: index === 0 ? 1 : 0 }}>
                 {/* --- 1. Work Name --- */}
