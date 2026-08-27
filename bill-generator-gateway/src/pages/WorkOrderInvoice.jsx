@@ -10,6 +10,7 @@ import './WorkOrderInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
+import { bannerSubs } from '../constants/data';
 
 const EditableField = ({
   value,
@@ -217,12 +218,6 @@ const WorkOrderInvoice = () => {
 
   const isPO = selectedItems[0]?.poNpo === 'PO';
   const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
-
-  const bannerSubs = [
-    "डिजिटल फ्लेक्स बॅनर डिझाईन करणे. (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग सहित (प्रती चो. फुट)",
-    "डिजिटल फ्लेक्स बॅनर डिझाईन प्रिंटिंग/लकडी फ्रेम तयार करणे"
-  ];
 
   return (
     <Container>
