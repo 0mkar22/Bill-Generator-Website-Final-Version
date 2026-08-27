@@ -189,9 +189,9 @@ const WorkOrderInvoice = () => {
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
-      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
-        .then(({ data }) => {
-          if (data) setCompanyDetails(data);
+      API.get('/companies/' + parentOrder.company_id)
+        .then(response => {
+          if (response.data.data) setCompanyDetails(response.data.data);
         })
         .catch(console.error);
     }

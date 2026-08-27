@@ -7,7 +7,7 @@ import {
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
-import API, { getWorkOrders, createWorkOrder } from '../services/api';
+import API, { getWorkOrders, createWorkOrder, getCompanies, getTeam, createCompany, updateCompany, upsertTeam } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks } from '../constants/data';
 import { calculateItemAmount, convertMarathiToEnglishNumbers } from '../utils/helpers';
@@ -114,9 +114,8 @@ const WorkOrder = () => {
 
   const fetchCompanies = async () => {
     try {
-      const { data, error } = await supabase.from('companies').select('*');
-      if (error) throw error;
-      setCompanies(data || []);
+      const response = await getCompanies();
+      setCompanies(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch companies:", error);
     }
@@ -124,9 +123,8 @@ const WorkOrder = () => {
 
   const fetchTeamData = async () => {
     try {
-      const { data, error } = await supabase.from('team').select('*');
-      if (error) throw error;
-      setHistoricalPersonnel(data || []);
+      const response = await getTeam();
+      setHistoricalPersonnel(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch team data:", error);
     }
@@ -386,22 +384,17 @@ const WorkOrder = () => {
       const payloadToSave = { ...newCompany, work_rates: cleanedRates };
 
       if (editingCompanyId) {
-        const { data, error } = await supabase
-          .from('companies')
-          .update(payloadToSave)
-          .eq('id', editingCompanyId)
-          .select();
+        const response = await updateCompany(editingCompanyId, payloadToSave);
+        const data = response.data.data;
         
-        if (error) throw error;
-        
-        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? data[0] : c));
+        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? data : c));
         setSnackbar({ open: true, message: 'Company updated successfully!', severity: 'success' });
       } else {
-        const { data, error } = await supabase.from('companies').insert([payloadToSave]).select();
-        if (error) throw error;
+        const response = await createCompany(payloadToSave);
+        const data = response.data.data;
         
-        setCompanies(prev => [...prev, data[0]]);
-        setFormData(prev => ({ ...prev, company_id: data[0].id }));
+        setCompanies(prev => [...prev, data]);
+        setFormData(prev => ({ ...prev, company_id: data.id }));
         setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
       }
       
@@ -801,7 +794,7 @@ const WorkOrder = () => {
       });
 
       if (newTeamMembers.length > 0) {
-          await supabase.from('team').upsert(newTeamMembers, { onConflict: 'name' });
+          await upsertTeam(newTeamMembers);
           fetchTeamData(); 
       }
 
