@@ -262,10 +262,10 @@ function VendorInvoice() {
   const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
   const rounded = Math.round(total);
 
-  const isVidhanMandal = companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+  const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   const companyNameStr = (companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient || '').toUpperCase();
-  const isONGC = companyNameStr.includes('ONGC') || 
+  const isONGC = companyDetails?.requires_po_number === true || parentOrder?.companyDetails?.requires_po_number === true || companyNameStr.includes('ONGC') || 
                  companyNameStr.includes('OIL & NATURAL GAS') || 
                  companyNameStr.includes('OIL AND NATURAL GAS');
 

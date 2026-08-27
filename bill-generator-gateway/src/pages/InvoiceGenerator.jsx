@@ -73,9 +73,16 @@ const InvoiceGenerator = () => {
   }, []);
 
   const isONGCCompany = (companyId, fallbackName = '') => {
-      const company = companies.find(c => c.id === companyId);
-      const nameStr = (company?.company_name || fallbackName || '').toUpperCase();
+    const comp = companies.find(c => c.id === companyId);
+    if (comp && comp.requires_po_number !== undefined) {
+      return comp.requires_po_number === true;
+    }
+    if (comp) {
+      const nameStr = (comp.company_name || fallbackName).toUpperCase();
       return nameStr.includes('ONGC') || nameStr.includes('OIL & NATURAL GAS') || nameStr.includes('OIL AND NATURAL GAS');
+    }
+    const nameStr = fallbackName.toUpperCase();
+    return nameStr.includes('ONGC') || nameStr.includes('OIL & NATURAL GAS') || nameStr.includes('OIL AND NATURAL GAS');
   };
 
   const invoiceStatusMap = useMemo(() => {
