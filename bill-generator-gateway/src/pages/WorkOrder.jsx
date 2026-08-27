@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Container, Typography, TextField, Button, Grid, Paper, Box, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete
+  Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete, Switch, FormControlLabel
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
@@ -93,7 +93,10 @@ const WorkOrder = () => {
   const [newCompany, setNewCompany] = useState({ 
     company_name: '', 
     address: '', 
-    gst_number: '',
+    gst_number: '', 
+    is_govt_client: false,
+    requires_po_number: false,
+    uses_marathi_labels: false,
     work_rates: getRatesTemplateForCompany()
   });
 
@@ -1042,6 +1045,22 @@ const WorkOrder = () => {
             onChange={(e) => setNewCompany({...newCompany, gst_number: e.target.value})}
           />
           
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1, p: 2, bgcolor: 'rgba(0,0,0,0.03)', borderRadius: 1 }}>
+            <Typography variant="subtitle2" color="text.secondary">Client Specific Settings</Typography>
+            <FormControlLabel
+              control={<Switch checked={newCompany.is_govt_client || false} onChange={(e) => setNewCompany({...newCompany, is_govt_client: e.target.checked})} color="primary" />}
+              label="Is Government Client (Requires special handling)"
+            />
+            <FormControlLabel
+              control={<Switch checked={newCompany.requires_po_number || false} onChange={(e) => setNewCompany({...newCompany, requires_po_number: e.target.checked})} color="primary" />}
+              label="Requires PO Number (Mandatory PO fields on invoice)"
+            />
+            <FormControlLabel
+              control={<Switch checked={newCompany.uses_marathi_labels || false} onChange={(e) => setNewCompany({...newCompany, uses_marathi_labels: e.target.checked})} color="primary" />}
+              label="Uses Marathi Labels (Translates invoice fields to Marathi)"
+            />
+          </Box>
+
           <Divider sx={{ my: 3 }} />
           <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Custom Work Rates</Typography>
           
