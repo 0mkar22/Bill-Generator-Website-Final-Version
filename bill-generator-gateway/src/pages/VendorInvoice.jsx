@@ -234,8 +234,9 @@ function VendorInvoice() {
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
-      supabase.from('companies').select('*').eq('id', parentOrder.company_id).single()
-        .then(({ data }) => {
+      API.get('/companies/' + parentOrder.company_id)
+        .then(response => {
+          const data = response.data.data;
           if (data) {
             setCompanyDetails(data);
             if (passedRecipient === undefined) {

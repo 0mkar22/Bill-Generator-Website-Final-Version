@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import EditIcon from '@mui/icons-material/Edit';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import { getWorkOrders } from '../services/api';
+import { getWorkOrders, getCompanies } from '../services/api';
 import API from '../services/api';
 import { supabase } from '../supabase';
 
@@ -24,9 +24,8 @@ const InvoiceGenerator = () => {
 
   const fetchCompanies = async () => {
     try {
-      const { data, error } = await supabase.from('companies').select('*');
-      if (error) throw error;
-      setCompanies(data || []);
+      const response = await getCompanies();
+      setCompanies(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch companies:", error);
     }
