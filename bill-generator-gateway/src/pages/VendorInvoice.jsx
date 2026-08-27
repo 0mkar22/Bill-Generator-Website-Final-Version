@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
-  Button, TextField, Container, CircularProgress, Alert, Snackbar
+  Button, TextField, Container, CircularProgress, Alert, Snackbar, Backdrop
 } from '@mui/material';
 
 import './VendorInvoice.css';
@@ -82,6 +82,7 @@ function VendorInvoice() {
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
   const isReadOnly = (savedInvoice && !isEditing) || saveSuccess;
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isGenerating, setIsGenerating] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
 
   const [recipient, setRecipient] = useState('');
@@ -127,6 +128,7 @@ function VendorInvoice() {
     const originalElement = document.getElementById('generated-bill');
     if (!originalElement) return;
     
+    setIsGenerating(true);
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
     const filename = `VendorInvoice_${safeInvoiceNumber}.pdf`;
 
@@ -136,17 +138,20 @@ function VendorInvoice() {
           scale: 2,
           useCORS: true,
           logging: false,
-          windowWidth: 1000, // ensure it's wider than the 900px container
+          windowWidth: 1000, 
           width: 900,
-          scrollY: -window.scrollY // fixes capture when user has scrolled down
+          scrollY: -window.scrollY 
         }).then((canvas) => {
           const imgData = canvas.toDataURL('image/jpeg', 1.0);
           const pdf = new jsPDF('p', 'mm', 'a4');
-          // Calculate height to maintain aspect ratio, minus small margins if needed
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
           pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
           pdf.save(filename);
+          setIsGenerating(false);
+        }).catch(err => {
+          console.error(err);
+          setIsGenerating(false);
         });
       });
     });
@@ -655,6 +660,11 @@ function VendorInvoice() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1, display: 'flex', flexDirection: 'column', gap: 2 }} open={isGenerating}>
+        <CircularProgress color="inherit" />
+        <Typography variant="h6">Generating PDF... Please wait.</Typography>
+      </Backdrop>
     </Container>
   );
 }
