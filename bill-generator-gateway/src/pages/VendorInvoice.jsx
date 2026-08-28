@@ -8,7 +8,7 @@ import {
 import './VendorInvoice.css';
 import API from '../services/api';
 import { supabase } from '../supabase';
-import { calculateItemAmount, numberToWords, numberToMarathiWords } from '../utils/helpers';
+import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglishToMarathiNumbers } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
 
 const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };

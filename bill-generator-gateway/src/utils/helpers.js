@@ -115,3 +115,9 @@ export function numberToMarathiWords(num) {
     
     return str.trim();
 }
+
+export const convertEnglishToMarathiNumbers = (input) => {
+    if (input === null || input === undefined) return '';
+    const englishDigits = { '0': '०', '1': '१', '2': '२', '3': '३', '4': '४', '5': '५', '6': '६', '7': '७', '8': '८', '9': '९' };
+    return String(input).replace(/[0-9]/g, match => englishDigits[match]);
+};
