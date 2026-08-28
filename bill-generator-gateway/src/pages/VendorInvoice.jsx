@@ -433,29 +433,34 @@ function VendorInvoice() {
     </Table>
 
     <Box sx={{ display: 'flex', width: '100%', mt: 'auto', borderTop: 'none' }}>
-        <Box sx={{ width: '55%', borderRight: '1px solid #000', p: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
-            <Typography variant="body2" sx={{ borderBottom: '1px solid #000', pb: 1, mb: 1, fontSize: '0.85rem' }}>Pan No. ABJPB2133M</Typography>
-            <Typography variant="body2" sx={{ textDecoration: 'underline', fontSize: '0.85rem', fontWeight: 'bold' }}>Bank Details</Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank Name : State Bank Of India</Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank A/C No. : 34238092999</Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank IFSC Code : SBIN0013035</Typography>
-        </Box>
-        <Box sx={{ width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography variant="body1" sx={{ fontWeight: 'bold', borderBottom: '1px solid #000', width: '100%', textAlign: 'center', p: 1 }}>For Icomp Systems</Typography>
-            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                <Box sx={{ border: '2px solid #8e44ad', borderRadius: '50%', p: 1, color: '#8e44ad', display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 2, transform: 'rotate(-10deg)', width: '60px', height: '60px', justifyContent: 'center' }}>
-                    <Typography sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>ICOMP</Typography>
-                    <Typography sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>SYSTEMS</Typography>
-                    <Typography sx={{ fontSize: '0.5rem' }}>THANE</Typography>
-                </Box>
-                <Box>
-                    <Typography sx={{ fontSize: '0.9rem' }}>Vijay R.</Typography>
-                    <Typography sx={{ fontSize: '0.9rem' }}>Bhogte</Typography>
-                    <Typography sx={{ fontSize: '0.9rem' }}>{new Date().toISOString().slice(0,10).replace(/-/g, '.')}</Typography>
-                </Box>
+        <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>GST No. 27ABJPB2133M5ZO</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Pan No. ABJPB2133M</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Bank Details</Typography>
+            <Box sx={{ p: '2px 4px', display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank Name : State Bank Of India</Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank A/C No. : 34238092999</Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank IFSC Code : SBIN0013035</Typography>
             </Box>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', borderTop: '1px solid #000', width: '100%', textAlign: 'center', p: 1, mt: 'auto' }}>Authorised Signatory</Typography>
+        </Box>
+        <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
+            <Box sx={{ border: '2px solid #3f51b5', borderRadius: '50%', p: 1, color: '#3f51b5', display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 2, transform: 'rotate(-10deg)', width: '70px', height: '70px', justifyContent: 'center', outline: '1px solid #3f51b5', outlineOffset: '-4px' }}>
+                <Typography sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>ICOMP</Typography>
+                <Typography sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>SYSTEMS</Typography>
+                <Typography sx={{ fontSize: '0.5rem' }}>THANE</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Vijay R.</Typography>
+                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Bhogte</Typography>
+                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>{new Date().toISOString().slice(0,10).replace(/-/g, '.')}</Typography>
+                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>09:26:14</Typography>
+                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>+05'30'</Typography>
+            </Box>
+        </Box>
+        <Box sx={{ width: '30%', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="body1" sx={{ fontWeight: 'bold', borderBottom: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>For Icomp Systems</Typography>
+            <Box sx={{ flexGrow: 1 }}></Box>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', borderTop: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>Authorised Signatory</Typography>
         </Box>
     </Box>
 </Paper>
