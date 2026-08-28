@@ -330,8 +330,8 @@ function VendorInvoice() {
     
     <Box sx={{ display: 'flex', width: '100%', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
         <Box sx={{ width: '55%', borderRight: '1px solid #000', p: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>प्रति,</Typography>
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>प्रति,</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 1, fontSize: '1.2rem', lineHeight: 1.4 }}>
                 {companyDetails?.address || parentOrder?.companyDetails?.address || ''}
             </Typography>
             <Typography variant="body2" sx={{ mt: 'auto', fontWeight: 'bold', borderTop: '1px solid #000', mx: -1, mb: -1, p: 1 }}>
