@@ -361,17 +361,17 @@ function VendorInvoice() {
         <TableBody>
             <TableRow>
                 <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>कक्ष क्रमांक</TableCell>
-                <TableCell>{selectedItems[0]?.parent?.roomNumber || 'ई-२'}</TableCell>
+                <TableCell>{convertEnglishToMarathiNumbers(selectedItems[0]?.parent?.roomNumber) || 'ई-२'}</TableCell>
             </TableRow>
             <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>कामाचा दिनांक :</TableCell>
                 <TableCell>{
-                    (() => {
+                    convertEnglishToMarathiNumbers((() => {
                         const dates = selectedItems.map(i => i.parent?.eventDate).filter(Boolean).sort();
                         if (dates.length === 0) return 'N/A';
-                        if (dates.length === 1) return new Date(dates[0]).toLocaleDateString('en-GB');
-                        return `${new Date(dates[0]).toLocaleDateString('en-GB')} ते ${new Date(dates[dates.length - 1]).toLocaleDateString('en-GB')}`;
-                    })()
+                        if (dates.length === 1) return new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-');
+                        return `${new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-')} ते ${new Date(dates[dates.length - 1]).toLocaleDateString('en-GB').replace(/\//g, '-')}`;
+                    })())
                 }</TableCell>
             </TableRow>
             <TableRow>
@@ -416,20 +416,18 @@ function VendorInvoice() {
 
                 return (
                     <TableRow key={item.id || idx}>
-                        <TableCell align="center">{idx + 1}</TableCell>
-                        <TableCell>{desc}</TableCell>
-                        <TableCell align="center">{item.quantity || 1}</TableCell>
-                        <TableCell align="right">{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                        <TableCell align="right">{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                        <TableCell align="center">{convertEnglishToMarathiNumbers(idx + 1)}</TableCell>
+                        <TableCell>{convertEnglishToMarathiNumbers(desc)}</TableCell>
+                        <TableCell align="center">{convertEnglishToMarathiNumbers(item.quantity || 1)}</TableCell>
+                        <TableCell align="right">{convertEnglishToMarathiNumbers(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
+                        <TableCell align="right">{convertEnglishToMarathiNumbers(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
                     </TableRow>
                 );
             })}
             <TableRow>
-                <TableCell colSpan={4} align="right" sx={{ fontWeight: 'bold' }}>एकूण जीएसटीसह रक्कम रु.</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>{amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-            </TableRow>
-            <TableRow>
-                <TableCell colSpan={5} sx={{ fontWeight: 'bold' }}>अक्षरी रुपये : {numberToMarathiWords(amountBeforeTax)} फक्त</TableCell>
+                <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>अक्षरी रुपये : {numberToMarathiWords(amountBeforeTax)} फक्त</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>एकूण जीएसटीसह रक्कम रु.</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>{convertEnglishToMarathiNumbers(amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
             </TableRow>
         </TableBody>
     </Table>
