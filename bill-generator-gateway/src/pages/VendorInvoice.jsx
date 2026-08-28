@@ -444,11 +444,7 @@ function VendorInvoice() {
             </Box>
         </Box>
         <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
-            <Box sx={{ border: '2px solid #3f51b5', borderRadius: '50%', p: 1, color: '#3f51b5', display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 2, transform: 'rotate(-10deg)', width: '70px', height: '70px', justifyContent: 'center', outline: '1px solid #3f51b5', outlineOffset: '-4px' }}>
-                <Typography sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>ICOMP</Typography>
-                <Typography sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>SYSTEMS</Typography>
-                <Typography sx={{ fontSize: '0.5rem' }}>THANE</Typography>
-            </Box>
+            <img src="/stamp.png" alt="Stamp" style={{ width: '80px', height: '80px', objectFit: 'contain', marginRight: '16px' }} />
             <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Vijay R.</Typography>
                 <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Bhogte</Typography>
