@@ -331,9 +331,6 @@ function VendorInvoice() {
     <Box sx={{ display: 'flex', width: '100%', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
         <Box sx={{ width: '55%', borderRight: '1px solid #000', p: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>प्रति,</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                <EditableField value={recipient} onChange={setRecipient} isEditing={editingRecipient} setEditing={setEditingRecipient} isReadOnly={isReadOnly} />
-            </Typography>
             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
                 {companyDetails?.address || parentOrder?.companyDetails?.address || ''}
             </Typography>
@@ -342,9 +339,8 @@ function VendorInvoice() {
             </Typography>
         </Box>
         <Box sx={{ width: '45%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, p: 1 }}>
-                <img src="/logo.PNG" alt="Logo" style={{ height: '30px', marginRight: '8px' }} />
-                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#0056b3' }}>Icomp Systems</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, p: 1, height: '45px' }}>
+                <img src="/logo.PNG" alt="Logo" style={{ height: '100%', objectFit: 'contain' }} />
             </Box>
             <Typography variant="body2" sx={{ px: 1 }}>21, Nilkanth Aprtment, Samata Nagar,</Typography>
             <Typography variant="body2" sx={{ px: 1 }}>Pokharan Road No. 1, Thane (W) 400 606</Typography>
