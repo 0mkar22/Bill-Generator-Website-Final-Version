@@ -339,10 +339,10 @@ function VendorInvoice() {
             </Typography>
         </Box>
         <Box sx={{ width: '45%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, p: 1, height: '45px' }}>
-                <img src="/logo.PNG" alt="Logo" style={{ height: '100%', objectFit: 'contain' }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', p: 1, height: '75px', borderBottom: '1px solid #000' }}>
+                <img src="/logo.PNG" alt="Logo" style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left' }} />
             </Box>
-            <Typography variant="body2" sx={{ px: 1 }}>21, Nilkanth Aprtment, Samata Nagar,</Typography>
+            <Typography variant="body2" sx={{ px: 1, mt: 0.5 }}>21, Nilkanth Aprtment, Samata Nagar,</Typography>
             <Typography variant="body2" sx={{ px: 1 }}>Pokharan Road No. 1, Thane (W) 400 606</Typography>
             <Typography variant="body2" sx={{ mb: 1, px: 1 }}>E-mail : bhogtevijay@gmail.com</Typography>
             
