@@ -77,7 +77,7 @@ const WorkOrder = () => {
   } = useWorkOrderForm({
     entryNumber: '',
     eventDate: '',
-    vendor: '',
+    vendor: 'ICOMP SYSTEMS',
     company_id: '',
     workItems: [
       { 
@@ -495,7 +495,7 @@ const WorkOrder = () => {
         await createWorkOrder(payloadToSubmit);
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
-          entryNumber: '', eventDate: '', vendor: '', company_id: '',
+          entryNumber: '', eventDate: '', vendor: 'ICOMP SYSTEMS', company_id: '',
           workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], assemblyDetails: [{ assemblyType: '', members: [''] }], personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();

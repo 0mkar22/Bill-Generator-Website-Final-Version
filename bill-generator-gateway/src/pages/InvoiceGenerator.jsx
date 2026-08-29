@@ -240,6 +240,7 @@ const InvoiceGenerator = () => {
                 <TableRow>
                     <TableCell padding="checkbox"></TableCell>
                     <TableCell>Entry No.</TableCell>
+                    <TableCell>Company</TableCell>
                     <TableCell align="center">Vendor Invoice</TableCell>
                     <TableCell align="center">Work Order Invoice</TableCell>
                     <TableCell>Event Name</TableCell>
@@ -276,6 +277,7 @@ const InvoiceGenerator = () => {
                       />
                     </TableCell>
                     <TableCell>{item.parent.entryNumber}</TableCell>
+                    <TableCell>{companies.find(c => c.id === item.parent.company_id)?.company_name || 'N/A'}</TableCell>
                     <TableCell align="center">
                       <Checkbox checked={hasVendorInvoice} disabled />
                     </TableCell>
@@ -366,6 +368,7 @@ const InvoiceGenerator = () => {
                         <TableRow>
                             <TableCell>Date Saved</TableCell>
                             <TableCell>Invoice Number</TableCell>
+                            <TableCell>Company</TableCell>
                             <TableCell>Event Name(s)</TableCell>
                             <TableCell>PO/NPO</TableCell>
                             <TableCell>Vendor</TableCell>
@@ -386,6 +389,7 @@ const InvoiceGenerator = () => {
                               <TableRow key={invoice.invoiceNumber || invoice.id || i}>
                                   <TableCell>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
                                   <TableCell>{invoice.invoiceNumber}</TableCell>
+                                  <TableCell>{companies.find(c => c.id === invoice.company_id)?.company_name || 'N/A'}</TableCell>
                                   <TableCell>{displayEventName}</TableCell>
                                   <TableCell>{displayPoNpo}</TableCell>
                                   <TableCell>{invoice.parentOrderInfo?.vendor}</TableCell>
