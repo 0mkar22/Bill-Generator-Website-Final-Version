@@ -34,7 +34,7 @@ export const venues = [
   'Others'
 ];
 
-export const vendors = ['ICOMP SYSTEMS', 'STUDIO VISION', 'WAGHSONS PHOTO VISION'];
+export const vendors = ['ICOMP SYSTEMS']//, 'STUDIO VISION', 'WAGHSONS PHOTO VISION'];
 
 // --- NEW EXPORTS ---
 export const vidhanMandalWorks = {
