@@ -427,6 +427,24 @@ const WorkOrder = () => {
     try {
       
       const payloadToSubmit = JSON.parse(JSON.stringify(formData));
+      // Copy common fields to all items
+      if (payloadToSubmit.workItems && payloadToSubmit.workItems.length > 0) {
+          const commonFields = {
+              eventName: payloadToSubmit.workItems[0].eventName,
+              eventVenue: payloadToSubmit.workItems[0].eventVenue,
+              eventTime: payloadToSubmit.workItems[0].eventTime,
+              contactPerson: payloadToSubmit.workItems[0].contactPerson,
+              contactNumber: payloadToSubmit.workItems[0].contactNumber,
+              poNpo: payloadToSubmit.workItems[0].poNpo,
+              customVenue: payloadToSubmit.workItems[0].customVenue,
+              roomNumber: payloadToSubmit.workItems[0].roomNumber,
+          };
+          payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
+              ...item,
+              ...commonFields
+          }));
+      }
+
       if (!isONGCSelected) {
           payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
               ...item,
@@ -543,6 +561,74 @@ const WorkOrder = () => {
             <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
           </Grid>
           
+
+            {/* --- Common Fields --- */}
+            <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={formData.workItems[0].eventName} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
+                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={formData.workItems[0].eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(0, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={formData.workItems[0].eventTime} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
+                    {formData.workItems[0].eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={formData.workItems[0].customVenue} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>}
+                    
+                    {isVidhanMandalSelected ? (
+                      <Grid item xs={12} sm={12}>
+                        <TextField 
+                          name="roomNumber" 
+                          label="कक्ष क्रमांक" 
+                          required 
+                          fullWidth 
+                          value={formData.workItems[0].roomNumber || ''} 
+                          onChange={(e) => handleWorkItemChange(0, e)} 
+                        />
+                      </Grid>
+                    ) : (
+                      <>
+                        <Grid item xs={12} sm={6}>
+                          <Autocomplete
+                            freeSolo
+                            options={Array.from(new Set([
+                                ...historicalContacts.map(c => c.name),
+                                ...formData.workItems.map(wi => wi.contactPerson).filter(Boolean)
+                            ]))}
+                            inputValue={formData.workItems[0].contactPerson || ''}
+                            onInputChange={(e, newValue) => handleWorkItemChange(0, { target: { name: 'contactPerson', value: newValue || '' } })}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="Contact Person"
+                                required
+                                fullWidth
+                              />
+                            )}
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={6}>
+                          <TextField 
+                            name="contactNumber" 
+                            label="Contact Number" 
+                            required 
+                            fullWidth 
+                            type="text"
+                            inputProps={{ inputMode: 'numeric' }}
+                            value={formData.workItems[0].contactNumber} 
+                            onChange={(e) => handleWorkItemChange(0, e)} 
+                          />
+                        </Grid>
+                      </>
+                    )}
+                    
+                    {isONGCSelected && (
+                        <Grid item xs={12} sm={6}>
+                          <FormControl fullWidth required>
+                            <InputLabel>PO/NPO</InputLabel>
+                            <Select name="poNpo" value={formData.workItems[0].poNpo} label="PO/NPO" onChange={(e) => handleWorkItemChange(0, e)}>
+                              <MenuItem value="PO">PO</MenuItem>
+                              <MenuItem value="NPO">NPO</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                    )}
+                    
         </Grid>
 
         {formData.workItems.map((item, index) => {
@@ -584,71 +670,6 @@ const WorkOrder = () => {
             </AccordionSummary>
             <AccordionDetails sx={{ p: 2 }}>
               <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={item.eventName} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={item.eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(index, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
-                    <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
-                    <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={item.eventTime} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>
-                    {item.eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={item.customVenue} onChange={(e) => handleWorkItemChange(index, e)} /></Grid>}
-                    
-                    {isVidhanMandalSelected ? (
-                      <Grid item xs={12} sm={12}>
-                        <TextField 
-                          name="roomNumber" 
-                          label="कक्ष क्रमांक" 
-                          required 
-                          fullWidth 
-                          value={item.roomNumber || ''} 
-                          onChange={(e) => handleWorkItemChange(index, e)} 
-                        />
-                      </Grid>
-                    ) : (
-                      <>
-                        <Grid item xs={12} sm={6}>
-                          <Autocomplete
-                            freeSolo
-                            options={Array.from(new Set([
-                                ...historicalContacts.map(c => c.name),
-                                ...formData.workItems.map(wi => wi.contactPerson).filter(Boolean)
-                            ]))}
-                            inputValue={item.contactPerson || ''}
-                            onInputChange={(e, newValue) => handleWorkItemChange(index, { target: { name: 'contactPerson', value: newValue || '' } })}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                label="Contact Person"
-                                required
-                                fullWidth
-                              />
-                            )}
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6}>
-                          <TextField 
-                            name="contactNumber" 
-                            label="Contact Number" 
-                            required 
-                            fullWidth 
-                            type="text"
-                            inputProps={{ inputMode: 'numeric' }}
-                            value={item.contactNumber} 
-                            onChange={(e) => handleWorkItemChange(index, e)} 
-                          />
-                        </Grid>
-                      </>
-                    )}
-                    
-                    {isONGCSelected && (
-                        <Grid item xs={12} sm={6}>
-                          <FormControl fullWidth required>
-                            <InputLabel>PO/NPO</InputLabel>
-                            <Select name="poNpo" value={item.poNpo} label="PO/NPO" onChange={(e) => handleWorkItemChange(index, e)}>
-                              <MenuItem value="PO">PO</MenuItem>
-                              <MenuItem value="NPO">NPO</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                    )}
                     <Grid item xs={12}><Divider>Work Details</Divider></Grid>
                   </Grid>
 
