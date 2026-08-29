@@ -507,6 +507,8 @@ function VendorInvoice() {
 
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
           <Box sx={{ width: '50%', ...borderRightStyle, p: 1, pl: 2, fontSize: '1.2rem' }}>
+            {isONGC && (
+            <>
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold' }}>Dealing Officer :</span>
               <EditableField
               value={dealingOfficer}
@@ -529,6 +531,8 @@ function VendorInvoice() {
               textSx={{ fontSize: '1.2rem' }}
             />
             </Typography>
+            </>
+            )}
               <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>GST No. :</span>
                 <EditableField
                 value={gstNo}
@@ -540,6 +544,8 @@ function VendorInvoice() {
                 textSx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}
               />
               </Typography>
+            {isONGC && (
+            <>
             <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO No. :</span>
               <EditableField
               value={poNumber}
@@ -562,6 +568,8 @@ function VendorInvoice() {
               textSx={{ fontSize: '1.2rem' }}
             />
             </Typography>
+            </>
+            )}
           </Box>
           
           <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
@@ -593,6 +601,8 @@ function VendorInvoice() {
               </Box>
             </Box>
             <Box sx={{ p: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {isONGC && (
+              <>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Vendor Code :</Typography>
                 <EditableField
@@ -621,6 +631,8 @@ function VendorInvoice() {
                   textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'normal', wordBreak: 'break-word' }}
                 />
               </Box>
+              </>
+            )}
             </Box>
           </Box>
         </Box>
