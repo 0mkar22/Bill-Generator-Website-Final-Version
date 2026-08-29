@@ -782,7 +782,7 @@ function VendorInvoice() {
         </Box>
         
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
-          <Box sx={{ width: '40%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
+          <Box sx={{ width: '32%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
