@@ -467,7 +467,7 @@ function VendorInvoice() {
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, pl: 2, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem' }}>To:</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem' }}>To,</Typography>
 
               {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
                 <Typography 
@@ -477,7 +477,7 @@ function VendorInvoice() {
                     pl: 0.5, 
                     pr: 0.5, 
                     pb: 0.5, 
-                    fontSize: '1.4rem', 
+                    fontSize: '1.1rem', 
                     color: '#333',
                     lineHeight: 1.4 
                   }}
