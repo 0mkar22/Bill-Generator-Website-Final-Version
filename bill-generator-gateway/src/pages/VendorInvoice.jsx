@@ -130,7 +130,7 @@ function VendorInvoice() {
     
     setIsGenerating(true);
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
-    const filename = `VendorInvoice_${safeInvoiceNumber}.pdf`;
+    const filename = `IcompSystemInvoice_${safeInvoiceNumber}.pdf`;
 
     import('html2canvas').then(({ default: html2canvas }) => {
       import('jspdf').then(({ jsPDF }) => {
@@ -165,7 +165,7 @@ function VendorInvoice() {
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset='utf-8'>
-        <title>Vendor Invoice</title>
+        <title>IcompSystem Invoice</title>
         <style>
           body { font-family: Arial, sans-serif; }
           table { border-collapse: collapse; width: 100%; margin-top: 10px; }
