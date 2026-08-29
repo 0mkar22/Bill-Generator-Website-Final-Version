@@ -790,11 +790,11 @@ function VendorInvoice() {
               <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
               <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
             </Box>
-            <Box sx={{ flex: 1, textAlign: 'center', ...borderRightStyle, pr: 1, height: '100%', py: '8px', ...flexEndColumnStyle }}>
+            <Box sx={{ flex: 1, textAlign: 'center', ...borderRightStyle, pr: 1, py: '8px', ...flexEndColumnStyle }}>
               <Box sx={{ height: 100, width: '90%', maxWidth: 220, mx: 'auto', mt: 1 }}></Box>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
             </Box>
-            <Box sx={{ flex: '0 0 280px', textAlign: 'center', ml: 0, height: '100%', py: '8px', ...flexEndColumnStyle }}>
+            <Box sx={{ flex: '0 0 280px', textAlign: 'center', ml: 0, py: '8px', ...flexEndColumnStyle }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
               <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
