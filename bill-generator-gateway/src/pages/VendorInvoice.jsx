@@ -185,7 +185,7 @@ function VendorInvoice() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `VendorInvoice_${invoiceNumber || 'preview'}.doc`;
+    link.download = `IcompSystemInvoice_${invoiceNumber || 'preview'}.doc`;
     
     document.body.appendChild(link);
     link.click();
