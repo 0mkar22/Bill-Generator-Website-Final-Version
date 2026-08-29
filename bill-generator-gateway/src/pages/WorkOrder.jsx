@@ -660,7 +660,7 @@ const WorkOrder = () => {
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ display: 'flex', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <Typography variant="h6">Work Item #{index + 1} {item.eventName ? `- ${item.eventName}` : ''}</Typography>
+                <Typography variant="h6">Work Item #{index + 1} {item.workMain ? `- ${item.workMain}` : ''}</Typography>
                 {formData.workItems.length > 1 && (
                   <IconButton type="button" onClick={(e) => { e.stopPropagation(); removeWorkItem(index); }} color="error">
                     <RemoveCircleOutlineIcon />
