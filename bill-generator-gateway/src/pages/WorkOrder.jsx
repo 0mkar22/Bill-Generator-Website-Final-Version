@@ -63,6 +63,7 @@ const WorkOrder = () => {
   const navigate = useNavigate();
   const editData = location.state?.editData;
   const [latestEntry, setLatestEntry] = useState(null);
+  const [existingEntryNumbers, setExistingEntryNumbers] = useState([]);
   const [companies, setCompanies] = useState([]);
   
   const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
@@ -146,6 +147,7 @@ const WorkOrder = () => {
                 { entryNumber: '0' }
             );
             setLatestEntry(latest.entryNumber);
+            setExistingEntryNumbers(workOrders.map(o => String(o.entryNumber)));
 
             const cMap = new Map();
 
@@ -508,6 +510,10 @@ const WorkOrder = () => {
     }
   };
 
+
+  const isEntryNumberDuplicate = existingEntryNumbers.includes(String(formData.entryNumber)) && 
+                                 (!editData || String(editData.entryNumber) !== String(formData.entryNumber));
+
   return (
     <Container component={Paper} sx={{ p: 4, mt: 4 }}>
       <Typography variant="h4" gutterBottom align="center">{editData ? 'Edit Event Data' : 'Event Data Entry'}</Typography>
@@ -558,7 +564,16 @@ const WorkOrder = () => {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={3}>
-            <TextField name="entryNumber" label="Entry Number" required fullWidth value={formData.entryNumber} onChange={handleMainChange} helperText={latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.'} />
+            <TextField 
+                name="entryNumber" 
+                label="Entry Number" 
+                required 
+                fullWidth 
+                error={isEntryNumberDuplicate}
+                value={formData.entryNumber} 
+                onChange={handleMainChange} 
+                helperText={isEntryNumberDuplicate ? 'This entry number is already used!' : (latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.')} 
+              />
           </Grid>
           
 
@@ -1018,7 +1033,7 @@ const WorkOrder = () => {
           Add Another Item
         </Button>
 
-        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 3 }} disabled={submitting}>
+        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 3 }} disabled={submitting || isEntryNumberDuplicate}>
           {submitting ? <CircularProgress size={24} color="inherit" /> : (editData ? 'Update The Data' : 'Save The Data')}
         </Button>
       </Box>
