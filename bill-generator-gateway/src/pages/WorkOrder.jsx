@@ -67,6 +67,9 @@ const WorkOrder = () => {
   const [companies, setCompanies] = useState([]);
   
   const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
+    const [localVenues, setLocalVenues] = useState(venues);
+    const [isVenueModalOpen, setIsVenueModalOpen] = useState(false);
+    const [newVenueText, setNewVenueText] = useState('');
   const [historicalContacts, setHistoricalContacts] = useState([]);
 
   const {
@@ -198,6 +201,12 @@ const WorkOrder = () => {
         }];
       } else {
         parsedItems = parsedItems.map(item => {
+          if (item.eventVenue === 'Others') {
+              item.eventVenue = item.customVenue || 'Others';
+          }
+          if (item.eventVenue && !venues.includes(item.eventVenue)) {
+              setLocalVenues(prev => prev.includes(item.eventVenue) ? prev : [...prev, item.eventVenue]);
+          }
           const qty = Number(item.quantity) || 1;
           
           let targetPersonnelCount = qty;
@@ -579,10 +588,22 @@ const WorkOrder = () => {
 
             {/* --- Common Fields --- */}
             <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={formData.workItems[0].eventName} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" value={formData.workItems[0].eventVenue} label={isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'} onChange={(e) => handleWorkItemChange(0, e)}>{venues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</Select></FormControl></Grid>
+                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" 
+value={formData.workItems[0].eventVenue} label={isVidhanMandalSelected ? 'ठिकाण निवडा' : 'Event Venue'} onChange={(e) => {
+    if (e.target.value === '__add_venue__') {
+        handleWorkItemChange(0, { target: { name: 'eventVenue', value: '' } });
+    } else {
+        handleWorkItemChange(0, e);
+    }
+}}>
+    <MenuItem value="__add_venue__" onClick={() => setIsVenueModalOpen(true)}>
+        <em>+ Add Venue</em>
+    </MenuItem>
+    {localVenues.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+</Select></FormControl></Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={formData.workItems[0].eventTime} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
-                    {formData.workItems[0].eventVenue === 'Others' && <Grid item xs={12}><TextField name="customVenue" label="Custom Venue" required fullWidth value={formData.workItems[0].customVenue} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>}
+                    
                     
                     {isVidhanMandalSelected ? (
                       <Grid item xs={12} sm={12}>
@@ -1171,7 +1192,37 @@ const WorkOrder = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    
+        <Dialog open={isVenueModalOpen} onClose={() => setIsVenueModalOpen(false)}>
+          <DialogTitle>Add New Venue</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Venue Name"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newVenueText}
+              onChange={(e) => setNewVenueText(e.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsVenueModalOpen(false)}>Cancel</Button>
+            <Button onClick={() => {
+                if (newVenueText.trim()) {
+                    setLocalVenues(prev => [...prev, newVenueText.trim()]);
+                    handleWorkItemChange(0, { target: { name: 'eventVenue', value: newVenueText.trim() } });
+                }
+                setIsVenueModalOpen(false);
+                setNewVenueText('');
+            }} variant="contained" disabled={!newVenueText.trim()}>
+              Add
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+      </Container>
   );
 };
 
