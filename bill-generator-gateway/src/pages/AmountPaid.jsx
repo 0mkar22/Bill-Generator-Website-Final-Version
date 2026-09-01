@@ -20,18 +20,20 @@ const AmountPaid = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editPayoutId, setEditPayoutId] = useState(null);
-  const [payoutForm, setPayoutForm] = useState({
+
+  // Global Event Form Data
+  const [globalForm, setGlobalForm] = useState({
       eventId: null,
       entryNumber: '',
       eventName: '',
       eventVenue: '',
-      personnelName: '',
-      workName: '',
-      duration: '',
-      amountPaid: '',
       paymentDate: new Date().toISOString().split('T')[0],
       notes: ''
   });
+
+  // Batch Personnel Array (for new) or Single Personnel (for edit)
+  const [batchPersonnel, setBatchPersonnel] = useState([]);
+
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [saving, setSaving] = useState(false);
 
@@ -95,51 +97,32 @@ const AmountPaid = () => {
                       });
                   });
                   
-                  if (personnelMap.size === 0) {
-                      let allWorkNames = new Set();
-                      let allWorkSubs = new Set();
-                      items.forEach(item => {
-                          if (item.workMain) allWorkNames.add(item.workMain.replaceAll('_', ' '));
-                          if (item.workSub) allWorkSubs.add(item.workSub.replaceAll('_', ' '));
-                      });
+                  const extractedPersonnel = [];
+                  for (const [pName, pData] of personnelMap.entries()) {
+                      // Check if THIS specific person was already paid for THIS event
+                      const alreadyPaid = savedPayouts.some(p => p.event_id === order.id && p.personnel_name === pName);
+                      if (!alreadyPaid) {
+                          extractedPersonnel.push({
+                              personnelName: pName,
+                              workName: Array.from(pData.workNames).join(', '),
+                              duration: Array.from(pData.workSubs).join(', '),
+                              amountPaid: Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : ''
+                          });
+                      }
+                  }
+
+                  // Only push the event if there are still unpaid personnel
+                  if (extractedPersonnel.length > 0) {
                       pendingPayoutOptions.push({
                           ...order,
-                          extracted: {
-                              personnelName: '',
-                              workName: Array.from(allWorkNames).join(', '),
-                              duration: Array.from(allWorkSubs).join(', '),
-                              amountPaid: '',
-                              eventName: eName,
-                              eventVenue: eVenue
-                          }
+                          extractedEventName: eName,
+                          extractedEventVenue: eVenue,
+                          personnelList: extractedPersonnel
                       });
-                  } else {
-                      let idx = 0;
-                      for (const [pName, pData] of personnelMap.entries()) {
-                          pendingPayoutOptions.push({
-                              ...order,
-                              id: `${order.id}-${idx}`,
-                              originalId: order.id,
-                              extracted: {
-                                  personnelName: pName,
-                                  workName: Array.from(pData.workNames).join(', '),
-                                  duration: Array.from(pData.workSubs).join(', '),
-                                  amountPaid: Math.round(pData.totalRate) || '',
-                                  eventName: eName,
-                                  eventVenue: eVenue
-                              }
-                          });
-                          idx++;
-                      }
                   }
               });
               
-              // Filter out payouts that are already saved
-              const filteredOptions = pendingPayoutOptions.filter(opt => {
-                  return !savedPayouts.some(p => p.event_id === opt.originalId && p.personnel_name === opt.extracted.personnelName);
-              });
-              
-              setWorkOrders(filteredOptions);
+              setWorkOrders(pendingPayoutOptions);
           }
       } catch (err) {
           console.error('Failed to fetch data', err);
@@ -151,38 +134,47 @@ const AmountPaid = () => {
 
   const handleEventSelection = (event, selectedOrder) => {
       if (!selectedOrder) {
-          setPayoutForm({ ...payoutForm, eventId: null, entryNumber: '', eventName: '', eventVenue: '', personnelName: '', workName: '', duration: '', amountPaid: '' });
+          setGlobalForm({ ...globalForm, eventId: null, entryNumber: '', eventName: '', eventVenue: '' });
+          setBatchPersonnel([]);
           return;
       }
       
-      setPayoutForm({
-          ...payoutForm,
-          eventId: selectedOrder.originalId || selectedOrder.id,
+      setGlobalForm({
+          ...globalForm,
+          eventId: selectedOrder.id,
           entryNumber: selectedOrder.entryNumber || '',
-          eventName: selectedOrder.extracted.eventName,
-          eventVenue: selectedOrder.extracted.eventVenue,
-          personnelName: selectedOrder.extracted.personnelName,
-          workName: selectedOrder.extracted.workName,
-          duration: selectedOrder.extracted.duration,
-          amountPaid: selectedOrder.extracted.amountPaid ? selectedOrder.extracted.amountPaid.toString() : ''
+          eventName: selectedOrder.extractedEventName,
+          eventVenue: selectedOrder.extractedEventVenue
       });
+      setBatchPersonnel(selectedOrder.personnelList);
+  };
+
+  const handleBatchAmountChange = (index, value) => {
+      const updated = [...batchPersonnel];
+      updated[index].amountPaid = value;
+      setBatchPersonnel(updated);
   };
   
   const handleEditPayout = (payout) => {
       const oOrder = rawWorkOrders.find(o => o.id === payout.event_id);
       setEditPayoutId(payout.id);
-      setPayoutForm({
+      
+      setGlobalForm({
           eventId: payout.event_id,
           entryNumber: oOrder?.entryNumber || '',
           eventName: oOrder?.workItems?.[0]?.eventName || '',
           eventVenue: oOrder?.workItems?.[0]?.eventVenue || '',
-          personnelName: payout.personnel_name,
-          workName: payout.work_name || '',
-          duration: payout.duration || '',
-          amountPaid: payout.amount_paid.toString(),
           paymentDate: payout.payment_date || new Date().toISOString().split('T')[0],
           notes: payout.notes || ''
       });
+      
+      setBatchPersonnel([{
+          personnelName: payout.personnel_name,
+          workName: payout.work_name || '',
+          duration: payout.duration || '',
+          amountPaid: payout.amount_paid.toString()
+      }]);
+      
       setIsModalOpen(true);
   };
   
@@ -201,21 +193,30 @@ const AmountPaid = () => {
   const handleSubmitPayout = async () => {
       setSaving(true);
       try {
-          const payload = {
-              event_id: payoutForm.eventId,
-              personnel_name: payoutForm.personnelName,
-              work_name: payoutForm.workName,
-              duration: payoutForm.duration,
-              amount_paid: Number(payoutForm.amountPaid),
-              payment_date: payoutForm.paymentDate,
-              notes: payoutForm.notes
-          };
           if (editPayoutId) {
-              await updatePayout(editPayoutId, payload);
+              const singlePayload = {
+                  event_id: globalForm.eventId,
+                  personnel_name: batchPersonnel[0].personnelName,
+                  work_name: batchPersonnel[0].workName,
+                  duration: batchPersonnel[0].duration,
+                  amount_paid: Number(batchPersonnel[0].amountPaid),
+                  payment_date: globalForm.paymentDate,
+                  notes: globalForm.notes
+              };
+              await updatePayout(editPayoutId, singlePayload);
               setSnackbar({ open: true, message: 'Payout updated successfully!', severity: 'success' });
           } else {
-              await API.post('/personnelPayouts', payload);
-              setSnackbar({ open: true, message: 'Payout logged successfully!', severity: 'success' });
+              const payloadArray = batchPersonnel.map(person => ({
+                  event_id: globalForm.eventId,
+                  personnel_name: person.personnelName,
+                  work_name: person.workName,
+                  duration: person.duration,
+                  amount_paid: Number(person.amountPaid),
+                  payment_date: globalForm.paymentDate,
+                  notes: globalForm.notes
+              }));
+              await API.post('/personnelPayouts', payloadArray);
+              setSnackbar({ open: true, message: 'Batch payout logged successfully!', severity: 'success' });
           }
           setIsModalOpen(false);
           setEditPayoutId(null);
@@ -231,8 +232,15 @@ const AmountPaid = () => {
   
   const openNewPayout = () => {
       setEditPayoutId(null);
-      setPayoutForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', personnelName: '', workName: '', duration: '', amountPaid: '', paymentDate: new Date().toISOString().split('T')[0], notes: '' });
+      setGlobalForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', paymentDate: new Date().toISOString().split('T')[0], notes: '' });
+      setBatchPersonnel([]);
       setIsModalOpen(true);
+  };
+
+  const isFormValid = () => {
+      if (!globalForm.eventId) return false;
+      if (batchPersonnel.length === 0) return false;
+      return batchPersonnel.every(p => p.personnelName && p.amountPaid !== '');
   };
 
   if (loading) {
@@ -337,92 +345,97 @@ const AmountPaid = () => {
         </Grid>
       </Grid>
 
-      <Dialog open={isModalOpen} onClose={() => { setIsModalOpen(false); setEditPayoutId(null); }} maxWidth="sm" fullWidth>
-          <DialogTitle>{editPayoutId ? 'Edit Personnel Payout' : 'Log Personnel Payout'}</DialogTitle>
+      <Dialog open={isModalOpen} onClose={() => { setIsModalOpen(false); setEditPayoutId(null); }} maxWidth="md" fullWidth>
+          <DialogTitle>{editPayoutId ? 'Edit Personnel Payout' : 'Batch Log Personnel Payouts'}</DialogTitle>
           <DialogContent dividers>
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
                   {!editPayoutId && (
                   <Grid item xs={12}>
                       <Autocomplete
                           options={workOrders}
                           getOptionLabel={(option) => {
-                              return `Entry: ${option.entryNumber} | ${option.extracted?.eventName || 'N/A'} ${option.extracted?.personnelName ? `| Person: ${option.extracted.personnelName}` : ''}`;
+                              return `Entry: ${option.entryNumber} | ${option.extractedEventName || 'N/A'}`;
                           }}
                           onChange={handleEventSelection}
                           renderInput={(params) => <TextField {...params} label="Select Pending Event" fullWidth />}
                       />
                   </Grid>
                   )}
+                  
+                  {/* Global Event Details */}
                   <Grid item xs={4}>
-                      <TextField label="Entry Number" fullWidth value={payoutForm.entryNumber} disabled />
+                      <TextField label="Entry Number" fullWidth value={globalForm.entryNumber} disabled />
                   </Grid>
                   <Grid item xs={4}>
-                      <TextField label="Event Name" fullWidth value={payoutForm.eventName} disabled />
+                      <TextField label="Event Name" fullWidth value={globalForm.eventName} disabled />
                   </Grid>
                   <Grid item xs={4}>
-                      <TextField label="Event Venue" fullWidth value={payoutForm.eventVenue} disabled />
+                      <TextField label="Event Venue" fullWidth value={globalForm.eventVenue} disabled />
                   </Grid>
+
+                  {/* Batch Personnel Array */}
                   <Grid item xs={12}>
-                      <TextField
-                          label="Personnel Name"
-                          fullWidth
-                          value={payoutForm.personnelName}
-                          onChange={e => setPayoutForm({...payoutForm, personnelName: e.target.value})}
-                          disabled={!!editPayoutId}
-                      />
+                      <Typography variant="h6" sx={{ mt: 2, mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+                          Assigned Personnel
+                      </Typography>
+                      {batchPersonnel.length === 0 ? (
+                          <Typography variant="body2" color="textSecondary">Select an event to view assigned personnel.</Typography>
+                      ) : (
+                          batchPersonnel.map((person, idx) => (
+                              <Paper key={idx} variant="outlined" sx={{ p: 2, mb: 2, backgroundColor: '#fafafa' }}>
+                                  <Grid container spacing={2} alignItems="center">
+                                      <Grid item xs={3}>
+                                          <TextField label="Personnel Name" fullWidth value={person.personnelName} disabled size="small" />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                          <TextField label="Work Name" fullWidth value={person.workName} disabled size="small" />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                          <TextField label="Duration / Subcategory" fullWidth value={person.duration} disabled size="small" />
+                                      </Grid>
+                                      <Grid item xs={3}>
+                                          <TextField
+                                              label="Amount Paid (Rs)"
+                                              type="number"
+                                              fullWidth
+                                              required
+                                              size="small"
+                                              value={person.amountPaid}
+                                              onChange={(e) => handleBatchAmountChange(idx, e.target.value)}
+                                          />
+                                      </Grid>
+                                  </Grid>
+                              </Paper>
+                          ))
+                      )}
                   </Grid>
-                  <Grid item xs={12}>
+
+                  {/* Global Payout Details */}
+                  <Grid item xs={12} sm={6}>
                       <TextField
-                          label="Work Name"
-                          fullWidth
-                          value={payoutForm.workName}
-                          onChange={e => setPayoutForm({...payoutForm, workName: e.target.value})}
-                      />
-                  </Grid>
-                  <Grid item xs={6}>
-                      <TextField
-                          label="Duration / Subcategory"
-                          fullWidth
-                          value={payoutForm.duration}
-                          onChange={e => setPayoutForm({...payoutForm, duration: e.target.value})}
-                      />
-                  </Grid>
-                  <Grid item xs={6}>
-                      <TextField
-                          label="Amount Paid (Rs)"
-                          type="number"
-                          fullWidth
-                          required
-                          value={payoutForm.amountPaid}
-                          onChange={e => setPayoutForm({...payoutForm, amountPaid: e.target.value})}
-                      />
-                  </Grid>
-                  <Grid item xs={12}>
-                      <TextField
-                          label="Payment Date"
+                          label="Global Payment Date"
                           type="date"
                           fullWidth
                           InputLabelProps={{ shrink: true }}
-                          value={payoutForm.paymentDate}
-                          onChange={e => setPayoutForm({...payoutForm, paymentDate: e.target.value})}
+                          value={globalForm.paymentDate}
+                          onChange={e => setGlobalForm({...globalForm, paymentDate: e.target.value})}
                       />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                       <TextField
-                          label="Notes (Optional)"
+                          label="Global Notes (Optional)"
                           multiline
-                          rows={2}
                           fullWidth
-                          value={payoutForm.notes}
-                          onChange={e => setPayoutForm({...payoutForm, notes: e.target.value})}
+                          value={globalForm.notes}
+                          onChange={e => setGlobalForm({...globalForm, notes: e.target.value})}
                       />
                   </Grid>
               </Grid>
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
               <Button onClick={() => { setIsModalOpen(false); setEditPayoutId(null); }}>Cancel</Button>
-              <Button variant="contained" color="secondary" onClick={handleSubmitPayout} disabled={!payoutForm.personnelName || !payoutForm.amountPaid || saving}>
-                  {saving ? <CircularProgress size={24} /> : (editPayoutId ? 'Update Payout' : 'Save Payout')}
+              <Button variant="contained" color="secondary" onClick={handleSubmitPayout} disabled={!isFormValid() || saving}>
+                  {saving ? <CircularProgress size={24} /> : (editPayoutId ? 'Update Payout' : 'Save Batch')}
               </Button>
           </DialogActions>
       </Dialog>
