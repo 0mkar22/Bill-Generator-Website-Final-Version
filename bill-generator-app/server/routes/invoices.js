@@ -1,5 +1,5 @@
 const express = require('express');
-const { getInvoices, createInvoice, updateInvoice } = require('../controllers/invoices');
+const { getInvoices, createInvoice, updateInvoice, updateInvoiceStatus } = require('../controllers/invoices');
 const { validateInvoice } = require('../middleware/validate');
 
 const router = express.Router();
