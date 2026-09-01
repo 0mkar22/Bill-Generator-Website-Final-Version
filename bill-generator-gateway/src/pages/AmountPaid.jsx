@@ -77,7 +77,7 @@ const AmountPaid = () => {
                   const items = order.workItems || [];
                   const eName = items[0]?.eventName || '';
                   const eVenue = items[0]?.eventVenue || '';
-                  const eDate = order.eventDate ? new Date(order.eventDate).toLocaleDateString('en-GB') : '';
+                  const eDate = order.eventDate || order.event_date || 'N/A';
 
                   const personnelMap = new Map();
 
@@ -85,12 +85,12 @@ const AmountPaid = () => {
                       let rawPersonnel = item.personnel || [];
                       
                       // Retrofit legacy records before parsing
-                      if (item.workMain === 'Two_Camera_Setup' && rawPersonnel.length === 4 && !rawPersonnel[0].role) {
+                      if (item.workMain === 'Two_Camera_Setup' && rawPersonnel.length > 0 && !rawPersonnel[0].role) {
                           const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
-                          rawPersonnel = rawPersonnel.map((per, i) => ({ ...per, role: roles[i] }));
-                      } else if (item.workMain === 'Three_Camera_Setup' && rawPersonnel.length === 5 && !rawPersonnel[0].role) {
+                          rawPersonnel = rawPersonnel.map((per, i) => ({ ...per, role: roles[i] || 'Assistant' }));
+                      } else if (item.workMain === 'Three_Camera_Setup' && rawPersonnel.length > 0 && !rawPersonnel[0].role) {
                           const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
-                          rawPersonnel = rawPersonnel.map((per, i) => ({ ...per, role: roles[i] }));
+                          rawPersonnel = rawPersonnel.map((per, i) => ({ ...per, role: roles[i] || 'Assistant' }));
                       }
                       
                       const pList = Array.isArray(rawPersonnel) ? rawPersonnel.filter(p => p.name) : [];
@@ -391,12 +391,12 @@ const AmountPaid = () => {
                                                   let personnelArray = item.personnel || [];
                                                   
                                                   // Retrofit legacy records
-                                                  if (item.workMain === 'Two_Camera_Setup' && personnelArray.length === 4 && !personnelArray[0].role) {
+                                                  if (item.workMain === 'Two_Camera_Setup' && personnelArray.length > 0 && !personnelArray[0].role) {
                                                       const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
-                                                      personnelArray = personnelArray.map((per, i) => ({ ...per, role: roles[i] }));
-                                                  } else if (item.workMain === 'Three_Camera_Setup' && personnelArray.length === 5 && !personnelArray[0].role) {
+                                                      personnelArray = personnelArray.map((per, i) => ({ ...per, role: roles[i] || 'Assistant' }));
+                                                  } else if (item.workMain === 'Three_Camera_Setup' && personnelArray.length > 0 && !personnelArray[0].role) {
                                                       const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
-                                                      personnelArray = personnelArray.map((per, i) => ({ ...per, role: roles[i] }));
+                                                      personnelArray = personnelArray.map((per, i) => ({ ...per, role: roles[i] || 'Assistant' }));
                                                   }
 
                                                   const person = personnelArray.find(person => person.name === p.personnel_name);
