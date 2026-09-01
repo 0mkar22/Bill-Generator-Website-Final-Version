@@ -83,11 +83,12 @@ const AmountPaid = () => {
                       const pList = Array.isArray(item.personnel) ? item.personnel.filter(p => p.name) : [];
                       
                       pList.forEach(p => {
-                          const pName = p.role ? `${p.name} - ${p.role}` : p.name;
+                          const pName = p.name;
                           if (!personnelMap.has(pName)) {
-                              personnelMap.set(pName, { workNames: new Set(), workSubs: new Set(), totalRate: 0 });
+                              personnelMap.set(pName, { workNames: new Set(), workSubs: new Set(), roles: new Set(), totalRate: 0 });
                           }
                           const pData = personnelMap.get(pName);
+                          if (p.role) pData.roles.add(p.role);
                           if (item.workMain) pData.workNames.add(item.workMain.replaceAll('_', ' '));
                           if (item.workSub) pData.workSubs.add(item.workSub.replaceAll('_', ' '));
                           if (item.customRate && pList.length > 0) {
@@ -103,7 +104,7 @@ const AmountPaid = () => {
                       if (!alreadyPaid) {
                           extractedPersonnel.push({
                               personnelName: pName,
-                              workName: Array.from(pData.workNames).join(', '),
+                              workName: pData.roles.size > 0 ? Array.from(pData.roles).join(', ') : Array.from(pData.workNames).join(', '),
                               duration: Array.from(pData.workSubs).join(', '),
                               amountPaid: Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : '',
                               paymentDate: new Date().toISOString().split('T')[0]
@@ -351,35 +352,65 @@ const AmountPaid = () => {
                           {payouts.length === 0 ? (
                               <TableRow><TableCell colSpan={7} align="center">No payouts logged yet.</TableCell></TableRow>
                           ) : (
-                              payouts.map((p) => {
-                                  const oOrder = rawWorkOrders.find(o => o.id === p.event_id);
-                                  const eName = oOrder?.workItems?.[0]?.eventName || '';
-                                  const eVenue = oOrder?.workItems?.[0]?.eventVenue || '';
-                                  
-                                  return (
-                                  <TableRow key={p.id}>
-                                      <TableCell>
-                                        <strong>Entry {p.workOrders?.entryNumber}</strong>
-                                      </TableCell>
-                                      <TableCell>
-                                        {eName}
-                                        {eVenue && (
-                                            <>
-                                                <br/>
-                                                <Typography variant="caption" color="textSecondary">{eVenue}</Typography>
-                                            </>
-                                        )}
-                                      </TableCell>
-                                      <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
-                                      <TableCell>{p.work_name}</TableCell>
-                                      <TableCell>₹{p.amount_paid}</TableCell>
-                                      <TableCell>{p.payment_date}</TableCell>
-                                      <TableCell align="right">
-                                          <IconButton size="small" color="primary" onClick={() => handleEditPayout(p)}><EditIcon /></IconButton>
-                                          <IconButton size="small" color="error" onClick={() => handleDeletePayout(p.id)}><DeleteIcon /></IconButton>
-                                      </TableCell>
-                                  </TableRow>
-                              )})
+                              (() => {
+                                  const payoutsByEvent = [];
+                                  const eventGroups = {};
+                                  payouts.forEach(p => {
+                                      if (!eventGroups[p.event_id]) {
+                                          eventGroups[p.event_id] = [];
+                                          payoutsByEvent.push(eventGroups[p.event_id]);
+                                      }
+                                      eventGroups[p.event_id].push(p);
+                                  });
+
+                                  return payoutsByEvent.map(group => {
+                                      return group.map((p, index) => {
+                                          const oOrder = rawWorkOrders.find(o => o.id === p.event_id);
+                                          const eName = oOrder?.workItems?.[0]?.eventName || '';
+                                          const eVenue = oOrder?.workItems?.[0]?.eventVenue || '';
+                                          
+                                          let displayWorkName = p.work_name;
+                                          if (oOrder && oOrder.workItems) {
+                                              for (const item of oOrder.workItems) {
+                                                  const person = (item.personnel || []).find(person => person.name === p.personnel_name);
+                                                  if (person && person.role) {
+                                                      displayWorkName = person.role;
+                                                      break;
+                                                  }
+                                              }
+                                          }
+
+                                          return (
+                                              <TableRow key={p.id} hover>
+                                                  {index === 0 && (
+                                                      <TableCell rowSpan={group.length} sx={{ verticalAlign: 'top', borderRight: '1px solid rgba(224, 224, 224, 1)' }}>
+                                                          <strong>Entry {p.workOrders?.entryNumber}</strong>
+                                                      </TableCell>
+                                                  )}
+                                                  {index === 0 && (
+                                                      <TableCell rowSpan={group.length} sx={{ verticalAlign: 'top', borderRight: '1px solid rgba(224, 224, 224, 1)' }}>
+                                                          {eName}
+                                                          {eVenue && (
+                                                              <>
+                                                                  <br/>
+                                                                  <Typography variant="caption" color="textSecondary">{eVenue}</Typography>
+                                                              </>
+                                                          )}
+                                                      </TableCell>
+                                                  )}
+                                                  <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
+                                                  <TableCell>{displayWorkName}</TableCell>
+                                                  <TableCell>₹{p.amount_paid}</TableCell>
+                                                  <TableCell>{p.payment_date}</TableCell>
+                                                  <TableCell align="right">
+                                                      <IconButton size="small" color="primary" onClick={() => handleEditPayout(p)}><EditIcon /></IconButton>
+                                                      <IconButton size="small" color="error" onClick={() => handleDeletePayout(p.id)}><DeleteIcon /></IconButton>
+                                                  </TableCell>
+                                              </TableRow>
+                                          );
+                                      });
+                                  });
+                              })()
                           )}
                       </TableBody>
                   </Table>
