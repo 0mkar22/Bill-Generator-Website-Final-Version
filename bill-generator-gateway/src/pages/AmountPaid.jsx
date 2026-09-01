@@ -62,54 +62,65 @@ const AmountPaid = () => {
               const pendingPayoutOptions = [];
               
               rawOrders.forEach(order => {
-                  let totalRate = 0;
-                  let workNames = new Set();
-                  let durations = new Set();
-                  let allPersonnel = [];
-                  
-                  (order.workItems || []).forEach(item => {
-                      if (item.workMain) workNames.add(item.workMain.replaceAll('_', ' '));
-                      if (item.quantity) durations.add(item.quantity.toString());
-                      if (item.customRate) totalRate += Number(item.customRate);
-                      if (Array.isArray(item.personnel)) {
-                          item.personnel.forEach(p => {
-                              if (p.name) allPersonnel.push(p.name);
-                          });
-                      }
+                  const items = order.workItems || [];
+                  const eName = items[0]?.eventName || '';
+                  const eVenue = items[0]?.eventVenue || '';
+
+                  const personnelMap = new Map();
+
+                  items.forEach(item => {
+                      const pList = Array.isArray(item.personnel) ? item.personnel.filter(p => p.name) : [];
+                      
+                      pList.forEach(p => {
+                          const pName = p.name;
+                          if (!personnelMap.has(pName)) {
+                              personnelMap.set(pName, { workNames: new Set(), workSubs: new Set(), totalRate: 0 });
+                          }
+                          const pData = personnelMap.get(pName);
+                          if (item.workMain) pData.workNames.add(item.workMain.replaceAll('_', ' '));
+                          if (item.workSub) pData.workSubs.add(item.workSub.replaceAll('_', ' '));
+                          if (item.customRate && pList.length > 0) {
+                              pData.totalRate += (Number(item.customRate) / pList.length);
+                          }
+                      });
                   });
                   
-                  const eName = order.workItems?.[0]?.eventName || '';
-                  const eVenue = order.workItems?.[0]?.eventVenue || '';
-                  const expectedWage = allPersonnel.length > 0 && totalRate > 0 ? Math.round(totalRate / allPersonnel.length) : '';
-                  
-                  if (allPersonnel.length === 0) {
+                  if (personnelMap.size === 0) {
+                      let allWorkNames = new Set();
+                      let allWorkSubs = new Set();
+                      items.forEach(item => {
+                          if (item.workMain) allWorkNames.add(item.workMain.replaceAll('_', ' '));
+                          if (item.workSub) allWorkSubs.add(item.workSub.replaceAll('_', ' '));
+                      });
                       pendingPayoutOptions.push({
                           ...order,
                           extracted: {
                               personnelName: '',
-                              workName: Array.from(workNames).join(', '),
-                              duration: Array.from(durations).join(', '),
-                              amountPaid: expectedWage,
+                              workName: Array.from(allWorkNames).join(', '),
+                              duration: Array.from(allWorkSubs).join(', '),
+                              amountPaid: '',
                               eventName: eName,
                               eventVenue: eVenue
                           }
                       });
                   } else {
-                      allPersonnel.forEach((pName, idx) => {
+                      let idx = 0;
+                      for (const [pName, pData] of personnelMap.entries()) {
                           pendingPayoutOptions.push({
                               ...order,
-                              id: `${order.id}-${idx}`, // Override ID to make it distinct
+                              id: `${order.id}-${idx}`,
                               originalId: order.id,
                               extracted: {
                                   personnelName: pName,
-                                  workName: Array.from(workNames).join(', '),
-                                  duration: Array.from(durations).join(', '),
-                                  amountPaid: expectedWage,
+                                  workName: Array.from(pData.workNames).join(', '),
+                                  duration: Array.from(pData.workSubs).join(', '),
+                                  amountPaid: Math.round(pData.totalRate) || '',
                                   eventName: eName,
                                   eventVenue: eVenue
                               }
                           });
-                      });
+                          idx++;
+                      }
                   }
               });
               setWorkOrders(pendingPayoutOptions);
