@@ -27,6 +27,7 @@ const AmountPaid = () => {
       entryNumber: '',
       eventName: '',
       eventVenue: '',
+      eventDate: '',
       notes: ''
   });
 
@@ -76,11 +77,23 @@ const AmountPaid = () => {
                   const items = order.workItems || [];
                   const eName = items[0]?.eventName || '';
                   const eVenue = items[0]?.eventVenue || '';
+                  const eDate = order.eventDate ? new Date(order.eventDate).toLocaleDateString('en-GB') : '';
 
                   const personnelMap = new Map();
 
                   items.forEach(item => {
-                      const pList = Array.isArray(item.personnel) ? item.personnel.filter(p => p.name) : [];
+                      let rawPersonnel = item.personnel || [];
+                      
+                      // Retrofit legacy records before parsing
+                      if (item.workMain === 'Two_Camera_Setup' && rawPersonnel.length === 4 && !rawPersonnel[0].role) {
+                          const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
+                          rawPersonnel = rawPersonnel.map((per, i) => ({ ...per, role: roles[i] }));
+                      } else if (item.workMain === 'Three_Camera_Setup' && rawPersonnel.length === 5 && !rawPersonnel[0].role) {
+                          const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
+                          rawPersonnel = rawPersonnel.map((per, i) => ({ ...per, role: roles[i] }));
+                      }
+                      
+                      const pList = Array.isArray(rawPersonnel) ? rawPersonnel.filter(p => p.name) : [];
                       
                       pList.forEach(p => {
                           const pName = p.name;
@@ -118,6 +131,7 @@ const AmountPaid = () => {
                           ...order,
                           extractedEventName: eName,
                           extractedEventVenue: eVenue,
+                          extractedEventDate: eDate,
                           personnelList: extractedPersonnel
                       });
                   }
@@ -159,7 +173,8 @@ const AmountPaid = () => {
           eventId: selectedOrder.id,
           entryNumber: selectedOrder.entryNumber || '',
           eventName: selectedOrder.extractedEventName,
-          eventVenue: selectedOrder.extractedEventVenue
+          eventVenue: selectedOrder.extractedEventVenue,
+          eventDate: selectedOrder.extractedEventDate
       });
       setBatchPersonnel(selectedOrder.personnelList);
   };
@@ -185,6 +200,7 @@ const AmountPaid = () => {
           entryNumber: oOrder?.entryNumber || '',
           eventName: oOrder?.workItems?.[0]?.eventName || '',
           eventVenue: oOrder?.workItems?.[0]?.eventVenue || '',
+          eventDate: oOrder?.eventDate ? new Date(oOrder.eventDate).toLocaleDateString('en-GB') : '',
           notes: payout.notes || ''
       });
       
@@ -448,14 +464,17 @@ const AmountPaid = () => {
                   )}
                   
                   {/* Global Event Details */}
-                  <Grid item xs={4}>
+                  <Grid item xs={3}>
                       <TextField label="Entry Number" fullWidth value={globalForm.entryNumber} disabled />
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={3}>
                       <TextField label="Event Name" fullWidth value={globalForm.eventName} disabled />
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={3}>
                       <TextField label="Event Venue" fullWidth value={globalForm.eventVenue} disabled />
+                  </Grid>
+                  <Grid item xs={3}>
+                      <TextField label="Event Date" fullWidth value={globalForm.eventDate} disabled />
                   </Grid>
 
                   {/* Batch Personnel Array */}
