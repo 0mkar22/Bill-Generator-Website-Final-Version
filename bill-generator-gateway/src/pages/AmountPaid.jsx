@@ -372,7 +372,18 @@ const AmountPaid = () => {
                                           let displayWorkName = p.work_name;
                                           if (oOrder && oOrder.workItems) {
                                               for (const item of oOrder.workItems) {
-                                                  const person = (item.personnel || []).find(person => person.name === p.personnel_name);
+                                                  let personnelArray = item.personnel || [];
+                                                  
+                                                  // Retrofit legacy records
+                                                  if (item.workMain === 'Two_Camera_Setup' && personnelArray.length === 4 && !personnelArray[0].role) {
+                                                      const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
+                                                      personnelArray = personnelArray.map((per, i) => ({ ...per, role: roles[i] }));
+                                                  } else if (item.workMain === 'Three_Camera_Setup' && personnelArray.length === 5 && !personnelArray[0].role) {
+                                                      const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
+                                                      personnelArray = personnelArray.map((per, i) => ({ ...per, role: roles[i] }));
+                                                  }
+
+                                                  const person = personnelArray.find(person => person.name === p.personnel_name);
                                                   if (person && person.role) {
                                                       displayWorkName = person.role;
                                                       break;
