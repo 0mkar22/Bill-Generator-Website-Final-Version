@@ -20,7 +20,6 @@ import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { supabase } from '../supabase';
@@ -59,6 +58,10 @@ const Layout = ({ children }) => {
           <ListItemButton component={Link} to="/reports" onClick={() => isMobile && setMobileOpen(false)}>
             <ListItemIcon><AssessmentIcon /></ListItemIcon>
             <ListItemText primary="Reports" />
+          </ListItemButton>
+          <ListItemButton component={Link} to="/amount-paid" onClick={() => isMobile && setMobileOpen(false)}>
+            <ListItemIcon><AccountBalanceWalletIcon /></ListItemIcon>
+            <ListItemText primary="Amount Paid" />
           </ListItemButton>
         </List>
       </Box>
@@ -131,7 +134,3 @@ const Layout = ({ children }) => {
 }
 
 export default Layout;
-\n\n          <ListItemButton component={Link} to="/amount-paid" onClick={() => isMobile && setMobileOpen(false)}>
-            <ListItemIcon><AccountBalanceWalletIcon /></ListItemIcon>
-            <ListItemText primary="Amount Paid" />
-          </ListItemButton>
