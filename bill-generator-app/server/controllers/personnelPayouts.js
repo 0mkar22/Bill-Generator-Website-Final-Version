@@ -18,9 +18,10 @@ exports.getPayouts = async (req, res) => {
 
 exports.createPayout = async (req, res) => {
   try {
+    const payload = Array.isArray(req.body) ? req.body : [req.body];
     const { data: payout, error } = await supabase
       .from('personnel_payouts')
-      .insert([req.body])
+      .insert(payload)
       .select('*, workOrders(entryNumber, eventDate)');
 
     if (error) {
@@ -28,7 +29,7 @@ exports.createPayout = async (req, res) => {
         throw error;
     }
 
-    res.status(201).json({ success: true, data: payout[0] });
+    res.status(201).json({ success: true, data: payout });
   } catch (err) {
     console.error("createPayout Error:", err);
     res.status(400).json({ success: false, error: err.message || err.details || err.hint || JSON.stringify(err) });
