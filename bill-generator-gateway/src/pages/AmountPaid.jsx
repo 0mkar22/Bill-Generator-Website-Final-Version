@@ -18,6 +18,9 @@ const AmountPaid = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [payoutForm, setPayoutForm] = useState({
       eventId: null,
+      entryNumber: '',
+      eventName: '',
+      eventVenue: '',
       personnelName: '',
       workName: '',
       duration: '',
@@ -35,18 +38,32 @@ const AmountPaid = () => {
   const fetchData = async () => {
       setLoading(true);
       try {
-          const [invoicesRes, payoutsRes, companiesRes, ordersRes] = await Promise.all([
+          const [invoicesRes, payoutsRes, companiesRes, ordersRes] = await Promise.allSettled([
               API.get('/invoices'),
               API.get('/personnelPayouts'),
               getCompanies(),
               getWorkOrders()
           ]);
 
-          const invoices = invoicesRes.data.data || [];
-          setPaidInvoices(invoices.filter(inv => inv.status === 'paid'));
-          setPayouts(payoutsRes.data.data || []);
-          setCompanies(companiesRes.data.data || []);
-          setWorkOrders(ordersRes.data.data || []);
+          if (invoicesRes.status === 'fulfilled') {
+              const invoices = invoicesRes.value.data.data || [];
+              setPaidInvoices(invoices.filter(inv => inv.status === 'paid'));
+          }
+          if (payoutsRes.status === 'fulfilled') {
+              setPayouts(payoutsRes.value.data.data || []);
+          } else {
+              console.error("Payouts fetch failed:", payoutsRes.reason);
+          }
+          if (companiesRes.status === 'fulfilled') {
+              setCompanies(companiesRes.value.data.data || []);
+          }
+          if (ordersRes.status === 'fulfilled') {
+              setWorkOrders(ordersRes.value.data.data || []);
+          }
+          
+          if (invoicesRes.status === 'rejected' || payoutsRes.status === 'rejected' || ordersRes.status === 'rejected') {
+              throw new Error("Some data failed to load. Did you run the SQL migration and restart the backend server?");
+          }
       } catch (err) {
           console.error('Failed to fetch data', err);
           setSnackbar({ open: true, message: 'Failed to load data.', severity: 'error' });
@@ -57,7 +74,7 @@ const AmountPaid = () => {
 
   const handleEventSelection = (event, selectedOrder) => {
       if (!selectedOrder) {
-          setPayoutForm({ ...payoutForm, eventId: null, personnelName: '', workName: '', duration: '', amountPaid: '' });
+          setPayoutForm({ ...payoutForm, eventId: null, entryNumber: '', eventName: '', eventVenue: '', personnelName: '', workName: '', duration: '', amountPaid: '' });
           return;
       }
       
@@ -82,10 +99,17 @@ const AmountPaid = () => {
       
       totalPersonnel = allPersonnel.length;
       const expectedWage = totalPersonnel > 0 && totalRate > 0 ? Math.round(totalRate / totalPersonnel) : '';
+      
+      const firstItem = items[0] || {};
+      const eventName = firstItem.eventName || '';
+      const eventVenue = firstItem.eventVenue || '';
 
       setPayoutForm({
           ...payoutForm,
           eventId: selectedOrder.id,
+          entryNumber: selectedOrder.entryNumber || '',
+          eventName: eventName,
+          eventVenue: eventVenue,
           personnelName: allPersonnel.length === 1 ? allPersonnel[0] : '',
           workName: Array.from(workNames).join(', '),
           duration: Array.from(durations).join(', '),
@@ -216,10 +240,23 @@ const AmountPaid = () => {
                   <Grid item xs={12}>
                       <Autocomplete
                           options={workOrders}
-                          getOptionLabel={(option) => `Entry: ${option.entryNumber} | Date: ${option.eventDate ? new Date(option.eventDate).toLocaleDateString() : 'N/A'}`}
+                          getOptionLabel={(option) => {
+                              const firstItem = option.workItems?.[0] || {};
+                              const eName = firstItem.eventName || 'N/A';
+                              return `Entry: ${option.entryNumber} | Date: ${option.eventDate ? new Date(option.eventDate).toLocaleDateString() : 'N/A'} | ${eName}`;
+                          }}
                           onChange={handleEventSelection}
                           renderInput={(params) => <TextField {...params} label="Select Pending Event" fullWidth />}
                       />
+                  </Grid>
+                  <Grid item xs={4}>
+                      <TextField label="Entry Number" fullWidth value={payoutForm.entryNumber} disabled />
+                  </Grid>
+                  <Grid item xs={4}>
+                      <TextField label="Event Name" fullWidth value={payoutForm.eventName} disabled />
+                  </Grid>
+                  <Grid item xs={4}>
+                      <TextField label="Event Venue" fullWidth value={payoutForm.eventVenue} disabled />
                   </Grid>
                   <Grid item xs={12}>
                       <TextField
