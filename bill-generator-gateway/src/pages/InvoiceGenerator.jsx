@@ -63,7 +63,8 @@ const InvoiceGenerator = () => {
             setSnackbar({ open: true, message: 'Invoice marked as paid!', severity: 'success' });
         } catch (err) {
             console.error('Failed to mark invoice as paid:', err);
-            setSnackbar({ open: true, message: 'Failed to mark invoice as paid.', severity: 'error' });
+            const serverError = err.response?.data?.error || 'Failed to mark invoice as paid.';
+            setSnackbar({ open: true, message: serverError, severity: 'error' });
         }
     };
     

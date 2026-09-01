@@ -8,7 +8,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddCardIcon from '@mui/icons-material/AddCard';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import API, { getWorkOrders, getCompanies, updatePayout, deletePayout } from '../services/api';
+import API, { getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived } from '../services/api';
 
 const AmountPaid = () => {
   const [paidInvoices, setPaidInvoices] = useState([]);
@@ -132,6 +132,20 @@ const AmountPaid = () => {
       }
   };
 
+  
+  const handleAmountReceivedChange = (id, value) => {
+      setPaidInvoices(paidInvoices.map(inv => inv.id === id ? { ...inv, amount_received: value } : inv));
+  };
+  
+  const saveAmountReceived = async (id, value) => {
+      try {
+          await updateInvoiceAmountReceived(id, value);
+      } catch (err) {
+          console.error('Failed to save amount received', err);
+          setSnackbar({ open: true, message: 'Failed to save amount received.', severity: 'error' });
+      }
+  };
+  
   const handleEventSelection = (event, selectedOrder) => {
       if (!selectedOrder) {
           setGlobalForm({ ...globalForm, eventId: null, entryNumber: '', eventName: '', eventVenue: '' });
@@ -269,6 +283,8 @@ const AmountPaid = () => {
                               <TableCell>Invoice Number</TableCell>
                               <TableCell>Company</TableCell>
                               <TableCell>Vendor</TableCell>
+                              <TableCell>Invoice Amount</TableCell>
+                              <TableCell>Amount Received</TableCell>
                           </TableRow>
                       </TableHead>
                       <TableBody>
@@ -281,6 +297,18 @@ const AmountPaid = () => {
                                       <TableCell>{inv.invoiceNumber}</TableCell>
                                       <TableCell>{companies.find(c => c.id === inv.company_id)?.company_name || 'N/A'}</TableCell>
                                       <TableCell>{inv.parentOrderInfo?.vendor || 'N/A'}</TableCell>
+                                      <TableCell>
+                                          ₹{inv.workItems?.reduce((sum, item) => sum + (Number(item.customRate) || 0), 0) || 0}
+                                      </TableCell>
+                                      <TableCell>
+                                          <TextField
+                                              size="small"
+                                              variant="outlined"
+                                              value={inv.amount_received || ''}
+                                              onChange={(e) => handleAmountReceivedChange(inv.id, e.target.value)}
+                                              onBlur={(e) => saveAmountReceived(inv.id, e.target.value)}
+                                          />
+                                      </TableCell>
                                   </TableRow>
                               ))
                           )}
