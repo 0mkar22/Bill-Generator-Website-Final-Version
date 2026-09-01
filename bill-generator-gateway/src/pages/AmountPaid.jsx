@@ -338,11 +338,11 @@ const AmountPaid = () => {
                   <Table>
                       <TableHead>
                           <TableRow>
-                              <TableCell>Payment Date</TableCell>
                               <TableCell>Event Details</TableCell>
                               <TableCell>Personnel Name</TableCell>
                               <TableCell>Work Name</TableCell>
                               <TableCell>Amount Paid (Rs)</TableCell>
+                              <TableCell>Payment Date</TableCell>
                               <TableCell align="right">Actions</TableCell>
                           </TableRow>
                       </TableHead>
@@ -357,7 +357,6 @@ const AmountPaid = () => {
                                   
                                   return (
                                   <TableRow key={p.id}>
-                                      <TableCell>{p.payment_date}</TableCell>
                                       <TableCell>
                                         <strong>Entry {p.workOrders?.entryNumber}</strong> <br/>
                                         <Typography variant="caption" color="textSecondary">{eName}{eVenue ? ` - ${eVenue}` : ''}</Typography>
@@ -365,6 +364,7 @@ const AmountPaid = () => {
                                       <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
                                       <TableCell>{p.work_name}</TableCell>
                                       <TableCell>₹{p.amount_paid}</TableCell>
+                                      <TableCell>{p.payment_date}</TableCell>
                                       <TableCell align="right">
                                           <IconButton size="small" color="primary" onClick={() => handleEditPayout(p)}><EditIcon /></IconButton>
                                           <IconButton size="small" color="error" onClick={() => handleDeletePayout(p.id)}><DeleteIcon /></IconButton>
