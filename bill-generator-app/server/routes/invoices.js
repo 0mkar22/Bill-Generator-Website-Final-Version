@@ -14,3 +14,5 @@ router
   .put(validateInvoice, updateInvoice);
 
 module.exports = router;
+
+router.patch('/:id/status', updateInvoiceStatus);

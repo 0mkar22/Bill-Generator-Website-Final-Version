@@ -25,3 +25,8 @@ export const getTeam = () => API.get('/team');
 export const upsertTeam = (data) => API.post('/team', data);
 
 export default API;
+
+export const updateInvoiceStatus = (id, status) => API.patch(`/invoices/${id}/status`, { status });
+export const getPayouts = () => API.get('/personnelPayouts');
+export const createPayout = (data) => API.post('/personnelPayouts', data);
+export const deletePayout = (id) => API.delete(`/personnelPayouts/${id}`);
