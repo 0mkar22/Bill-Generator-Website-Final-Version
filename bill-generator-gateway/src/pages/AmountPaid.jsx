@@ -2,20 +2,24 @@ import React, { useState, useEffect } from 'react';
 import {
   Container, Paper, Typography, Box, Button, Grid, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Autocomplete, Snackbar, Alert, CircularProgress
+  DialogActions, TextField, Autocomplete, Snackbar, Alert, CircularProgress, IconButton
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddCardIcon from '@mui/icons-material/AddCard';
-import API, { getWorkOrders, getCompanies } from '../services/api';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import API, { getWorkOrders, getCompanies, updatePayout, deletePayout } from '../services/api';
 
 const AmountPaid = () => {
   const [paidInvoices, setPaidInvoices] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [rawWorkOrders, setRawWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editPayoutId, setEditPayoutId] = useState(null);
   const [payoutForm, setPayoutForm] = useState({
       eventId: null,
       entryNumber: '',
@@ -49,16 +53,22 @@ const AmountPaid = () => {
               const invoices = invoicesRes.value.data.data || [];
               setPaidInvoices(invoices.filter(inv => inv.status === 'paid'));
           }
+          
+          let savedPayouts = [];
           if (payoutsRes.status === 'fulfilled') {
-              setPayouts(payoutsRes.value.data.data || []);
+              savedPayouts = payoutsRes.value.data.data || [];
+              setPayouts(savedPayouts);
           } else {
               console.error("Payouts fetch failed:", payoutsRes.reason);
           }
+          
           if (companiesRes.status === 'fulfilled') {
               setCompanies(companiesRes.value.data.data || []);
           }
+          
           if (ordersRes.status === 'fulfilled') {
               const rawOrders = ordersRes.value.data.data || [];
+              setRawWorkOrders(rawOrders);
               const pendingPayoutOptions = [];
               
               rawOrders.forEach(order => {
@@ -108,7 +118,7 @@ const AmountPaid = () => {
                       for (const [pName, pData] of personnelMap.entries()) {
                           pendingPayoutOptions.push({
                               ...order,
-                              id: `${order.id}-${idx}`,
+                              id: \`\${order.id}-\${idx}\`,
                               originalId: order.id,
                               extracted: {
                                   personnelName: pName,
@@ -123,10 +133,14 @@ const AmountPaid = () => {
                       }
                   }
               });
-              setWorkOrders(pendingPayoutOptions);
+              
+              // Filter out payouts that are already saved
+              const filteredOptions = pendingPayoutOptions.filter(opt => {
+                  return !savedPayouts.some(p => p.event_id === opt.originalId && p.personnel_name === opt.extracted.personnelName);
+              });
+              
+              setWorkOrders(filteredOptions);
           }
-          
-          
       } catch (err) {
           console.error('Failed to fetch data', err);
           setSnackbar({ open: true, message: 'Failed to load data.', severity: 'error' });
@@ -153,6 +167,36 @@ const AmountPaid = () => {
           amountPaid: selectedOrder.extracted.amountPaid ? selectedOrder.extracted.amountPaid.toString() : ''
       });
   };
+  
+  const handleEditPayout = (payout) => {
+      const oOrder = rawWorkOrders.find(o => o.id === payout.event_id);
+      setEditPayoutId(payout.id);
+      setPayoutForm({
+          eventId: payout.event_id,
+          entryNumber: oOrder?.entryNumber || '',
+          eventName: oOrder?.workItems?.[0]?.eventName || '',
+          eventVenue: oOrder?.workItems?.[0]?.eventVenue || '',
+          personnelName: payout.personnel_name,
+          workName: payout.work_name || '',
+          duration: payout.duration || '',
+          amountPaid: payout.amount_paid.toString(),
+          paymentDate: payout.payment_date || new Date().toISOString().split('T')[0],
+          notes: payout.notes || ''
+      });
+      setIsModalOpen(true);
+  };
+  
+  const handleDeletePayout = async (id) => {
+      if (window.confirm("Are you sure you want to delete this payout?")) {
+          try {
+              await deletePayout(id);
+              setSnackbar({ open: true, message: 'Payout deleted successfully!', severity: 'success' });
+              fetchData();
+          } catch (err) {
+              setSnackbar({ open: true, message: 'Failed to delete payout.', severity: 'error' });
+          }
+      }
+  };
 
   const handleSubmitPayout = async () => {
       setSaving(true);
@@ -166,17 +210,29 @@ const AmountPaid = () => {
               payment_date: payoutForm.paymentDate,
               notes: payoutForm.notes
           };
-          await API.post('/personnelPayouts', payload);
-          setSnackbar({ open: true, message: 'Payout logged successfully!', severity: 'success' });
+          if (editPayoutId) {
+              await updatePayout(editPayoutId, payload);
+              setSnackbar({ open: true, message: 'Payout updated successfully!', severity: 'success' });
+          } else {
+              await API.post('/personnelPayouts', payload);
+              setSnackbar({ open: true, message: 'Payout logged successfully!', severity: 'success' });
+          }
           setIsModalOpen(false);
+          setEditPayoutId(null);
           fetchData(); 
       } catch (err) {
           console.error(err);
           const serverError = err.response?.data?.error || err.message;
-          setSnackbar({ open: true, message: `Failed to save: ${serverError}`, severity: 'error' });
+          setSnackbar({ open: true, message: \`Failed to save: \${serverError}\`, severity: 'error' });
       } finally {
           setSaving(false);
       }
+  };
+  
+  const openNewPayout = () => {
+      setEditPayoutId(null);
+      setPayoutForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', personnelName: '', workName: '', duration: '', amountPaid: '', paymentDate: new Date().toISOString().split('T')[0], notes: '' });
+      setIsModalOpen(true);
   };
 
   if (loading) {
@@ -232,7 +288,7 @@ const AmountPaid = () => {
                     <Typography variant="h5" color="secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AddCardIcon /> Paid Assigned Personnel
                     </Typography>
-                    <Button variant="contained" color="secondary" onClick={() => setIsModalOpen(true)}>
+                    <Button variant="contained" color="secondary" onClick={openNewPayout}>
                         Log Payout
                     </Button>
                 </Box>
@@ -241,28 +297,38 @@ const AmountPaid = () => {
                       <TableHead>
                           <TableRow>
                               <TableCell>Payment Date</TableCell>
-                              <TableCell>Event / Entry No</TableCell>
+                              <TableCell>Event Details</TableCell>
                               <TableCell>Personnel Name</TableCell>
                               <TableCell>Work Name</TableCell>
                               <TableCell>Amount Paid (Rs)</TableCell>
+                              <TableCell align="right">Actions</TableCell>
                           </TableRow>
                       </TableHead>
                       <TableBody>
                           {payouts.length === 0 ? (
-                              <TableRow><TableCell colSpan={5} align="center">No payouts logged yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={6} align="center">No payouts logged yet.</TableCell></TableRow>
                           ) : (
-                              payouts.map((p) => (
+                              payouts.map((p) => {
+                                  const oOrder = rawWorkOrders.find(o => o.id === p.event_id);
+                                  const eName = oOrder?.workItems?.[0]?.eventName || '';
+                                  const eVenue = oOrder?.workItems?.[0]?.eventVenue || '';
+                                  
+                                  return (
                                   <TableRow key={p.id}>
                                       <TableCell>{p.payment_date}</TableCell>
                                       <TableCell>
-                                        Entry {p.workOrders?.entryNumber} <br/>
-                                        <Typography variant="caption" color="textSecondary">{p.workOrders?.eventDate ? new Date(p.workOrders.eventDate).toLocaleDateString() : ''}</Typography>
+                                        <strong>Entry {p.workOrders?.entryNumber}</strong> <br/>
+                                        <Typography variant="caption" color="textSecondary">{eName}{eVenue ? \` - \${eVenue}\` : ''}</Typography>
                                       </TableCell>
                                       <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
                                       <TableCell>{p.work_name}</TableCell>
                                       <TableCell>₹{p.amount_paid}</TableCell>
+                                      <TableCell align="right">
+                                          <IconButton size="small" color="primary" onClick={() => handleEditPayout(p)}><EditIcon /></IconButton>
+                                          <IconButton size="small" color="error" onClick={() => handleDeletePayout(p.id)}><DeleteIcon /></IconButton>
+                                      </TableCell>
                                   </TableRow>
-                              ))
+                              )})
                           )}
                       </TableBody>
                   </Table>
@@ -271,20 +337,22 @@ const AmountPaid = () => {
         </Grid>
       </Grid>
 
-      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Log Personnel Payout</DialogTitle>
+      <Dialog open={isModalOpen} onClose={() => { setIsModalOpen(false); setEditPayoutId(null); }} maxWidth="sm" fullWidth>
+          <DialogTitle>{editPayoutId ? 'Edit Personnel Payout' : 'Log Personnel Payout'}</DialogTitle>
           <DialogContent dividers>
               <Grid container spacing={2}>
+                  {!editPayoutId && (
                   <Grid item xs={12}>
                       <Autocomplete
                           options={workOrders}
                           getOptionLabel={(option) => {
-                              return `Entry: ${option.entryNumber} | ${option.extracted?.eventName || 'N/A'} ${option.extracted?.personnelName ? `| Person: ${option.extracted.personnelName}` : ''}`;
+                              return \`Entry: \${option.entryNumber} | \${option.extracted?.eventName || 'N/A'} \${option.extracted?.personnelName ? \`| Person: \${option.extracted.personnelName}\` : ''}\`;
                           }}
                           onChange={handleEventSelection}
                           renderInput={(params) => <TextField {...params} label="Select Pending Event" fullWidth />}
                       />
                   </Grid>
+                  )}
                   <Grid item xs={4}>
                       <TextField label="Entry Number" fullWidth value={payoutForm.entryNumber} disabled />
                   </Grid>
@@ -300,6 +368,7 @@ const AmountPaid = () => {
                           fullWidth
                           value={payoutForm.personnelName}
                           onChange={e => setPayoutForm({...payoutForm, personnelName: e.target.value})}
+                          disabled={!!editPayoutId}
                       />
                   </Grid>
                   <Grid item xs={12}>
@@ -351,9 +420,9 @@ const AmountPaid = () => {
               </Grid>
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
-              <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => { setIsModalOpen(false); setEditPayoutId(null); }}>Cancel</Button>
               <Button variant="contained" color="secondary" onClick={handleSubmitPayout} disabled={!payoutForm.personnelName || !payoutForm.amountPaid || saving}>
-                  {saving ? <CircularProgress size={24} /> : 'Save Payout'}
+                  {saving ? <CircularProgress size={24} /> : (editPayoutId ? 'Update Payout' : 'Save Payout')}
               </Button>
           </DialogActions>
       </Dialog>
