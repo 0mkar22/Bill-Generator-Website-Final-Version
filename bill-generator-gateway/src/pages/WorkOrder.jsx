@@ -1057,7 +1057,7 @@ renderValue={(selected) => selected}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
-                                label={`Photographer/Videographer ${pIdx + 1} Name`}
+                                label={person.role ? `${person.role} Name` : `Photographer/Videographer ${pIdx + 1} Name`}
                                 fullWidth
                                 size="small"
                               />
