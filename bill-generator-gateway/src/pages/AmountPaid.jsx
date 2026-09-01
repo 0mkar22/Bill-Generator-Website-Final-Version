@@ -149,7 +149,7 @@ const AmountPaid = () => {
   
   const handleEventSelection = (event, selectedOrder) => {
       if (!selectedOrder) {
-          setGlobalForm({ ...globalForm, eventId: null, entryNumber: '', eventName: '', eventVenue: '' });
+          setGlobalForm({ ...globalForm, eventId: null, entryNumber: '', eventName: '', eventVenue: '', eventDate: '' });
           setBatchPersonnel([]);
           return;
       }
@@ -253,7 +253,7 @@ const AmountPaid = () => {
   
   const openNewPayout = () => {
       setEditPayoutId(null);
-      setGlobalForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', notes: '' });
+      setGlobalForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', eventDate: '', notes: '' });
       setBatchPersonnel([]);
       setIsModalOpen(true);
   };
