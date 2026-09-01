@@ -118,7 +118,7 @@ const AmountPaid = () => {
                       for (const [pName, pData] of personnelMap.entries()) {
                           pendingPayoutOptions.push({
                               ...order,
-                              id: \`\${order.id}-\${idx}\`,
+                              id: `${order.id}-${idx}`,
                               originalId: order.id,
                               extracted: {
                                   personnelName: pName,
@@ -223,7 +223,7 @@ const AmountPaid = () => {
       } catch (err) {
           console.error(err);
           const serverError = err.response?.data?.error || err.message;
-          setSnackbar({ open: true, message: \`Failed to save: \${serverError}\`, severity: 'error' });
+          setSnackbar({ open: true, message: `Failed to save: ${serverError}`, severity: 'error' });
       } finally {
           setSaving(false);
       }
@@ -318,7 +318,7 @@ const AmountPaid = () => {
                                       <TableCell>{p.payment_date}</TableCell>
                                       <TableCell>
                                         <strong>Entry {p.workOrders?.entryNumber}</strong> <br/>
-                                        <Typography variant="caption" color="textSecondary">{eName}{eVenue ? \` - \${eVenue}\` : ''}</Typography>
+                                        <Typography variant="caption" color="textSecondary">{eName}{eVenue ? ` - ${eVenue}` : ''}</Typography>
                                       </TableCell>
                                       <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
                                       <TableCell>{p.work_name}</TableCell>
@@ -346,7 +346,7 @@ const AmountPaid = () => {
                       <Autocomplete
                           options={workOrders}
                           getOptionLabel={(option) => {
-                              return \`Entry: \${option.entryNumber} | \${option.extracted?.eventName || 'N/A'} \${option.extracted?.personnelName ? \`| Person: \${option.extracted.personnelName}\` : ''}\`;
+                              return `Entry: ${option.entryNumber} | ${option.extracted?.eventName || 'N/A'} ${option.extracted?.personnelName ? `| Person: ${option.extracted.personnelName}` : ''}`;
                           }}
                           onChange={handleEventSelection}
                           renderInput={(params) => <TextField {...params} label="Select Pending Event" fullWidth />}
