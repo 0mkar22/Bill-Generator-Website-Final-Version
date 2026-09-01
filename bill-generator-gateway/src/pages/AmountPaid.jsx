@@ -83,7 +83,7 @@ const AmountPaid = () => {
                       const pList = Array.isArray(item.personnel) ? item.personnel.filter(p => p.name) : [];
                       
                       pList.forEach(p => {
-                          const pName = p.name;
+                          const pName = p.role ? `${p.name} - ${p.role}` : p.name;
                           if (!personnelMap.has(pName)) {
                               personnelMap.set(pName, { workNames: new Set(), workSubs: new Set(), totalRate: 0 });
                           }
