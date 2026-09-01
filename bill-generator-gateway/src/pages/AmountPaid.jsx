@@ -172,7 +172,8 @@ const AmountPaid = () => {
           fetchData(); 
       } catch (err) {
           console.error(err);
-          setSnackbar({ open: true, message: 'Failed to save payout.', severity: 'error' });
+          const serverError = err.response?.data?.error || err.message;
+          setSnackbar({ open: true, message: `Failed to save: ${serverError}`, severity: 'error' });
       } finally {
           setSaving(false);
       }

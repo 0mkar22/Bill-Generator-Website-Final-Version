@@ -23,12 +23,15 @@ exports.createPayout = async (req, res) => {
       .insert([req.body])
       .select('*, workOrders(entryNumber, eventDate)');
 
-    if (error) throw error;
+    if (error) {
+        console.error("Supabase Insert Error:", error);
+        throw error;
+    }
 
     res.status(201).json({ success: true, data: payout[0] });
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ success: false, error: err.message });
+    console.error("createPayout Error:", err);
+    res.status(400).json({ success: false, error: err.message || err.details || err.hint || JSON.stringify(err) });
   }
 };
 
