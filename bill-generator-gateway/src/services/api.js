@@ -32,3 +32,5 @@ export const createPayout = (data) => API.post('/personnelPayouts', data);
 export const deletePayout = (id) => API.delete(`/personnelPayouts/${id}`);
 
 export const updatePayout = (id, data) => API.put(`/personnelPayouts/${id}`, data);
+
+export const updateInvoiceAmountReceived = (id, amount_received) => API.patch(/invoices//amount-received, { amount_received });
