@@ -338,6 +338,7 @@ const AmountPaid = () => {
                   <Table>
                       <TableHead>
                           <TableRow>
+                              <TableCell>Entry Number</TableCell>
                               <TableCell>Event Details</TableCell>
                               <TableCell>Personnel Name</TableCell>
                               <TableCell>Work Name</TableCell>
@@ -348,7 +349,7 @@ const AmountPaid = () => {
                       </TableHead>
                       <TableBody>
                           {payouts.length === 0 ? (
-                              <TableRow><TableCell colSpan={6} align="center">No payouts logged yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={7} align="center">No payouts logged yet.</TableCell></TableRow>
                           ) : (
                               payouts.map((p) => {
                                   const oOrder = rawWorkOrders.find(o => o.id === p.event_id);
@@ -358,8 +359,16 @@ const AmountPaid = () => {
                                   return (
                                   <TableRow key={p.id}>
                                       <TableCell>
-                                        <strong>Entry {p.workOrders?.entryNumber}</strong> <br/>
-                                        <Typography variant="caption" color="textSecondary">{eName}{eVenue ? ` - ${eVenue}` : ''}</Typography>
+                                        <strong>Entry {p.workOrders?.entryNumber}</strong>
+                                      </TableCell>
+                                      <TableCell>
+                                        {eName}
+                                        {eVenue && (
+                                            <>
+                                                <br/>
+                                                <Typography variant="caption" color="textSecondary">{eVenue}</Typography>
+                                            </>
+                                        )}
                                       </TableCell>
                                       <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
                                       <TableCell>{p.work_name}</TableCell>
