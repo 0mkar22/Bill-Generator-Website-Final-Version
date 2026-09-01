@@ -27,7 +27,6 @@ const AmountPaid = () => {
       entryNumber: '',
       eventName: '',
       eventVenue: '',
-      paymentDate: new Date().toISOString().split('T')[0],
       notes: ''
   });
 
@@ -106,7 +105,8 @@ const AmountPaid = () => {
                               personnelName: pName,
                               workName: Array.from(pData.workNames).join(', '),
                               duration: Array.from(pData.workSubs).join(', '),
-                              amountPaid: Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : ''
+                              amountPaid: Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : '',
+                              paymentDate: new Date().toISOString().split('T')[0]
                           });
                       }
                   }
@@ -168,6 +168,12 @@ const AmountPaid = () => {
       updated[index].amountPaid = value;
       setBatchPersonnel(updated);
   };
+
+  const handleBatchDateChange = (index, value) => {
+      const updated = [...batchPersonnel];
+      updated[index].paymentDate = value;
+      setBatchPersonnel(updated);
+  };
   
   const handleEditPayout = (payout) => {
       const oOrder = rawWorkOrders.find(o => o.id === payout.event_id);
@@ -178,7 +184,6 @@ const AmountPaid = () => {
           entryNumber: oOrder?.entryNumber || '',
           eventName: oOrder?.workItems?.[0]?.eventName || '',
           eventVenue: oOrder?.workItems?.[0]?.eventVenue || '',
-          paymentDate: payout.payment_date || new Date().toISOString().split('T')[0],
           notes: payout.notes || ''
       });
       
@@ -186,7 +191,8 @@ const AmountPaid = () => {
           personnelName: payout.personnel_name,
           workName: payout.work_name || '',
           duration: payout.duration || '',
-          amountPaid: payout.amount_paid.toString()
+          amountPaid: payout.amount_paid.toString(),
+          paymentDate: payout.payment_date || new Date().toISOString().split('T')[0]
       }]);
       
       setIsModalOpen(true);
@@ -214,7 +220,7 @@ const AmountPaid = () => {
                   work_name: batchPersonnel[0].workName,
                   duration: batchPersonnel[0].duration,
                   amount_paid: Number(batchPersonnel[0].amountPaid),
-                  payment_date: globalForm.paymentDate,
+                  payment_date: batchPersonnel[0].paymentDate,
                   notes: globalForm.notes
               };
               await updatePayout(editPayoutId, singlePayload);
@@ -226,7 +232,7 @@ const AmountPaid = () => {
                   work_name: person.workName,
                   duration: person.duration,
                   amount_paid: Number(person.amountPaid),
-                  payment_date: globalForm.paymentDate,
+                  payment_date: person.paymentDate,
                   notes: globalForm.notes
               }));
               await API.post('/personnelPayouts', payloadArray);
@@ -246,7 +252,7 @@ const AmountPaid = () => {
   
   const openNewPayout = () => {
       setEditPayoutId(null);
-      setGlobalForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', paymentDate: new Date().toISOString().split('T')[0], notes: '' });
+      setGlobalForm({ eventId: null, entryNumber: '', eventName: '', eventVenue: '', notes: '' });
       setBatchPersonnel([]);
       setIsModalOpen(true);
   };
@@ -254,7 +260,7 @@ const AmountPaid = () => {
   const isFormValid = () => {
       if (!globalForm.eventId) return false;
       if (batchPersonnel.length === 0) return false;
-      return batchPersonnel.every(p => p.personnelName && p.amountPaid !== '');
+      return batchPersonnel.every(p => p.personnelName && p.amountPaid !== '' && p.paymentDate !== '');
   };
 
   if (loading) {
@@ -411,45 +417,37 @@ const AmountPaid = () => {
                       ) : (
                           batchPersonnel.map((person, idx) => (
                               <Paper key={idx} variant="outlined" sx={{ p: 2, mb: 2, backgroundColor: '#fafafa' }}>
-                                  <Grid container spacing={2} alignItems="center">
-                                      <Grid item xs={3}>
-                                          <TextField label="Personnel Name" fullWidth value={person.personnelName} disabled size="small" />
-                                      </Grid>
-                                      <Grid item xs={3}>
-                                          <TextField label="Work Name" fullWidth value={person.workName} disabled size="small" />
-                                      </Grid>
-                                      <Grid item xs={3}>
-                                          <TextField label="Duration / Subcategory" fullWidth value={person.duration} disabled size="small" />
-                                      </Grid>
-                                      <Grid item xs={3}>
-                                          <TextField
-                                              label="Amount Paid (Rs)"
-                                              type="number"
-                                              fullWidth
-                                              required
-                                              size="small"
-                                              value={person.amountPaid}
-                                              onChange={(e) => handleBatchAmountChange(idx, e.target.value)}
-                                          />
-                                      </Grid>
-                                  </Grid>
+                                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                                      <TextField label="Personnel Name" sx={{ flex: 1, minWidth: '130px' }} value={person.personnelName} disabled size="small" />
+                                      <TextField label="Work Name" sx={{ flex: 1, minWidth: '130px' }} value={person.workName} disabled size="small" />
+                                      <TextField label="Duration / Subcategory" sx={{ flex: 1, minWidth: '130px' }} value={person.duration} disabled size="small" />
+                                      <TextField
+                                          label="Amount Paid (Rs)"
+                                          type="number"
+                                          sx={{ flex: 1, minWidth: '130px' }}
+                                          required
+                                          size="small"
+                                          value={person.amountPaid}
+                                          onChange={(e) => handleBatchAmountChange(idx, e.target.value)}
+                                      />
+                                      <TextField
+                                          label="Payment Date"
+                                          type="date"
+                                          sx={{ flex: 1, minWidth: '130px' }}
+                                          required
+                                          size="small"
+                                          InputLabelProps={{ shrink: true }}
+                                          value={person.paymentDate}
+                                          onChange={(e) => handleBatchDateChange(idx, e.target.value)}
+                                      />
+                                  </Box>
                               </Paper>
                           ))
                       )}
                   </Grid>
 
                   {/* Global Payout Details */}
-                  <Grid item xs={12} sm={6}>
-                      <TextField
-                          label="Global Payment Date"
-                          type="date"
-                          fullWidth
-                          InputLabelProps={{ shrink: true }}
-                          value={globalForm.paymentDate}
-                          onChange={e => setGlobalForm({...globalForm, paymentDate: e.target.value})}
-                      />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid item xs={12}>
                       <TextField
                           label="Global Notes (Optional)"
                           multiline
