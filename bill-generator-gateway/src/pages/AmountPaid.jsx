@@ -58,12 +58,64 @@ const AmountPaid = () => {
               setCompanies(companiesRes.value.data.data || []);
           }
           if (ordersRes.status === 'fulfilled') {
-              setWorkOrders(ordersRes.value.data.data || []);
+              const rawOrders = ordersRes.value.data.data || [];
+              const pendingPayoutOptions = [];
+              
+              rawOrders.forEach(order => {
+                  let totalRate = 0;
+                  let workNames = new Set();
+                  let durations = new Set();
+                  let allPersonnel = [];
+                  
+                  (order.workItems || []).forEach(item => {
+                      if (item.workMain) workNames.add(item.workMain.replaceAll('_', ' '));
+                      if (item.quantity) durations.add(item.quantity.toString());
+                      if (item.customRate) totalRate += Number(item.customRate);
+                      if (Array.isArray(item.personnel)) {
+                          item.personnel.forEach(p => {
+                              if (p.name) allPersonnel.push(p.name);
+                          });
+                      }
+                  });
+                  
+                  const eName = order.workItems?.[0]?.eventName || '';
+                  const eVenue = order.workItems?.[0]?.eventVenue || '';
+                  const expectedWage = allPersonnel.length > 0 && totalRate > 0 ? Math.round(totalRate / allPersonnel.length) : '';
+                  
+                  if (allPersonnel.length === 0) {
+                      pendingPayoutOptions.push({
+                          ...order,
+                          extracted: {
+                              personnelName: '',
+                              workName: Array.from(workNames).join(', '),
+                              duration: Array.from(durations).join(', '),
+                              amountPaid: expectedWage,
+                              eventName: eName,
+                              eventVenue: eVenue
+                          }
+                      });
+                  } else {
+                      allPersonnel.forEach((pName, idx) => {
+                          pendingPayoutOptions.push({
+                              ...order,
+                              id: `${order.id}-${idx}`, // Override ID to make it distinct
+                              originalId: order.id,
+                              extracted: {
+                                  personnelName: pName,
+                                  workName: Array.from(workNames).join(', '),
+                                  duration: Array.from(durations).join(', '),
+                                  amountPaid: expectedWage,
+                                  eventName: eName,
+                                  eventVenue: eVenue
+                              }
+                          });
+                      });
+                  }
+              });
+              setWorkOrders(pendingPayoutOptions);
           }
           
-          if (invoicesRes.status === 'rejected' || payoutsRes.status === 'rejected' || ordersRes.status === 'rejected') {
-              throw new Error("Some data failed to load. Did you run the SQL migration and restart the backend server?");
-          }
+          
       } catch (err) {
           console.error('Failed to fetch data', err);
           setSnackbar({ open: true, message: 'Failed to load data.', severity: 'error' });
@@ -78,42 +130,16 @@ const AmountPaid = () => {
           return;
       }
       
-      const items = selectedOrder.workItems || [];
-      let totalRate = 0;
-      let totalPersonnel = 0;
-      let workNames = new Set();
-      let durations = new Set();
-      let allPersonnel = [];
-
-      items.forEach(item => {
-          if (item.workMain) workNames.add(item.workMain.replaceAll('_', ' '));
-          if (item.quantity) durations.add(item.quantity.toString());
-          if (item.customRate) totalRate += Number(item.customRate);
-          
-          if (Array.isArray(item.personnel)) {
-              item.personnel.forEach(p => {
-                  if (p.name) allPersonnel.push(p.name);
-              });
-          }
-      });
-      
-      totalPersonnel = allPersonnel.length;
-      const expectedWage = totalPersonnel > 0 && totalRate > 0 ? Math.round(totalRate / totalPersonnel) : '';
-      
-      const firstItem = items[0] || {};
-      const eventName = firstItem.eventName || '';
-      const eventVenue = firstItem.eventVenue || '';
-
       setPayoutForm({
           ...payoutForm,
-          eventId: selectedOrder.id,
+          eventId: selectedOrder.originalId || selectedOrder.id,
           entryNumber: selectedOrder.entryNumber || '',
-          eventName: eventName,
-          eventVenue: eventVenue,
-          personnelName: allPersonnel.length === 1 ? allPersonnel[0] : '',
-          workName: Array.from(workNames).join(', '),
-          duration: Array.from(durations).join(', '),
-          amountPaid: expectedWage ? expectedWage.toString() : ''
+          eventName: selectedOrder.extracted.eventName,
+          eventVenue: selectedOrder.extracted.eventVenue,
+          personnelName: selectedOrder.extracted.personnelName,
+          workName: selectedOrder.extracted.workName,
+          duration: selectedOrder.extracted.duration,
+          amountPaid: selectedOrder.extracted.amountPaid ? selectedOrder.extracted.amountPaid.toString() : ''
       });
   };
 
@@ -241,9 +267,7 @@ const AmountPaid = () => {
                       <Autocomplete
                           options={workOrders}
                           getOptionLabel={(option) => {
-                              const firstItem = option.workItems?.[0] || {};
-                              const eName = firstItem.eventName || 'N/A';
-                              return `Entry: ${option.entryNumber} | Date: ${option.eventDate ? new Date(option.eventDate).toLocaleDateString() : 'N/A'} | ${eName}`;
+                              return `Entry: ${option.entryNumber} | ${option.extracted?.eventName || 'N/A'} ${option.extracted?.personnelName ? `| Person: ${option.extracted.personnelName}` : ''}`;
                           }}
                           onChange={handleEventSelection}
                           renderInput={(params) => <TextField {...params} label="Select Pending Event" fullWidth />}
