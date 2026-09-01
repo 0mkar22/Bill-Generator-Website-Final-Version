@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import EditIcon from '@mui/icons-material/Edit';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import { getWorkOrders, getCompanies } from '../services/api';
 import API from '../services/api';
@@ -54,10 +55,23 @@ const InvoiceGenerator = () => {
     }
   };
 
-  const fetchSavedInvoices = async () => {
+  
+    const handleMarkAsPaid = async (id) => {
+        try {
+            await API.patch(`/invoices/${id}/status`, { status: 'paid' });
+            setSavedInvoices(prev => prev.filter(inv => inv.id !== id));
+            setSnackbar({ open: true, message: 'Invoice marked as paid!', severity: 'success' });
+        } catch (err) {
+            console.error('Failed to mark invoice as paid:', err);
+            setSnackbar({ open: true, message: 'Failed to mark invoice as paid.', severity: 'error' });
+        }
+    };
+    
+    const fetchSavedInvoices = async () => {
       try {
           const response = await API.get('/invoices');
-          const invoices = response.data.data || [];
+          let invoices = response.data.data || [];
+            invoices = invoices.filter(inv => inv.status !== 'paid');
 
           const normalized = invoices.map(inv => {
               let parsedItems = [];
@@ -443,6 +457,16 @@ const InvoiceGenerator = () => {
                                                   </Button>
                                               </>
                                           }
+                                            <Button 
+                                              variant="contained" 
+                                              color="success" 
+                                              size="small"
+                                              startIcon={<CheckCircleIcon />}
+                                              onClick={() => handleMarkAsPaid(invoice.id)}
+                                              sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', ml: 'auto' }}
+                                            >
+                                                Mark as Paid
+                                            </Button>
                                       </Box>
                                   </TableCell>
                               </TableRow>

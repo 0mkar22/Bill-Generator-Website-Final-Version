@@ -19,6 +19,7 @@ import { Link } from 'react-router-dom';
 import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DescriptionIcon from '@mui/icons-material/Description';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { supabase } from '../supabase';

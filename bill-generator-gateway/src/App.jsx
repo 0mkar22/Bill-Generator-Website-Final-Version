@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import WorkOrderInvoice from './pages/WorkOrderInvoice';
 import VendorInvoice from './pages/VendorInvoice';
 import InvoiceGenerator from './pages/InvoiceGenerator';
+import AmountPaid from './pages/AmountPaid';
 
 
 const theme = createTheme({
@@ -229,6 +230,7 @@ function App() {
             <Route path="/vendor-invoice" element={<VendorInvoice />} />
             <Route path="/workorder-invoice" element={<WorkOrderInvoice />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/amount-paid" element={<AmountPaid />} />
           </Routes>
         </Layout>
       </Router>
