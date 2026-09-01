@@ -95,9 +95,20 @@ export const useWorkOrderForm = (initialData, historicalContacts, historicalPers
             newWorkItems[index]['assemblyDetails'] = [{ assemblyType: '', members: [''] }];
 
             if (finalValue === 'Two_Camera_Setup') {
-                newWorkItems[index]['personnel'] = Array(4).fill(null).map(() => ({ name: '', number: '' }));
+                newWorkItems[index]['personnel'] = [
+                    { role: 'Mixer Operator', name: '', number: '' },
+                    { role: 'Camera Operator', name: '', number: '' },
+                    { role: 'Camera Operator', name: '', number: '' },
+                    { role: 'Assistant', name: '', number: '' }
+                ];
             } else if (finalValue === 'Three_Camera_Setup') {
-                newWorkItems[index]['personnel'] = Array(5).fill(null).map(() => ({ name: '', number: '' }));
+                newWorkItems[index]['personnel'] = [
+                    { role: 'Mixer Operator', name: '', number: '' },
+                    { role: 'Camera Operator', name: '', number: '' },
+                    { role: 'Camera Operator', name: '', number: '' },
+                    { role: 'Camera Operator', name: '', number: '' },
+                    { role: 'Assistant', name: '', number: '' }
+                ];
             } else if (finalValue === 'लाईव्ह व्हिडिओ मिक्सर') {
                 newWorkItems[index]['personnel'] = Array(2).fill(null).map(() => ({ name: '', number: '' }));
             } else if (noPersonnelWorks && noPersonnelWorks.includes(finalValue)) {

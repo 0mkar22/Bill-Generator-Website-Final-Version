@@ -226,12 +226,38 @@ const WorkOrder = () => {
           else if (noPersonnelWorks.includes(item.workMain)) targetPersonnelCount = 0;
 
           let personnel = item.personnel || [];
-          if (personnel.length < targetPersonnelCount) {
-            for (let i = personnel.length; i < targetPersonnelCount; i++) {
-              personnel.push({ name: '', number: '' });
-            }
-          } else if (personnel.length > targetPersonnelCount) {
-            personnel = personnel.slice(0, targetPersonnelCount);
+          if (item.workMain === 'Two_Camera_Setup' && personnel.length === 0) {
+              personnel = [
+                  { role: 'Mixer Operator', name: '', number: '' },
+                  { role: 'Camera Operator', name: '', number: '' },
+                  { role: 'Camera Operator', name: '', number: '' },
+                  { role: 'Assistant', name: '', number: '' }
+              ];
+          } else if (item.workMain === 'Three_Camera_Setup' && personnel.length === 0) {
+              personnel = [
+                  { role: 'Mixer Operator', name: '', number: '' },
+                  { role: 'Camera Operator', name: '', number: '' },
+                  { role: 'Camera Operator', name: '', number: '' },
+                  { role: 'Camera Operator', name: '', number: '' },
+                  { role: 'Assistant', name: '', number: '' }
+              ];
+          } else {
+              if (personnel.length < targetPersonnelCount) {
+                for (let i = personnel.length; i < targetPersonnelCount; i++) {
+                  personnel.push({ name: '', number: '' });
+                }
+              } else if (personnel.length > targetPersonnelCount) {
+                personnel = personnel.slice(0, targetPersonnelCount);
+              }
+              
+              // Retroactively add roles for legacy edits
+              if (item.workMain === 'Two_Camera_Setup' && personnel.length === 4 && !personnel[0].role) {
+                  const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
+                  personnel = personnel.map((p, i) => ({ ...p, role: roles[i] }));
+              } else if (item.workMain === 'Three_Camera_Setup' && personnel.length === 5 && !personnel[0].role) {
+                  const roles = ['Mixer Operator', 'Camera Operator', 'Camera Operator', 'Camera Operator', 'Assistant'];
+                  personnel = personnel.map((p, i) => ({ ...p, role: roles[i] }));
+              }
           }
 
           let dimensions = item.dimensions || [];
