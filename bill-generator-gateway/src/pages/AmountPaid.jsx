@@ -9,6 +9,7 @@ import AddCardIcon from '@mui/icons-material/AddCard';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import API, { getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived } from '../services/api';
+import { calculateItemAmount } from '../utils/helpers';
 
 const AmountPaid = () => {
   const [paidInvoices, setPaidInvoices] = useState([]);
@@ -156,8 +157,29 @@ const AmountPaid = () => {
       }
   };
 
-  
-  const handleAmountReceivedChange = (id, value) => {
+    const allItems = React.useMemo(() => {
+        return rawWorkOrders.flatMap(order =>
+             (order.workItems || []).map((item, index) => {
+               const uniqueId = item.id || `entry-${order.entryNumber}-item-${index}`;
+               return { ...item, id: uniqueId, parent: order };
+           })
+        );
+    }, [rawWorkOrders]);
+
+    const getInvoiceAmount = (inv) => {
+        let invItems = [];
+        try {
+            invItems = Array.isArray(inv.workItems) ? inv.workItems : (typeof inv.workItems === 'string' ? JSON.parse(inv.workItems || '[]') : []);
+        } catch(e) {}
+        
+        const itemsForInvoice = allItems.filter(item => invItems.includes(item.id));
+        const companyDetails = companies.find(c => c.id === inv.company_id) || {};
+        
+        const amountBeforeTax = itemsForInvoice.reduce((sum, item) => sum + (calculateItemAmount(item, companyDetails) || 0), 0);
+        return Math.round(amountBeforeTax * 1.18);
+    };
+    
+    const handleAmountReceivedChange = (id, value) => {
       setPaidInvoices(paidInvoices.map(inv => inv.id === id ? { ...inv, amount_received: value } : inv));
   };
   
@@ -329,9 +351,9 @@ const AmountPaid = () => {
                                       <TableCell>{inv.invoiceNumber}</TableCell>
                                       <TableCell>{companies.find(c => c.id === inv.company_id)?.company_name || 'N/A'}</TableCell>
                                       <TableCell>{inv.parentOrderInfo?.vendor || 'N/A'}</TableCell>
-                                      <TableCell>
-                                          ₹{inv.workItems?.reduce((sum, item) => sum + (Number(item.customRate) || 0), 0) || 0}
-                                      </TableCell>
+                                        <TableCell>
+                                            ₹{getInvoiceAmount(inv).toLocaleString('en-IN')}
+                                        </TableCell>
                                       <TableCell>
                                           <TextField
                                               size="small"
