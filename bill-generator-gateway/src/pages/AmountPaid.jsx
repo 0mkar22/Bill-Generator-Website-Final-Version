@@ -53,7 +53,16 @@ const AmountPaid = () => {
 
           if (invoicesRes.status === 'fulfilled') {
               const invoices = invoicesRes.value.data.data || [];
-              setPaidInvoices(invoices.filter(inv => inv.status === 'paid'));
+              const paid = invoices.filter(inv => inv.status === 'paid');
+              
+              const grouped = new Map();
+              paid.forEach(inv => {
+                  if (!grouped.has(inv.invoiceNumber)) {
+                      grouped.set(inv.invoiceNumber, inv);
+                  }
+              });
+              
+              setPaidInvoices(Array.from(grouped.values()));
           }
           
           let savedPayouts = [];

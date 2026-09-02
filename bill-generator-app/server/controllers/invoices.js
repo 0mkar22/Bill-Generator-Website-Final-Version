@@ -122,42 +122,27 @@ exports.updateInvoiceStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (status === 'paid') {
-        const { data: currentInvoice } = await supabase
-            .from('invoices')
-            .select('company_id, companies(company_name)')
-            .eq('id', id)
-            .single();
-            
-        if (currentInvoice && currentInvoice.companies && currentInvoice.companies.company_name === 'OIL & NATURAL GAS CORPORATION LTD.') {
-            const { data: paidOngcInvoices } = await supabase
-                .from('invoices')
-                .select('id')
-                .eq('company_id', currentInvoice.company_id)
-                .eq('status', 'paid');
-                
-            if (paidOngcInvoices && paidOngcInvoices.length > 0) {
-                return res.status(400).json({ success: false, error: 'Only one ONGC invoice can be marked as paid because their amounts are identical.' });
-            }
-        }
+    const { data: currentInvoice } = await supabase
+        .from('invoices')
+        .select('invoiceNumber')
+        .eq('id', id)
+        .single();
+
+    if (!currentInvoice || !currentInvoice.invoiceNumber) {
+        return res.status(404).json({ success: false, error: 'Invoice not found.' });
     }
 
     const { data: invoice, error: updateError } = await supabase
         .from('invoices')
         .update({ status })
-        .eq('id', id)
+        .eq('invoiceNumber', currentInvoice.invoiceNumber)
         .select();
 
     if (updateError) throw updateError;
-
-    if (!invoice || invoice.length === 0) {
-        return res.status(404).json({ success: false, error: 'Invoice not found' });
-    }
-
-    res.status(200).json({ success: true, data: invoice[0] });
+    res.status(200).json({ success: true, data: invoice });
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ success: false, error: err.message });
+    console.error("Update Invoice Status Error:", err);
+    res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
 
@@ -166,21 +151,26 @@ exports.updateInvoiceAmountReceived = async (req, res) => {
     const { id } = req.params;
     const { amount_received } = req.body;
 
+    const { data: currentInvoice } = await supabase
+        .from('invoices')
+        .select('invoiceNumber')
+        .eq('id', id)
+        .single();
+
+    if (!currentInvoice || !currentInvoice.invoiceNumber) {
+        return res.status(404).json({ success: false, error: 'Invoice not found.' });
+    }
+
     const { data: invoice, error: updateError } = await supabase
         .from('invoices')
         .update({ amount_received })
-        .eq('id', id)
+        .eq('invoiceNumber', currentInvoice.invoiceNumber)
         .select();
 
     if (updateError) throw updateError;
-
-    if (!invoice || invoice.length === 0) {
-        return res.status(404).json({ success: false, error: 'Invoice not found' });
-    }
-
-    res.status(200).json({ success: true, data: invoice[0] });
+    res.status(200).json({ success: true, data: invoice });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
