@@ -55,18 +55,25 @@ const InvoiceGenerator = () => {
     }
   };
 
-  
-    const handleMarkAsPaid = async (id) => {
-        try {
-            await API.patch(`/invoices/${id}/status`, { status: 'paid' });
-            setSavedInvoices(prev => prev.filter(inv => inv.id !== id));
-            setSnackbar({ open: true, message: 'Invoice marked as paid!', severity: 'success' });
-        } catch (err) {
-            console.error('Failed to mark invoice as paid:', err);
-            const serverError = err.response?.data?.error || 'Failed to mark invoice as paid.';
-            setSnackbar({ open: true, message: serverError, severity: 'error' });
-        }
-    };
+      const handleMarkAsPaid = async (id) => {
+          try {
+              await API.patch(`/invoices/${id}/status`, { status: 'paid' });
+              
+              setSavedInvoices(prev => {
+                  const paidInvoice = prev.find(inv => inv.id === id);
+                  if (paidInvoice && paidInvoice.invoiceNumber) {
+                      return prev.filter(inv => inv.invoiceNumber !== paidInvoice.invoiceNumber);
+                  }
+                  return prev.filter(inv => inv.id !== id);
+              });
+              
+              setSnackbar({ open: true, message: 'Invoice marked as paid!', severity: 'success' });
+          } catch (err) {
+              console.error('Failed to mark invoice as paid:', err);
+              const serverError = err.response?.data?.error || 'Failed to mark invoice as paid.';
+              setSnackbar({ open: true, message: serverError, severity: 'error' });
+          }
+      };
     
     const fetchSavedInvoices = async () => {
       try {
