@@ -16,7 +16,8 @@ import { supabase } from '../supabase';
 const InvoiceGenerator = () => {
   const [workItems, setWorkItems] = useState([]);
   const [selected, setSelected] = useState({});
-  const [savedInvoices, setSavedInvoices] = useState([]);
+  const [allInvoices, setAllInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState([]);
   const navigate = useNavigate();
   const [viewingInvoiceType, setViewingInvoiceType] = useState('All');
@@ -59,12 +60,12 @@ const InvoiceGenerator = () => {
           try {
               await API.patch(`/invoices/${id}/status`, { status: 'paid' });
               
-              setSavedInvoices(prev => {
+              setAllInvoices(prev => {
                   const paidInvoice = prev.find(inv => inv.id === id);
                   if (paidInvoice && paidInvoice.invoiceNumber) {
-                      return prev.filter(inv => inv.invoiceNumber !== paidInvoice.invoiceNumber);
+                      return prev.map(inv => inv.invoiceNumber === paidInvoice.invoiceNumber ? { ...inv, status: 'paid' } : inv);
                   }
-                  return prev.filter(inv => inv.id !== id);
+                  return prev.map(inv => inv.id === id ? { ...inv, status: 'paid' } : inv);
               });
               
               setSnackbar({ open: true, message: 'Invoice marked as paid!', severity: 'success' });
@@ -75,12 +76,11 @@ const InvoiceGenerator = () => {
           }
       };
     
-    const fetchSavedInvoices = async () => {
+    const fetchAllInvoices = async () => {
       try {
           const response = await API.get('/invoices');
           let invoices = response.data.data || [];
-            invoices = invoices.filter(inv => inv.status !== 'paid');
-
+          
           const normalized = invoices.map(inv => {
               let parsedItems = [];
               if (Array.isArray(inv.workItems)) {
@@ -90,16 +90,20 @@ const InvoiceGenerator = () => {
               }
               return { ...inv, workItems: parsedItems };
           });
-          setSavedInvoices(normalized);
+          setAllInvoices(normalized);
       } catch (error) {
-          console.error("Failed to fetch saved invoices", error);
+          console.error("Failed to fetch all invoices", error);
       }
   };
 
   useEffect(() => {
-    fetchCompanies();
-    fetchWorkItems();
-    fetchSavedInvoices();
+    Promise.all([
+      fetchCompanies(),
+      fetchWorkItems(),
+      fetchAllInvoices()
+    ]).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   const isONGCCompany = (companyId, fallbackName = '') => {
@@ -117,7 +121,7 @@ const InvoiceGenerator = () => {
 
   const invoiceStatusMap = useMemo(() => {
     const statusMap = {};
-    for (const invoice of savedInvoices) {
+    for (const invoice of allInvoices) {
       const items = Array.isArray(invoice.workItems) ? invoice.workItems : [];
       for (const workItemId of items) {
         if (!statusMap[workItemId]) { statusMap[workItemId] = {}; }
@@ -125,7 +129,9 @@ const InvoiceGenerator = () => {
       }
     }
     return statusMap;
-  }, [savedInvoices]);
+  }, [allInvoices]);
+  
+  const savedInvoices = useMemo(() => allInvoices.filter(inv => inv.status !== 'paid'), [allInvoices]);
 
   const handleSelect = (itemId) => {
     setSelected(prev => ({ ...prev, [itemId]: !prev[itemId] }));
@@ -239,6 +245,12 @@ const InvoiceGenerator = () => {
 
   return (
     <Container>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
       <Paper sx={{ p: 4, mt: 4 }}>
         <Typography variant="h4" gutterBottom align="center">
           Generate Invoice
@@ -495,6 +507,8 @@ const InvoiceGenerator = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+          </>
+      )}
     </Container>
   );
 };

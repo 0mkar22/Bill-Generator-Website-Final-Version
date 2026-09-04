@@ -3,11 +3,24 @@ dotenv.config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const supabase = require("./config/db");
 const auth = require("./middleware/auth");
 
 const app = express();
+
+app.use(helmet());
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    max: 100,
+    message: "Too many requests from this IP, please try again after 15 minutes",
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use("/api/", limiter);
 
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')

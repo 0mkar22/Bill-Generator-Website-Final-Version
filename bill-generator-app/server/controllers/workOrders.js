@@ -17,14 +17,15 @@ exports.getWorkOrders = async (req, res) => {
 
 exports.createWorkOrder = async (req, res) => {
   try {
-    // Explicitly formatting the payload to ensure the nested personnel array is preserved
-    const payload = { ...req.body };
-    if (payload.workItems && Array.isArray(payload.workItems)) {
-        payload.workItems = payload.workItems.map(item => ({
+    const { entryNumber, eventDate, vendor, workItems, company_id } = req.body;
+    let formattedWorkItems = workItems;
+    if (formattedWorkItems && Array.isArray(formattedWorkItems)) {
+        formattedWorkItems = formattedWorkItems.map(item => ({
             ...item,
             personnel: item.personnel || [] 
         }));
     }
+    const payload = { entryNumber, eventDate, vendor, workItems: formattedWorkItems, company_id };
 
     const { data: workOrder, error } = await supabase
       .from('workOrders')
@@ -64,14 +65,15 @@ exports.getWorkOrder = async (req, res) => {
 
 exports.updateWorkOrder = async (req, res) => {
   try {
-    // Explicitly formatting the payload for updates as well
-    const payload = { ...req.body };
-    if (payload.workItems && Array.isArray(payload.workItems)) {
-        payload.workItems = payload.workItems.map(item => ({
+    const { entryNumber, eventDate, vendor, workItems, company_id } = req.body;
+    let formattedWorkItems = workItems;
+    if (formattedWorkItems && Array.isArray(formattedWorkItems)) {
+        formattedWorkItems = formattedWorkItems.map(item => ({
             ...item,
             personnel: item.personnel || [] 
         }));
     }
+    const payload = { entryNumber, eventDate, vendor, workItems: formattedWorkItems, company_id };
 
     const { data: workOrder, error } = await supabase
       .from('workOrders')
