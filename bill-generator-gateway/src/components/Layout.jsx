@@ -15,7 +15,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -29,6 +29,7 @@ const drawerWidth = 240;
 const Layout = ({ children }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -42,26 +43,46 @@ const Layout = ({ children }) => {
     setMobileOpen(!mobileOpen);
   };
 
+  const getListItemStyle = (path) => ({
+    bgcolor: location.pathname === path ? '#F3F4F6' : 'transparent',
+    '&:hover': { bgcolor: '#F9FAFB' },
+    borderRadius: '6px',
+    mx: 1,
+    mb: 0.5
+  });
+
+  const getListTextStyle = (path) => ({
+    fontWeight: location.pathname === path ? 600 : 400,
+    color: location.pathname === path ? '#0F172A' : '#475569'
+  });
+
+  const getIconStyle = (path) => ({
+    color: location.pathname === path ? '#059669' : '#64748B',
+    minWidth: '40px'
+  });
+
   const drawerContent = (
     <>
-      <Toolbar />
-      <Box sx={{ overflow: 'auto' }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #E5E7EB', minHeight: '64px' }}>
+        <img src="/logo.PNG" alt="Company Logo" style={{ height: '32px' }} />
+      </Box>
+      <Box sx={{ overflow: 'auto', mt: 2 }}>
         <List>
-          <ListItemButton component={Link} to="/" onClick={() => isMobile && setMobileOpen(false)}>
-            <ListItemIcon><WorkIcon /></ListItemIcon>
-            <ListItemText primary="Event Data Entry" />
+          <ListItemButton component={Link} to="/" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/')}>
+            <ListItemIcon sx={getIconStyle('/')}><WorkIcon /></ListItemIcon>
+            <ListItemText primary="Event Data Entry" primaryTypographyProps={getListTextStyle('/')} />
           </ListItemButton>
-          <ListItemButton component={Link} to="/invoices" onClick={() => isMobile && setMobileOpen(false)}>
-            <ListItemIcon><DescriptionIcon /></ListItemIcon>
-            <ListItemText primary="Invoices" />
+          <ListItemButton component={Link} to="/invoices" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/invoices')}>
+            <ListItemIcon sx={getIconStyle('/invoices')}><DescriptionIcon /></ListItemIcon>
+            <ListItemText primary="Invoices" primaryTypographyProps={getListTextStyle('/invoices')} />
           </ListItemButton>
-          <ListItemButton component={Link} to="/reports" onClick={() => isMobile && setMobileOpen(false)}>
-            <ListItemIcon><AssessmentIcon /></ListItemIcon>
-            <ListItemText primary="Reports" />
+          <ListItemButton component={Link} to="/reports" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/reports')}>
+            <ListItemIcon sx={getIconStyle('/reports')}><AssessmentIcon /></ListItemIcon>
+            <ListItemText primary="Reports" primaryTypographyProps={getListTextStyle('/reports')} />
           </ListItemButton>
-          <ListItemButton component={Link} to="/amount-paid" onClick={() => isMobile && setMobileOpen(false)}>
-            <ListItemIcon><AccountBalanceWalletIcon /></ListItemIcon>
-            <ListItemText primary="Amount Paid" />
+          <ListItemButton component={Link} to="/amount-paid" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/amount-paid')}>
+            <ListItemIcon sx={getIconStyle('/amount-paid')}><AccountBalanceWalletIcon /></ListItemIcon>
+            <ListItemText primary="Amount Paid" primaryTypographyProps={getListTextStyle('/amount-paid')} />
           </ListItemButton>
         </List>
       </Box>
@@ -73,8 +94,15 @@ const Layout = ({ children }) => {
       <CssBaseline />
       <AppBar
         position="fixed"
-        className="bg-white/10 backdrop-blur-md border-b border-white/20 shadow-lg"
-        sx={{ bgcolor: 'transparent', boxShadow: 'none', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        className="bg-white border-b border-gray-200 shadow-sm"
+        sx={{ 
+          bgcolor: 'white', 
+          color: '#0F172A', 
+          boxShadow: 'none', 
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          ml: { md: `${drawerWidth}px` },
+          zIndex: (theme) => theme.zIndex.drawer + 1 
+        }}
       >
         <Toolbar>
           {isMobile && (
@@ -82,8 +110,7 @@ const Layout = ({ children }) => {
               <MenuIcon />
             </IconButton>
           )}
-          <img src="/logo.PNG" alt="Company Logo" className="app-bar-logo" style={{ height: '40px', marginRight: '16px' }} />
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontSize: '1.4rem' }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontSize: '1.2rem', fontWeight: 600 }}>
             Bill Generator
           </Typography>
           <Button
@@ -102,7 +129,7 @@ const Layout = ({ children }) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { borderRight: '1px solid rgba(255,255,255,0.4)' } }}
+          PaperProps={{ sx: { borderRight: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -114,7 +141,7 @@ const Layout = ({ children }) => {
       ) : (
         <Drawer
           variant="permanent"
-          PaperProps={{ sx: { borderRight: '1px solid rgba(255,255,255,0.4)' } }}
+          PaperProps={{ sx: { borderRight: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' } }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -125,7 +152,7 @@ const Layout = ({ children }) => {
         </Drawer>
       )}
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, maxWidth: '100%', overflowX: 'hidden' }}>
         <Toolbar />
         {children}
       </Box>

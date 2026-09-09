@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-    Accordion, AccordionSummary, AccordionDetails, Box, Typography, IconButton, Grid, Divider, 
+    Box, Typography, IconButton, Grid, Divider, Paper,
     FormControl, InputLabel, Select, MenuItem, TextField, Button, Autocomplete
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -42,24 +42,21 @@ const WorkOrderItem = ({
           
 
     return (
-        <Accordion 
-            key={index} 
-            expanded={expandedItem === index} 
-            onChange={(e, isExpanded) => setExpandedItem(isExpanded ? index : false)}
-            sx={{ mt: 3 }}
-          >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ display: 'flex', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <Typography variant="h6">Work Item #{index + 1} {item.workMain ? `- ${item.workMain}` : ''}</Typography>
+          <Paper 
+              key={index} 
+              variant="outlined" 
+              sx={{ mb: 3, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)' }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: '#F3F4F6', borderBottom: '1px solid #E5E7EB' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '1rem' }}>Work Item #{index + 1} {item.workMain ? `- ${item.workMain}` : ''}</Typography>
                 {formData.workItems.length > 1 && (
-                  <IconButton type="button" onClick={(e) => { e.stopPropagation(); removeWorkItem(index); }} color="error">
+                  <IconButton type="button" onClick={(e) => { e.stopPropagation(); removeWorkItem(index); }} color="error" size="small">
                     <RemoveCircleOutlineIcon />
                   </IconButton>
                 )}
               </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 2 }}>
-              <Grid container spacing={3}>
+              <Box sx={{ p: 3 }}>
+                <Grid container spacing={3}>
                     <Grid item xs={12}><Divider>Work Details</Divider></Grid>
                   </Grid>
 
@@ -400,8 +397,8 @@ const WorkOrderItem = ({
                   </React.Fragment>
                 )}
             </Grid>
-            </AccordionDetails>
-          </Accordion>
+            </Box>
+          </Paper>
     );
 };
 
