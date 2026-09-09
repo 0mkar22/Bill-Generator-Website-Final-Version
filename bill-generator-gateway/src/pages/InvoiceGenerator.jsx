@@ -12,6 +12,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import { getWorkOrders, getCompanies } from '../services/api';
 import API from '../services/api';
 import { supabase } from '../supabase';
+import { TableSkeleton } from '../components/skeletons';
 
 const InvoiceGenerator = () => {
   const [workItems, setWorkItems] = useState([]);
@@ -246,9 +247,16 @@ const InvoiceGenerator = () => {
   return (
     <Container>
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
-          <CircularProgress />
-        </Box>
+        <Paper sx={{ p: 4, mt: 4, backgroundColor: 'rgba(24, 24, 27, 0.50)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
+          <TableSkeleton
+            title="Generate Invoice"
+            subtitle="Select work items from the same event to generate a consolidated invoice."
+            columns={8}
+            rows={8}
+            hasSearch={true}
+            hasPagination={true}
+          />
+        </Paper>
       ) : (
         <>
       <Paper sx={{ p: 4, mt: 4 }}>
@@ -268,19 +276,19 @@ const InvoiceGenerator = () => {
               sx={{ width: '300px' }}
             />
           </Box>
-          <TableContainer>
+          <TableContainer sx={{ border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
           <Table>
-            <TableHead>
+            <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
                 <TableRow>
                     <TableCell padding="checkbox"></TableCell>
-                    <TableCell>Entry No.</TableCell>
-                    <TableCell>Company</TableCell>
-                    <TableCell align="center">Vendor Invoice</TableCell>
-                    <TableCell align="center">Work Order Invoice</TableCell>
-                    <TableCell>Event Name</TableCell>
-                    <TableCell>PO/NPO</TableCell>
-                    <TableCell>Event Date</TableCell>
-                    <TableCell>Work Type</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Entry No.</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Company</TableCell>
+                    <TableCell align="center" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Vendor Invoice</TableCell>
+                    <TableCell align="center" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Work Order Invoice</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Name</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>PO/NPO</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Date</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Work Type</TableCell>
                 </TableRow>
             </TableHead>
             <TableBody>
@@ -298,8 +306,9 @@ const InvoiceGenerator = () => {
                     key={item.id} 
                     hover 
                     sx={{ 
-                      bgcolor: isSelected ? 'rgba(25, 118, 210, 0.15)' : (isHighlighted ? 'rgba(76, 175, 80, 0.1)' : 'inherit'),
-                      opacity: isDisabled ? 0.5 : 1
+                      bgcolor: isSelected ? 'rgba(99, 102, 241, 0.14)' : (isHighlighted ? 'rgba(99, 102, 241, 0.06)' : 'inherit'),
+                      opacity: isDisabled ? 0.45 : 1,
+                      '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' }
                     }}
                   >
                     <TableCell padding="checkbox">
@@ -307,27 +316,34 @@ const InvoiceGenerator = () => {
                           checked={isSelected}
                           onChange={() => handleSelect(item.id)}
                           disabled={isDisabled}
-                          color={isSameEntryNumber ? "success" : "primary"}
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.3)',
+                            '&.Mui-checked': { color: '#818cf8' }
+                          }}
                       />
                     </TableCell>
-                    <TableCell>{item.parent.entryNumber}</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600 }}>{item.parent.entryNumber}</TableCell>
                     <TableCell>{companies.find(c => c.id === item.parent.company_id)?.company_name || 'N/A'}</TableCell>
                     <TableCell align="center">
-                      <Checkbox checked={hasVendorInvoice} disabled />
+                      <span className={`inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded border ${hasVendorInvoice ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800/50 text-zinc-500 border-white/5'}`}>
+                        {hasVendorInvoice ? 'Generated' : 'None'}
+                      </span>
                     </TableCell>
                     <TableCell align="center">
-                      <Checkbox checked={hasWorkOrderInvoice} disabled />
+                      <span className={`inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded border ${hasWorkOrderInvoice ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800/50 text-zinc-500 border-white/5'}`}>
+                        {hasWorkOrderInvoice ? 'Generated' : 'None'}
+                      </span>
                     </TableCell>
-                    <TableCell>{item.eventName}</TableCell>
-                    <TableCell>{item.poNpo}</TableCell>
-                    <TableCell>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell sx={{ fontWeight: 500 }}>{item.eventName}</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{item.poNpo}</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
                     <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
                   </TableRow>
                 );
               })}
               {paginatedWorkItems.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">No items found.</TableCell>
+                  <TableCell colSpan={9} align="center" sx={{ py: 3, color: '#a1a1aa' }}>No items found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -396,17 +412,17 @@ const InvoiceGenerator = () => {
           </Grid>
           <Divider sx={{ mb: 3 }} />
           {filteredSavedInvoices.length > 0 ? (
-            <TableContainer>
+            <TableContainer sx={{ border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
                 <Table>
-                    <TableHead>
+                    <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
                         <TableRow>
-                            <TableCell>Date Saved</TableCell>
-                            <TableCell>Invoice Number</TableCell>
-                            <TableCell>Company</TableCell>
-                            <TableCell>Event Name(s)</TableCell>
-                            <TableCell>PO/NPO</TableCell>
-                            <TableCell>Vendor</TableCell>
-                            <TableCell>Actions</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Date Saved</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Invoice Number</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Company</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Name(s)</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>PO/NPO</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Vendor</TableCell>
+                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -420,12 +436,12 @@ const InvoiceGenerator = () => {
                             const isInvoiceONGC = isONGCCompany(invoice.company_id, invoice.recipient);
 
                             return (
-                              <TableRow key={invoice.invoiceNumber || invoice.id || i}>
-                                  <TableCell>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
-                                  <TableCell>{invoice.invoiceNumber}</TableCell>
+                              <TableRow key={invoice.invoiceNumber || invoice.id || i} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
+                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem' }}>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
+                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600 }}>{invoice.invoiceNumber}</TableCell>
                                   <TableCell>{companies.find(c => c.id === invoice.company_id)?.company_name || 'N/A'}</TableCell>
                                   <TableCell>{displayEventName}</TableCell>
-                                  <TableCell>{displayPoNpo}</TableCell>
+                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{displayPoNpo}</TableCell>
                                   <TableCell>{invoice.parentOrderInfo?.vendor}</TableCell>
                                   <TableCell>
                                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -435,19 +451,18 @@ const InvoiceGenerator = () => {
                                                     variant="contained" 
                                                     color="primary" 
                                                     size="small"
-                                                    startIcon={<ReceiptIcon />}
+                                                    startIcon={<ReceiptIcon fontSize="small" />}
                                                     onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}
-                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', boxShadow: '0 2px 4px rgba(25, 118, 210, 0.2)' }}
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem' }}
                                                   >
                                                       Vendor Invoice
                                                   </Button>
                                                   <Button 
                                                     variant="outlined" 
-                                                    color="primary" 
                                                     size="small"
-                                                    startIcon={<EditIcon />}
+                                                    startIcon={<EditIcon fontSize="small" />}
                                                     onClick={() => handleViewSavedInvoice(invoice, 'Vendor', true)}
-                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', borderWidth: '1.5px', '&:hover': { borderWidth: '1.5px' } }}
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem' }}
                                                   >
                                                       Edit Vendor
                                                   </Button>
@@ -459,31 +474,42 @@ const InvoiceGenerator = () => {
                                                     variant="contained" 
                                                     color="secondary" 
                                                     size="small"
-                                                    startIcon={<AssignmentIcon />}
+                                                    startIcon={<AssignmentIcon fontSize="small" />}
                                                     onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}
-                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', boxShadow: '0 2px 4px rgba(156, 39, 176, 0.2)' }}
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem' }}
                                                   >
                                                       Work Order Invoice
                                                   </Button>
                                                   <Button 
                                                     variant="outlined" 
-                                                    color="secondary" 
                                                     size="small"
-                                                    startIcon={<EditIcon />}
+                                                    startIcon={<EditIcon fontSize="small" />}
                                                     onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder', true)}
-                                                    sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', borderWidth: '1.5px', '&:hover': { borderWidth: '1.5px' } }}
+                                                    sx={{ textTransform: 'none', borderRadius: '6px', borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem' }}
                                                   >
                                                       Edit Work Order
                                                   </Button>
                                               </>
                                           }
                                             <Button 
-                                              variant="contained" 
-                                              color="success" 
+                                              variant="outlined"
                                               size="small"
-                                              startIcon={<CheckCircleIcon />}
+                                              startIcon={<CheckCircleIcon fontSize="small" />}
                                               onClick={() => handleMarkAsPaid(invoice.id)}
-                                              sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 'bold', ml: 'auto' }}
+                                              sx={{
+                                                textTransform: 'none',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                fontSize: '0.75rem',
+                                                color: '#34d399',
+                                                bgcolor: 'rgba(16, 185, 129, 0.10)',
+                                                border: '1px solid rgba(16, 185, 129, 0.20)',
+                                                '&:hover': {
+                                                  bgcolor: 'rgba(16, 185, 129, 0.20)',
+                                                  borderColor: 'rgba(16, 185, 129, 0.35)'
+                                                },
+                                                ml: 'auto'
+                                              }}
                                             >
                                                 Mark as Paid
                                             </Button>

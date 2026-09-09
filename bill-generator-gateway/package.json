@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lumina:lint": "node -e \"const fs=require('fs'); const code=fs.readFileSync('./src/App.jsx','utf8'); if(code.includes('#000000') || code.includes('bg-black')){ console.error('Violation: Pure black detected. Lumina requires bg-zinc-950 (#09090b).'); process.exit(1); } else { console.log('Lumina styling validated.'); }\""
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",

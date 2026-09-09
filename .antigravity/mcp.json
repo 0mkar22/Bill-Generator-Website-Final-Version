@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "lumina-design-system": {
+      "command": "node",
+      "args": ["./tools/mcp/dist/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

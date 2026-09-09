@@ -1,66 +1,134 @@
-.invoice-container {
-    font-family: 'Arial', sans-serif;
-    color: #333;
-}
-.pdf-bill-large {
-    width: 900px !important;
-    max-width: 900px !important;
-    margin: 0 auto !important;
-    overflow: visible !important;
-}
-.invoice-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.header-logo {
-    width: 150px;
-    margin-bottom: 10px;
-}
-.header-address {
-    font-size: 0.8em;
-}
-.invoice-details, .vendor-details {
-    margin: 20px 0;
-}
-.invoice-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-.invoice-table th, .invoice-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    font-size: 0.9em;
-}
-.invoice-table th {
-    background-color: #f2f2f2;
-    text-align: left;
-}
-.totals-section {
-    margin-top: 20px;
-    float: right;
-    width: 40%;
-}
-.totals-table {
-    width: 100%;
-}
-.totals-table td {
-    padding: 5px;
-}
-.text-right {
-    text-align: right;
-}
-.invoice-footer {
-    margin-top: 50px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8em;
-}
-.signature-section img {
-    height: 50px;
+/* Work Order Printable Document Scoped Styles - High Specificity */
+.invoice-container,
+#generated-invoice,
+.invoice-container *,
+#generated-invoice * {
+  box-sizing: border-box;
 }
 
+#generated-invoice,
 .invoice-container {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 0px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-family: Arial, sans-serif !important;
+}
+
+#generated-invoice {
+  width: 900px !important;
+  min-width: 900px !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  border: 2px solid #000000 !important;
+}
+
+/* Ensure all text within invoice is pure black */
+#generated-invoice p,
+#generated-invoice span,
+#generated-invoice div,
+#generated-invoice h1,
+#generated-invoice h2,
+#generated-invoice h3,
+#generated-invoice h4,
+#generated-invoice h5,
+#generated-invoice h6,
+#generated-invoice td,
+#generated-invoice th,
+#generated-invoice input,
+.invoice-container p,
+.invoice-container span,
+.invoice-container div,
+.invoice-container td,
+.invoice-container th,
+.invoice-container input {
+  color: #000000 !important;
+  font-family: Arial, sans-serif !important;
+}
+
+/* Tables and Cells */
+#generated-invoice table,
+.invoice-container table {
+  background-color: #ffffff !important;
+  border-collapse: collapse !important;
+}
+
+#generated-invoice thead,
+#generated-invoice tbody,
+#generated-invoice tfoot,
+#generated-invoice tr,
+.invoice-container thead,
+.invoice-container tbody,
+.invoice-container tfoot,
+.invoice-container tr {
+  background-color: #ffffff !important;
+}
+
+#generated-invoice tr:hover,
+.invoice-container tr:hover {
+  background-color: #ffffff !important;
+}
+
+#generated-invoice th,
+#generated-invoice td,
+.invoice-container th,
+.invoice-container td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#generated-invoice .MuiTableCell-root,
+.invoice-container .MuiTableCell-root {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#generated-invoice .MuiTableCell-head,
+.invoice-container .MuiTableCell-head {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-family: Arial, sans-serif !important;
+  font-weight: bold !important;
+}
+
+/* Box borders */
+#generated-invoice .MuiBox-root,
+.invoice-container .MuiBox-root {
+  border-color: #000000 !important;
+}
+
+.pdf-bill-large {
+  width: 900px !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .MuiAppBar-root,
+  .MuiDrawer-root,
+  header,
+  nav,
+  button,
+  .MuiSnackbar-root,
+  .MuiAlert-root,
+  .MuiBackdrop-root {
+    display: none !important;
+  }
+  #generated-invoice {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+  }
 }

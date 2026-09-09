@@ -10,6 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import API, { getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived } from '../services/api';
 import { calculateItemAmount } from '../utils/helpers';
+import { AmountPaidSkeleton } from '../components/skeletons';
 
 const AmountPaid = () => {
   const [paidInvoices, setPaidInvoices] = useState([]);
@@ -312,11 +313,7 @@ const AmountPaid = () => {
   };
 
   if (loading) {
-      return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-            <CircularProgress />
-          </Box>
-      );
+      return <AmountPaidSkeleton />;
   }
 
   return (
@@ -326,32 +323,32 @@ const AmountPaid = () => {
       <Grid container spacing={4}>
         <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircleIcon color="success" /> Paid Invoices
+                <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#34d399', fontWeight: 600 }}>
+                    <CheckCircleIcon sx={{ color: '#34d399' }} /> Paid Invoices
                 </Typography>
-                <TableContainer>
+                <TableContainer sx={{ border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
                   <Table>
-                      <TableHead>
+                      <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
                           <TableRow>
-                              <TableCell>Date Saved</TableCell>
-                              <TableCell>Invoice Number</TableCell>
-                              <TableCell>Company</TableCell>
-                              <TableCell>Vendor</TableCell>
-                              <TableCell>Invoice Amount</TableCell>
-                              <TableCell>Amount Received</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Date Saved</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Invoice Number</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Company</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Vendor</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Invoice Amount</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Amount Received</TableCell>
                           </TableRow>
                       </TableHead>
                       <TableBody>
                           {paidInvoices.length === 0 ? (
-                              <TableRow><TableCell colSpan={4} align="center">No paid invoices found.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: '#a1a1aa' }}>No paid invoices found.</TableCell></TableRow>
                           ) : (
                               paidInvoices.map((inv) => (
-                                  <TableRow key={inv.id}>
-                                      <TableCell>{new Date(inv.createdAt).toLocaleString()}</TableCell>
-                                      <TableCell>{inv.invoiceNumber}</TableCell>
+                                  <TableRow key={inv.id} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
+                                      <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem' }}>{new Date(inv.createdAt).toLocaleString()}</TableCell>
+                                      <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600 }}>{inv.invoiceNumber}</TableCell>
                                       <TableCell>{companies.find(c => c.id === inv.company_id)?.company_name || 'N/A'}</TableCell>
                                       <TableCell>{inv.parentOrderInfo?.vendor || 'N/A'}</TableCell>
-                                        <TableCell>
+                                        <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600, color: '#34d399' }}>
                                             ₹{getInvoiceAmount(inv).toLocaleString('en-IN')}
                                         </TableCell>
                                       <TableCell>
@@ -361,6 +358,7 @@ const AmountPaid = () => {
                                               value={inv.amount_received || ''}
                                               onChange={(e) => handleAmountReceivedChange(inv.id, e.target.value)}
                                               onBlur={(e) => saveAmountReceived(inv.id, e.target.value)}
+                                              InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                           />
                                       </TableCell>
                                   </TableRow>
@@ -375,29 +373,29 @@ const AmountPaid = () => {
         <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h5" color="secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#818cf8', fontWeight: 600 }}>
                         <AddCardIcon /> Paid Assigned Personnel
                     </Typography>
-                    <Button variant="contained" color="secondary" onClick={openNewPayout}>
+                    <Button variant="contained" color="primary" onClick={openNewPayout}>
                         Log Payout
                     </Button>
                 </Box>
-                <TableContainer>
+                <TableContainer sx={{ border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
                   <Table>
-                      <TableHead>
+                      <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
                           <TableRow>
-                              <TableCell>Entry Number</TableCell>
-                              <TableCell>Event Details</TableCell>
-                              <TableCell>Personnel Name</TableCell>
-                              <TableCell>Work Name</TableCell>
-                              <TableCell>Amount Paid (Rs)</TableCell>
-                              <TableCell>Payment Date</TableCell>
-                              <TableCell align="right">Actions</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Entry Number</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Details</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Personnel Name</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Work Name</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Amount Paid (Rs)</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Payment Date</TableCell>
+                              <TableCell align="right" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Actions</TableCell>
                           </TableRow>
                       </TableHead>
                       <TableBody>
                           {payouts.length === 0 ? (
-                              <TableRow><TableCell colSpan={7} align="center">No payouts logged yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: '#a1a1aa' }}>No payouts logged yet.</TableCell></TableRow>
                           ) : (
                               (() => {
                                   const payoutsByEvent = [];
@@ -439,30 +437,29 @@ const AmountPaid = () => {
                                           }
 
                                           return (
-                                              <TableRow key={p.id} hover>
+                                              <TableRow key={p.id} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
                                                   {index === 0 && (
-                                                      <TableCell rowSpan={group.length} sx={{ verticalAlign: 'top', borderRight: '1px solid rgba(224, 224, 224, 1)' }}>
-                                                          <strong>Entry {p.workOrders?.entryNumber}</strong>
+                                                      <TableCell rowSpan={group.length} sx={{ verticalAlign: 'top', borderRight: '1px solid rgba(255, 255, 255, 0.08)', fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600 }}>
+                                                          Entry {p.workOrders?.entryNumber}
                                                       </TableCell>
                                                   )}
                                                   {index === 0 && (
-                                                      <TableCell rowSpan={group.length} sx={{ verticalAlign: 'top', borderRight: '1px solid rgba(224, 224, 224, 1)' }}>
+                                                      <TableCell rowSpan={group.length} sx={{ verticalAlign: 'top', borderRight: '1px solid rgba(255, 255, 255, 0.08)' }}>
                                                           {eName}
-                                                          {eVenue && (
-                                                              <>
-                                                                  <br/>
-                                                                  <Typography variant="caption" color="textSecondary">{eVenue}</Typography>
-                                                              </>
-                                                          )}
+                                                          {eVenue && <Typography variant="caption" display="block" sx={{ color: '#a1a1aa' }}>📍 {eVenue}</Typography>}
                                                       </TableCell>
                                                   )}
-                                                  <TableCell sx={{ fontWeight: 'bold' }}>{p.personnel_name}</TableCell>
+                                                  <TableCell sx={{ fontWeight: 500 }}>{p.personnel_name}</TableCell>
                                                   <TableCell>{displayWorkName}</TableCell>
-                                                  <TableCell>₹{p.amount_paid}</TableCell>
-                                                  <TableCell>{p.payment_date}</TableCell>
+                                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#34d399', fontWeight: 600 }}>₹{Number(p.amount_paid).toLocaleString('en-IN')}</TableCell>
+                                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{p.payment_date}</TableCell>
                                                   <TableCell align="right">
-                                                      <IconButton size="small" color="primary" onClick={() => handleEditPayout(p)}><EditIcon /></IconButton>
-                                                      <IconButton size="small" color="error" onClick={() => handleDeletePayout(p.id)}><DeleteIcon /></IconButton>
+                                                      <IconButton size="small" onClick={() => handleEditPayout(p)} sx={{ color: '#818cf8' }}>
+                                                          <EditIcon fontSize="small" />
+                                                      </IconButton>
+                                                      <IconButton size="small" onClick={() => handleDeletePayout(p.id)} color="error">
+                                                          <DeleteIcon fontSize="small" />
+                                                      </IconButton>
                                                   </TableCell>
                                               </TableRow>
                                           );
@@ -477,10 +474,45 @@ const AmountPaid = () => {
         </Grid>
       </Grid>
 
-      <Dialog open={isModalOpen} onClose={() => { setIsModalOpen(false); setEditPayoutId(null); }} maxWidth="md" fullWidth>
-          <DialogTitle>{editPayoutId ? 'Edit Personnel Payout' : 'Batch Log Personnel Payouts'}</DialogTitle>
-          <DialogContent dividers>
-              <Grid container spacing={3}>
+      <Dialog 
+        open={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setEditPayoutId(null); }} 
+        maxWidth="md" 
+        fullWidth
+        slotProps={{
+          backdrop: { sx: { backgroundColor: 'rgba(9, 9, 11, 0.7)', backdropFilter: 'blur(8px)' } }
+        }}
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(24, 24, 27, 0.92)',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255, 255, 255, 0.10)',
+            borderRadius: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            position: 'relative',
+            overflow: 'hidden'
+          }
+        }}
+      >
+          {/* Spotlight glow */}
+          <Box sx={{
+            position: 'absolute',
+            top: -60,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 320,
+            height: 120,
+            bgcolor: 'rgba(99, 102, 241, 0.15)',
+            filter: 'blur(40px)',
+            pointerEvents: 'none',
+            borderRadius: '50%'
+          }} />
+
+          <DialogTitle sx={{ color: '#f4f4f5', fontWeight: 700, letterSpacing: '-0.02em', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            {editPayoutId ? 'Edit Personnel Payout' : 'Batch Log Personnel Payouts'}
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3 }}>
+              <Grid container spacing={2.5}>
                   {!editPayoutId && (
                   <Grid item xs={12}>
                       <Autocomplete
@@ -495,29 +527,29 @@ const AmountPaid = () => {
                   )}
                   
                   {/* Global Event Details */}
-                  <Grid item xs={3}>
-                      <TextField label="Entry Number" fullWidth value={globalForm.entryNumber} disabled />
+                  <Grid item xs={12} sm={3}>
+                      <TextField label="Entry Number" fullWidth value={globalForm.entryNumber} disabled InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }} />
                   </Grid>
-                  <Grid item xs={3}>
+                  <Grid item xs={12} sm={3}>
                       <TextField label="Event Name" fullWidth value={globalForm.eventName} disabled />
                   </Grid>
-                  <Grid item xs={3}>
+                  <Grid item xs={12} sm={3}>
                       <TextField label="Event Venue" fullWidth value={globalForm.eventVenue} disabled />
                   </Grid>
-                  <Grid item xs={3}>
-                      <TextField label="Event Date" fullWidth value={globalForm.eventDate} disabled />
+                  <Grid item xs={12} sm={3}>
+                      <TextField label="Event Date" fullWidth value={globalForm.eventDate} disabled InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }} />
                   </Grid>
 
                   {/* Batch Personnel Array */}
                   <Grid item xs={12}>
-                      <Typography variant="h6" sx={{ mt: 2, mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ mt: 1, mb: 1.5, color: '#818cf8', fontWeight: 600, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', pb: 1 }}>
                           Assigned Personnel
                       </Typography>
                       {batchPersonnel.length === 0 ? (
-                          <Typography variant="body2" color="textSecondary">Select an event to view assigned personnel.</Typography>
+                          <Typography variant="body2" sx={{ color: '#71717a', fontStyle: 'italic' }}>Select an event to view assigned personnel.</Typography>
                       ) : (
                           batchPersonnel.map((person, idx) => (
-                              <Paper key={idx} variant="outlined" sx={{ p: 2, mb: 2, backgroundColor: '#fafafa' }}>
+                              <Paper key={idx} variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: '10px' }}>
                                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                                       <TextField label="Personnel Name" sx={{ flex: 1, minWidth: '130px' }} value={person.personnelName} disabled size="small" />
                                       <TextField label="Work Name" sx={{ flex: 1, minWidth: '130px' }} value={person.workName} disabled size="small" />
@@ -530,6 +562,7 @@ const AmountPaid = () => {
                                           size="small"
                                           value={person.amountPaid}
                                           onChange={(e) => handleBatchAmountChange(idx, e.target.value)}
+                                          InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                       />
                                       <TextField
                                           label="Payment Date"
@@ -540,6 +573,7 @@ const AmountPaid = () => {
                                           InputLabelProps={{ shrink: true }}
                                           value={person.paymentDate}
                                           onChange={(e) => handleBatchDateChange(idx, e.target.value)}
+                                          InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                       />
                                   </Box>
                               </Paper>
@@ -552,6 +586,7 @@ const AmountPaid = () => {
                       <TextField
                           label="Global Notes (Optional)"
                           multiline
+                          rows={2}
                           fullWidth
                           value={globalForm.notes}
                           onChange={e => setGlobalForm({...globalForm, notes: e.target.value})}
@@ -559,10 +594,10 @@ const AmountPaid = () => {
                   </Grid>
               </Grid>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
+          <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
               <Button onClick={() => { setIsModalOpen(false); setEditPayoutId(null); }}>Cancel</Button>
-              <Button variant="contained" color="secondary" onClick={handleSubmitPayout} disabled={!isFormValid() || saving}>
-                  {saving ? <CircularProgress size={24} /> : (editPayoutId ? 'Update Payout' : 'Save Batch')}
+              <Button variant="contained" color="primary" onClick={handleSubmitPayout} disabled={!isFormValid() || saving}>
+                  {saving ? <CircularProgress size={22} /> : (editPayoutId ? 'Update Payout' : 'Save Batch')}
               </Button>
           </DialogActions>
       </Dialog>

@@ -17,6 +17,7 @@ import { useWorkOrderForm } from '../hooks/useWorkOrderForm';
 import CompanyModal from '../components/CompanyModal';
 import VenueModal from '../components/VenueModal';
 import WorkOrderItem from '../components/WorkOrderItem';
+import { WorkOrderSkeleton } from '../components/skeletons';
 
 const getRatesTemplateForCompany = (companyName = '') => {
   const isVidhan = companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
@@ -69,6 +70,7 @@ const WorkOrder = () => {
   const [latestEntry, setLatestEntry] = useState(null);
   const [existingEntryNumbers, setExistingEntryNumbers] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   
   const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
     const [localVenues, setLocalVenues] = useState(() => {
@@ -193,9 +195,13 @@ const WorkOrder = () => {
   };
 
   useEffect(() => {
-    fetchCompanies();
-    fetchLatestEntry();
-    fetchTeamData(); 
+    Promise.all([
+      fetchCompanies(),
+      fetchLatestEntry(),
+      fetchTeamData()
+    ]).finally(() => {
+      setInitialLoading(false);
+    });
 
     if (editData) {
       let parsedItems = [];
@@ -563,80 +569,97 @@ const WorkOrder = () => {
   const isEntryNumberDuplicate = existingEntryNumbers.includes(String(formData.entryNumber)) && 
                                  (!editData || String(editData.entryNumber) !== String(formData.entryNumber));
 
+  if (initialLoading) {
+    return <WorkOrderSkeleton />;
+  }
+
   return (
     <Container component={Paper} sx={{ p: 4, mt: 4 }}>
-      <Typography variant="h4" gutterBottom align="center">{editData ? 'Edit Event Data' : 'Event Data Entry'}</Typography>
+      <Box sx={{ textAlign: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.02em', color: '#f4f4f5' }}>
+          {editData ? 'Edit Event Data' : 'Event Data Entry'}
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#a1a1aa', mt: 0.5 }}>
+          Log and manage work orders, assign personnel, and calculate rates
+        </Typography>
+      </Box>
+
       <Box component="form" onSubmit={handleSubmit}>
-        <Grid container spacing={3}>
-          
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth required>
-              <InputLabel>Vendor</InputLabel>
-              <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
-                {vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel>Select Company</InputLabel>
-              <Select 
-                name="company_id" 
-                value={formData.company_id} 
-                label="Select Company" 
-                onChange={handleMainChange}
-                renderValue={(selectedId) => {
-                  if (!selectedId) return '';
-                  const selectedComp = companies.find(c => c.id === selectedId);
-                  return selectedComp ? selectedComp.company_name : '';
-                }}
-              >
-                <MenuItem value="" onClick={handleOpenAddCompany}>
-                  <em>+ Add New Company</em>
-                </MenuItem>
-                
-                {companies.map(c => (
-                  <MenuItem key={c.id} value={c.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {c.company_name}
-                    <IconButton 
-                      type="button"
-                      size="small" 
-                      onClick={(e) => handleEditCompanyClick(e, c)}
-                      sx={{ ml: 2, padding: '2px' }}
-                    >
-                      <EditIcon fontSize="small" color="action" />
-                    </IconButton>
+        <Box sx={{ p: 3, mb: 3, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.20)' }}>
+          <Typography variant="subtitle2" sx={{ color: '#818cf8', fontWeight: 600, mb: 2, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.75rem' }}>
+            Event Core Information
+          </Typography>
+          <Grid container spacing={3}>
+            
+            <Grid item xs={12} sm={3}>
+              <FormControl fullWidth required>
+                <InputLabel>Vendor</InputLabel>
+                <Select name="vendor" value={formData.vendor} label="Vendor" onChange={handleMainChange}>
+                  {vendors.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Select Company</InputLabel>
+                <Select 
+                  name="company_id" 
+                  value={formData.company_id} 
+                  label="Select Company" 
+                  onChange={handleMainChange}
+                  renderValue={(selectedId) => {
+                    if (!selectedId) return '';
+                    const selectedComp = companies.find(c => c.id === selectedId);
+                    return selectedComp ? selectedComp.company_name : '';
+                  }}
+                >
+                  <MenuItem value="" onClick={handleOpenAddCompany}>
+                    <em>+ Add New Company</em>
                   </MenuItem>
-                ))}
+                  
+                  {companies.map(c => (
+                    <MenuItem key={c.id} value={c.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {c.company_name}
+                      <IconButton 
+                        type="button"
+                        size="small" 
+                        onClick={(e) => handleEditCompanyClick(e, c)}
+                        sx={{ ml: 2, padding: '2px' }}
+                      >
+                        <EditIcon fontSize="small" color="action" />
+                      </IconButton>
+                    </MenuItem>
+                  ))}
 
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField 
-                name="entryNumber" 
-                label="Entry Number" 
-                required 
-                fullWidth 
-                error={isEntryNumberDuplicate}
-                value={formData.entryNumber} 
-                onChange={handleMainChange} 
-                helperText={isEntryNumberDuplicate ? 'This entry number is already used!' : (latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.')} 
-              />
-          </Grid>
-          
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField 
+                  name="entryNumber" 
+                  label="Entry Number" 
+                  required 
+                  fullWidth 
+                  error={isEntryNumberDuplicate}
+                  value={formData.entryNumber} 
+                  onChange={handleMainChange} 
+                  InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 } }}
+                  helperText={isEntryNumberDuplicate ? 'This entry number is already used!' : (latestEntry ? `Last entry was: ${latestEntry}` : 'Enter the first entry number.')} 
+                />
+            </Grid>
+            
 
-            {/* --- Common Fields --- */}
-            <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={formData.workItems[0].eventName} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
-                    <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" 
-value={formData.workItems[0].eventVenue} label={isVidhanMandalSelected ? 'ठिकाण निवडा' : 'Event Venue'} 
-onChange={(e) => {
-    if (e.target.value === '__add_venue__') {
-        handleWorkItemChange(0, { target: { name: 'eventVenue', value: '' } });
-    } else {
-        handleWorkItemChange(0, e);
-    }
-}}
+              {/* --- Common Fields --- */}
+              <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={formData.workItems[0].eventName} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
+                      <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" 
+  value={formData.workItems[0].eventVenue} label={isVidhanMandalSelected ? 'ठिकाण निवडा' : 'Event Venue'} 
+  onChange={(e) => {
+      if (e.target.value === '__add_venue__') {
+          handleWorkItemChange(0, { target: { name: 'eventVenue', value: '' } });
+      } else {
+          handleWorkItemChange(0, e);
+      }
+  }}
 renderValue={(selected) => selected}
 >
     <MenuItem value="__add_venue__" onClick={() => {
@@ -730,7 +753,8 @@ renderValue={(selected) => selected}
                         </Grid>
                     )}
                     
-        </Grid>
+          </Grid>
+        </Box>
 
         {formData.workItems.map((item, index) => {
           return (

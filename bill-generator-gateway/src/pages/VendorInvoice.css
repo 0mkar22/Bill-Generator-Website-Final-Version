@@ -1,9 +1,134 @@
-.pdf-bill-large {
-    width: 900px !important;
-    max-width: 900px !important;
-    margin: 0 auto !important;
-    overflow: visible !important;
+/* Printable Invoice Document Scoped Styles - High Specificity */
+.invoice-container,
+#generated-bill,
+.invoice-container *,
+#generated-bill * {
+  box-sizing: border-box;
 }
+
+#generated-bill,
 .invoice-container {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 0px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-family: Arial, sans-serif !important;
+}
+
+#generated-bill {
+  width: 900px !important;
+  min-width: 900px !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  border: 2px solid #000000 !important;
+}
+
+/* Ensure all text within invoice is pure black */
+#generated-bill p,
+#generated-bill span,
+#generated-bill div,
+#generated-bill h1,
+#generated-bill h2,
+#generated-bill h3,
+#generated-bill h4,
+#generated-bill h5,
+#generated-bill h6,
+#generated-bill td,
+#generated-bill th,
+#generated-bill input,
+.invoice-container p,
+.invoice-container span,
+.invoice-container div,
+.invoice-container td,
+.invoice-container th,
+.invoice-container input {
+  color: #000000 !important;
+  font-family: Arial, sans-serif !important;
+}
+
+/* Tables and Cells */
+#generated-bill table,
+.invoice-container table {
+  background-color: #ffffff !important;
+  border-collapse: collapse !important;
+}
+
+#generated-bill thead,
+#generated-bill tbody,
+#generated-bill tfoot,
+#generated-bill tr,
+.invoice-container thead,
+.invoice-container tbody,
+.invoice-container tfoot,
+.invoice-container tr {
+  background-color: #ffffff !important;
+}
+
+#generated-bill tr:hover,
+.invoice-container tr:hover {
+  background-color: #ffffff !important;
+}
+
+#generated-bill th,
+#generated-bill td,
+.invoice-container th,
+.invoice-container td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#generated-bill .MuiTableCell-root,
+.invoice-container .MuiTableCell-root {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#generated-bill .MuiTableCell-head,
+.invoice-container .MuiTableCell-head {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-family: Arial, sans-serif !important;
+  font-weight: bold !important;
+}
+
+/* Box borders */
+#generated-bill .MuiBox-root,
+.invoice-container .MuiBox-root {
+  border-color: #000000 !important;
+}
+
+.pdf-bill-large {
+  width: 900px !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .MuiAppBar-root,
+  .MuiDrawer-root,
+  header,
+  nav,
+  button,
+  .MuiSnackbar-root,
+  .MuiAlert-root,
+  .MuiBackdrop-root {
+    display: none !important;
+  }
+  #generated-bill {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+  }
 }

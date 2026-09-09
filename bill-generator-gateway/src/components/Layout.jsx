@@ -24,7 +24,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { supabase } from '../supabase';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const Layout = ({ children }) => {
   const theme = useTheme();
@@ -35,7 +35,7 @@ const Layout = ({ children }) => {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-        console.error("Error logging out:", error.message);
+      console.error("Error logging out:", error.message);
     }
   };
 
@@ -43,93 +43,171 @@ const Layout = ({ children }) => {
     setMobileOpen(!mobileOpen);
   };
 
-  const getListItemStyle = (path) => ({
-    bgcolor: location.pathname === path ? '#F3F4F6' : 'transparent',
-    '&:hover': { bgcolor: '#F9FAFB' },
-    borderRadius: '6px',
-    mx: 1,
-    mb: 0.5
-  });
-
-  const getListTextStyle = (path) => ({
-    fontWeight: location.pathname === path ? 600 : 400,
-    color: location.pathname === path ? '#0F172A' : '#475569'
-  });
-
-  const getIconStyle = (path) => ({
-    color: location.pathname === path ? '#059669' : '#64748B',
-    minWidth: '40px'
-  });
+  const navItems = [
+    { path: '/', label: 'Event Data Entry', icon: <WorkIcon fontSize="small" /> },
+    { path: '/invoices', label: 'Invoices', icon: <DescriptionIcon fontSize="small" /> },
+    { path: '/reports', label: 'Reports', icon: <AssessmentIcon fontSize="small" /> },
+    { path: '/amount-paid', label: 'Amount Paid', icon: <AccountBalanceWalletIcon fontSize="small" /> },
+  ];
 
   const drawerContent = (
-    <>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #E5E7EB', minHeight: '64px' }}>
-        <img src="/logo.PNG" alt="Company Logo" style={{ height: '32px' }} />
-      </Box>
-      <Box sx={{ overflow: 'auto', mt: 2 }}>
-        <List>
-          <ListItemButton component={Link} to="/" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/')}>
-            <ListItemIcon sx={getIconStyle('/')}><WorkIcon /></ListItemIcon>
-            <ListItemText primary="Event Data Entry" primaryTypographyProps={getListTextStyle('/')} />
-          </ListItemButton>
-          <ListItemButton component={Link} to="/invoices" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/invoices')}>
-            <ListItemIcon sx={getIconStyle('/invoices')}><DescriptionIcon /></ListItemIcon>
-            <ListItemText primary="Invoices" primaryTypographyProps={getListTextStyle('/invoices')} />
-          </ListItemButton>
-          <ListItemButton component={Link} to="/reports" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/reports')}>
-            <ListItemIcon sx={getIconStyle('/reports')}><AssessmentIcon /></ListItemIcon>
-            <ListItemText primary="Reports" primaryTypographyProps={getListTextStyle('/reports')} />
-          </ListItemButton>
-          <ListItemButton component={Link} to="/amount-paid" onClick={() => isMobile && setMobileOpen(false)} sx={getListItemStyle('/amount-paid')}>
-            <ListItemIcon sx={getIconStyle('/amount-paid')}><AccountBalanceWalletIcon /></ListItemIcon>
-            <ListItemText primary="Amount Paid" primaryTypographyProps={getListTextStyle('/amount-paid')} />
-          </ListItemButton>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', p: 2 }}>
+      <Box>
+        {/* Brand Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 2, mb: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.10)' }}>
+          <Box sx={{
+            width: 32,
+            height: 32,
+            borderRadius: '8px',
+            bgcolor: '#18181b',
+            border: '1px solid rgba(255, 255, 255, 0.10)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Box sx={{ width: 14, height: 14, borderRadius: '3px', bgcolor: '#6366f1', boxShadow: '0 0 10px #6366f1' }} />
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#f4f4f5', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              Lumina Ledger
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#71717a', fontSize: '10px', fontFamily: '"JetBrains Mono", monospace' }}>
+              BILL GENERATOR v2.0
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Navigation Items */}
+        <List sx={{ pt: 1 }}>
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <ListItemButton
+                key={item.path}
+                component={Link}
+                to={item.path}
+                onClick={() => isMobile && setMobileOpen(false)}
+                sx={{
+                  borderRadius: '8px',
+                  mb: 1,
+                  px: 1.5,
+                  py: 1,
+                  transition: 'all 0.15s ease',
+                  bgcolor: isActive ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+                  border: isActive ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid transparent',
+                  '&:hover': {
+                    bgcolor: isActive ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+                    borderColor: isActive ? 'rgba(99, 102, 241, 0.35)' : 'rgba(255, 255, 255, 0.08)',
+                  }
+                }}
+              >
+                <ListItemIcon sx={{
+                  minWidth: 32,
+                  color: isActive ? '#818cf8' : '#a1a1aa'
+                }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontSize: '0.825rem',
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? '#f4f4f5' : '#a1a1aa',
+                  }}
+                />
+              </ListItemButton>
+            );
+          })}
         </List>
       </Box>
-    </>
+
+      {/* System Status Footer */}
+      <Box sx={{
+        p: 1.5,
+        borderRadius: '10px',
+        bgcolor: 'rgba(24, 24, 27, 0.60)',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ width: 8, height: 8, bgcolor: '#34d399' }} className="lumina-live-pulse" />
+          <Typography sx={{ fontSize: '11px', fontFamily: '"JetBrains Mono", monospace', color: '#a1a1aa' }}>
+            Ledger Live
+          </Typography>
+        </Box>
+        <Typography sx={{ fontSize: '10px', fontFamily: '"JetBrains Mono", monospace', color: '#71717a' }}>
+          99.98%
+        </Typography>
+      </Box>
+    </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#09090b' }}>
       <CssBaseline />
       <AppBar
         position="fixed"
-        className="bg-white border-b border-gray-200 shadow-sm"
-        sx={{ 
-          bgcolor: 'white', 
-          color: '#0F172A', 
-          boxShadow: 'none', 
+        sx={{
+          bgcolor: 'rgba(9, 9, 11, 0.85)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.10)',
+          color: '#f4f4f5',
+          boxShadow: 'none',
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
-          zIndex: (theme) => theme.zIndex.drawer + 1 
+          zIndex: (theme) => theme.zIndex.drawer + 1
         }}
       >
-        <Toolbar>
-          {isMobile && (
-            <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontSize: '1.2rem', fontWeight: 600 }}>
-            Bill Generator
-          </Typography>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {isMobile && (
+              <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Typography variant="h6" noWrap component="div" sx={{ fontSize: '1.05rem', fontWeight: 600, letterSpacing: '-0.02em', color: '#f4f4f5' }}>
+              {navItems.find(item => item.path === location.pathname)?.label || 'Bill Generator'}
+            </Typography>
+          </Box>
+
           <Button
-            color="inherit"
             onClick={handleLogout}
-            startIcon={<LogoutIcon />}
+            startIcon={<LogoutIcon fontSize="small" />}
+            sx={{
+              color: '#a1a1aa',
+              fontSize: '0.8rem',
+              border: '1px solid rgba(255, 255, 255, 0.10)',
+              bgcolor: 'rgba(24, 24, 27, 0.50)',
+              '&:hover': {
+                color: '#f4f4f5',
+                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: 'rgba(255, 255, 255, 0.20)'
+              }
+            }}
           >
             Logout
           </Button>
         </Toolbar>
       </AppBar>
 
+      {/* Sidebar Navigation */}
       {isMobile ? (
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { borderRight: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' } }}
+          PaperProps={{
+            sx: {
+              width: drawerWidth,
+              bgcolor: 'rgba(9, 9, 11, 0.95)',
+              backdropFilter: 'blur(24px)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.10)',
+              color: '#f4f4f5',
+            }
+          }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -141,7 +219,15 @@ const Layout = ({ children }) => {
       ) : (
         <Drawer
           variant="permanent"
-          PaperProps={{ sx: { borderRight: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' } }}
+          PaperProps={{
+            sx: {
+              width: drawerWidth,
+              bgcolor: 'rgba(9, 9, 11, 0.85)',
+              backdropFilter: 'blur(24px)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.10)',
+              color: '#f4f4f5',
+            }
+          }}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -152,12 +238,27 @@ const Layout = ({ children }) => {
         </Drawer>
       )}
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3, maxWidth: '100%', overflowX: 'hidden' }}>
+      {/* Main Content Area */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: { xs: 2, sm: 3 },
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          maxWidth: '100%',
+          overflowX: 'hidden',
+          bgcolor: '#09090b',
+          minHeight: '100vh',
+          backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.07) 0%, rgba(9, 9, 11, 0) 60%)'
+        }}
+      >
         <Toolbar />
-        {children}
+        <Box key={location.pathname} className="lumina-page-enter">
+          {children}
+        </Box>
       </Box>
     </Box>
   );
-}
+};
 
 export default Layout;

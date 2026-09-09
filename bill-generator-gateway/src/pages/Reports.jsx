@@ -15,6 +15,7 @@ import API from '../services/api';
 import { calculateItemAmount } from '../utils/helpers';
 import { getCompanies } from '../services/api';
 import { supabase } from '../supabase';
+import { TableSkeleton } from '../components/skeletons';
 
 const Reports = () => {
     const navigate = useNavigate();
@@ -388,9 +389,9 @@ const Reports = () => {
         const totalAmountWithGst = totalAmount * 1.18;
 
         return (
-            <TableContainer component={Paper} sx={{ mt: 2, bgcolor: 'transparent', boxShadow: 'none', overflowX: 'auto', border: '1px solid rgba(0, 0, 0, 0.12)' }}>
-                <Table size="small" sx={{ minWidth: 1800, '& .MuiTableCell-root': { border: '1px solid rgba(0, 0, 0, 0.12)' } }}>
-                    <TableHead sx={{ bgcolor: 'rgba(0, 0, 0, 0.04)' }}>
+            <TableContainer component={Paper} sx={{ mt: 2, bgcolor: 'transparent', boxShadow: 'none', overflowX: 'auto', border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
+                <Table size="small" sx={{ minWidth: 1800, '& .MuiTableCell-root': { borderColor: 'rgba(255, 255, 255, 0.06)' } }}>
+                    <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
                         <TableRow>
                             {['entryNumber', 'date', 'companyName', 'vendor', 'eventName', 'eventVenue', 'eventTime', 'poNpo', 'workMainDisplay', 'workDurationDisplay'].map(key => {
                                 let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
@@ -399,47 +400,47 @@ const Reports = () => {
                                 if (key === 'workDurationDisplay') label = 'Work Duration';
 
                                 return (
-                                    <TableCell key={key} onClick={() => handleSort(key)} sx={{ cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                    <TableCell key={key} onClick={() => handleSort(key)} sx={{ cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', color: '#a1a1aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
                                         {label}
                                         {sortConfig.key === key && (sortConfig.direction === 'asc' ? ' ↑' : ' ↓')}
                                     </TableCell>
                                 );
                             })}
-                            <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Assigned Personnel</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Contact Person</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Amount+GST</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Edit</TableCell>
+                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', color: '#a1a1aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Assigned Personnel</TableCell>
+                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', color: '#a1a1aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Contact Person</TableCell>
+                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', color: '#a1a1aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Amount</TableCell>
+                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', color: '#a1a1aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Amount+GST</TableCell>
+                            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', color: '#a1a1aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Edit</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {paginatedItems.map((item, idx) => (
-                            <TableRow key={`${item.id}-${idx}`} hover>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{item.entryNumber}</TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{item.date ? new Date(item.date).toLocaleDateString('en-GB') : '—'}</TableCell>
+                            <TableRow key={`${item.id}-${idx}`} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace', color: '#818cf8' }}>{item.entryNumber}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace' }}>{item.date ? new Date(item.date).toLocaleDateString('en-GB') : '—'}</TableCell>
                                 <TableCell sx={{ minWidth: 200 }}>{item.companyName}</TableCell>
                                 <TableCell sx={{ minWidth: 150 }}>{item.vendor}</TableCell>
                                 <TableCell sx={{ minWidth: 150 }}>{item.eventName}</TableCell>
                                 <TableCell sx={{ minWidth: 250 }}>{item.eventVenue}</TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{item.eventTime}</TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{item.poNpo}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace' }}>{item.eventTime}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace' }}>{item.poNpo}</TableCell>
                                 <TableCell sx={{ minWidth: 200, whiteSpace: 'pre-line' }}>{item.workMainDisplay}</TableCell>
                                 <TableCell sx={{ minWidth: 250, whiteSpace: 'pre-line' }}>{item.workDurationDisplay}</TableCell>
                                 <TableCell sx={{ minWidth: 250, whiteSpace: 'pre-line' }}>{item.personnelDisplay}</TableCell>
                                 <TableCell sx={{ minWidth: 200, whiteSpace: 'pre-line' }}>{item.contactDisplay}</TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>Rs.{item.amount.toLocaleString('en-IN')}</TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>Rs.{(item.amount * 1.18).toLocaleString('en-IN')}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace', fontWeight: 600, color: '#f4f4f5' }}>Rs.{item.amount.toLocaleString('en-IN')}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace', fontWeight: 600, color: '#34d399' }}>Rs.{(item.amount * 1.18).toLocaleString('en-IN')}</TableCell>
                                 <TableCell>
-                                    <Button variant="contained" size="small" onClick={() => handleEditWorkItem(item)}>
+                                    <Button variant="outlined" size="small" onClick={() => handleEditWorkItem(item)} sx={{ borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem' }}>
                                         Edit
                                     </Button>
                                 </TableCell>
                             </TableRow>
                         ))}
-                        <TableRow sx={{ '& > *': { fontWeight: 'bold', fontSize: '1rem', bgcolor: 'rgba(0, 0, 0, 0.02)' } }}>
-                            <TableCell colSpan={12} align="right">Total:</TableCell>
-                            <TableCell sx={{ whiteSpace: 'nowrap' }}>Rs.{totalAmount.toLocaleString('en-IN')}</TableCell>
-                            <TableCell sx={{ whiteSpace: 'nowrap' }}>Rs.{totalAmountWithGst.toLocaleString('en-IN')}</TableCell>
+                        <TableRow sx={{ '& > *': { fontWeight: 'bold', fontSize: '0.9rem', bgcolor: 'rgba(99, 102, 241, 0.05)', borderTop: '1px solid rgba(255, 255, 255, 0.12)' } }}>
+                            <TableCell colSpan={12} align="right" sx={{ color: '#a1a1aa' }}>Total:</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace', color: '#f4f4f5' }}>Rs.{totalAmount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace', color: '#34d399' }}>Rs.{totalAmountWithGst.toLocaleString('en-IN')}</TableCell>
                             <TableCell />
                         </TableRow>
                     </TableBody>
@@ -511,7 +512,13 @@ const Reports = () => {
                     <Button variant="contained" color="error" startIcon={<FileDownloadIcon />} onClick={handleExportToPDF}>PDF</Button>
                     <Button variant="contained" color="info" startIcon={<FileDownloadIcon />} onClick={handleExportToONGCExcel}>ONGC Excel</Button>
                 </Box>
-                {loading ? <CircularProgress /> : error ? <Alert severity="error">{error}</Alert> : renderTable()}
+                {loading ? (
+                    <TableSkeleton columns={8} rows={7} hasSearch={false} hasPagination={true} />
+                ) : error ? (
+                    <Alert severity="error">{error}</Alert>
+                ) : (
+                    renderTable()
+                )}
             </Paper>
 
             <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>

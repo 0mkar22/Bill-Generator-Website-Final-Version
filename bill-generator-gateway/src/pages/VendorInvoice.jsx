@@ -2,17 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
-  Button, TextField, Container, CircularProgress, Alert, Snackbar, Backdrop
+  Button, TextField, Container, CircularProgress, Alert, Snackbar, Backdrop, ThemeProvider
 } from '@mui/material';
 
 import './VendorInvoice.css';
+import invoiceTheme from '../invoiceTheme';
 import API from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglishToMarathiNumbers } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
+import { InvoiceSkeleton } from '../components/skeletons';
 
-const tableCellStyle = { border: '1px solid #000', p: '4px 8px' };
-const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold' };
+const tableCellStyle = { border: '1px solid #000', p: '4px 8px', color: '#000', backgroundColor: '#fff' };
+const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold', textTransform: 'uppercase' };
 const boldRightAlignedCellStyle = { ...boldHeaderCellStyle, textAlign: 'right' };
 const flexEndColumnStyle = { display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' };
 const borderBottomStyle = { borderBottom: '1px solid #000' };
@@ -140,7 +142,8 @@ function VendorInvoice() {
           logging: false,
           windowWidth: 1000, 
           width: 900,
-          scrollY: -window.scrollY 
+          scrollY: -window.scrollY,
+          backgroundColor: '#ffffff'
         }).then((canvas) => {
           const imgData = canvas.toDataURL('image/jpeg', 1.0);
           const pdf = new jsPDF('p', 'mm', 'a4');
@@ -248,6 +251,7 @@ function VendorInvoice() {
   }
 
   const parentOrder = selectedItems[0]?.parent || {};
+  const [loadingDetails, setLoadingDetails] = useState(Boolean(parentOrder?.company_id));
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
@@ -262,9 +266,18 @@ function VendorInvoice() {
             if (data.gst_number && passedGstNo === undefined) setGstNo(data.gst_number);
           }
         })
-        .catch(console.error);
+        .catch(console.error)
+        .finally(() => {
+          setLoadingDetails(false);
+        });
+    } else {
+      setLoadingDetails(false);
     }
   }, [parentOrder, passedRecipient, passedGstNo]);
+
+  if (loadingDetails) {
+    return <InvoiceSkeleton />;
+  }
 
   const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
   
@@ -323,10 +336,11 @@ function VendorInvoice() {
       )}
 
       
+        <ThemeProvider theme={invoiceTheme}>
         {isVidhanMandal ? (
             
-<Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '1px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
-    <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', py: 0.5 }}>TAX INVOICE</Typography>
+<Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif', borderRadius: 0, boxShadow: 'none' }}>
+    <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', py: 0.5, color: '#000' }}>TAX INVOICE</Typography>
     
     <Box sx={{ display: 'flex', width: '100%', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
         <Box sx={{ width: '55%', borderRight: '1px solid #000', p: 1, display: 'flex', flexDirection: 'column' }}>
@@ -462,12 +476,12 @@ function VendorInvoice() {
 </Paper>
 
         ) : (
-            <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto' }}>
+            <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif', borderRadius: 0, boxShadow: 'none' }}>
         
         <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
           <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Box sx={{ p: 1, pl: 2, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem' }}>To,</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem', color: '#000' }}>To,</Typography>
 
               {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
                 <Typography 
@@ -478,7 +492,7 @@ function VendorInvoice() {
                     pr: 0.5, 
                     pb: 0.5, 
                     fontSize: '1.1rem', 
-                    color: '#333',
+                    color: '#000',
                     lineHeight: 1.4 
                   }}
                 >
@@ -494,10 +508,10 @@ function VendorInvoice() {
               </Box>
               
               <Box sx={{ textAlign: 'right', mt: 1, width: '100%' }}>
-                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#333' }}>
+                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#000' }}>
                   21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,
                 </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#333' }}>
+                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#000' }}>
                   Thane (W) 400 606 &nbsp;&nbsp; E-mail : bhogtevijay@gmail.com
                 </Typography>
               </Box>
@@ -637,9 +651,9 @@ function VendorInvoice() {
           </Box>
         </Box>
 
-        <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: 'none' }}>
+        <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: 'none', backgroundColor: '#fff' }}>
           <TableHead>
-            <TableRow sx={{ borderBottom: '1px solid #000' }}>
+            <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff' }}>
               <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
               <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
               <TableCell sx={boldHeaderCellStyle}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
@@ -689,10 +703,10 @@ function VendorInvoice() {
               }
               
               return (
-                <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000' }}>
+                <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                   <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
                   <TableCell sx={tableCellStyle}>
-                    <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#000' }}>
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
@@ -711,46 +725,46 @@ function VendorInvoice() {
               );
             })}
             
-            <TableRow sx={{ borderBottom: 'none' }}>
+            <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
               <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>Amount Before Tax:</Typography>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>Amount Before Tax:</Typography>
               </TableCell>
               <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                   {amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </TableCell>
             </TableRow>
 
             {isIGST ? (
-              <TableRow sx={{ borderBottom: 'none' }}>
+              <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                 <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>IGST 18%:</Typography>
+                  <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>IGST 18%:</Typography>
                 </TableCell>
                 <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                  <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                     {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
               <>
-                <TableRow sx={{ borderBottom: 'none' }}>
+                <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                   <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>CGST 9%:</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>CGST 9%:</Typography>
                   </TableCell>
                   <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                       {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Typography>
                   </TableCell>
                 </TableRow>
-                <TableRow sx={{ borderBottom: 'none' }}>
+                <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                   <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>SGST 9%:</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>SGST 9%:</Typography>
                   </TableCell>
                   <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem' }}>
+                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                       {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Typography>
                   </TableCell>
@@ -758,12 +772,12 @@ function VendorInvoice() {
               </>
             )}
 
-            <TableRow sx={{ borderBottom: '1px solid #000' }}>
+            <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
               <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Total Amount Rs.:</Typography>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>Total Amount Rs.:</Typography>
               </TableCell>
               <TableCell sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
                   {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </TableCell>
@@ -805,6 +819,7 @@ function VendorInvoice() {
 
       </Paper>
         )}
+      </ThemeProvider>
 
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>

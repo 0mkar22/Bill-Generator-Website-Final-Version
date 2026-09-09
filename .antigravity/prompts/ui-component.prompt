@@ -1,0 +1,9 @@
+name: ui-component
+description: Generate a Lumina Ledger glassmorphic component
+parameters:
+  component_type:
+    type: string
+    description: "e.g., table, modal, card, input, button, sidebar"
+instruction: |
+  Query MCP tool get_component_snippet for the given component_type or inspect lumina://design/tokens.
+  Implement the component using React + Tailwind CSS according to Lumina Ledger rules.

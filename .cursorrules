@@ -1,0 +1,7 @@
+# Lumina Ledger Design System Instructions
+1. Palette: Background MUST be #09090b (bg-zinc-950). Never pure black #000000.
+2. Borders: Single-pixel translucent lines (border border-white/10).
+3. Glass Surfaces: bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-2xl.
+4. Typography: Geist / Inter for general UI; JetBrains Mono for monetary values ($X,XXX.XX), invoice IDs, dates, and tables.
+5. Accents: Restrained indigo (bg-indigo-500/10 text-indigo-400 border-indigo-500/20).
+6. Badges: Paid (emerald), Pending (amber), Overdue (rose), Processing (indigo).

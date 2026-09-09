@@ -45,10 +45,18 @@ const WorkOrderItem = ({
           <Paper 
               key={index} 
               variant="outlined" 
-              sx={{ mb: 3, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)' }}
+              sx={{ 
+                mb: 3, 
+                borderRadius: '12px', 
+                overflow: 'hidden', 
+                bgcolor: 'rgba(24, 24, 27, 0.50)', 
+                backdropFilter: 'blur(16px)', 
+                border: '1px solid rgba(255, 255, 255, 0.10)',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+              }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: '#F3F4F6', borderBottom: '1px solid #E5E7EB' }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '1rem' }}>Work Item #{index + 1} {item.workMain ? `- ${item.workMain}` : ''}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(24, 24, 27, 0.80)', borderBottom: '1px solid rgba(255, 255, 255, 0.10)' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#f4f4f5', fontSize: '0.95rem' }}>Work Item #{index + 1} {item.workMain ? `- ${item.workMain}` : ''}</Typography>
                 {formData.workItems.length > 1 && (
                   <IconButton type="button" onClick={(e) => { e.stopPropagation(); removeWorkItem(index); }} color="error" size="small">
                     <RemoveCircleOutlineIcon />
@@ -112,9 +120,9 @@ const WorkOrderItem = ({
                       const groupAmount = groupQty * currentRate;
 
                       return (
-                      <Box key={gIdx} sx={{ p: 2, mb: 2, border: '1px solid #ddd', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.5)' }}>
+                      <Box key={gIdx} sx={{ p: 2, mb: 2, border: '1px solid rgba(99, 102, 241, 0.20)', borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.05)' }}>
                           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
-                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>सभागृह (Assembly):</Typography>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#f4f4f5' }}>सभागृह (Assembly):</Typography>
                               <FormControl sx={{ minWidth: 200 }} size="small" required>
                                   <Select
                                       value={assemblyGroup.assemblyType || ''}
@@ -136,9 +144,9 @@ const WorkOrderItem = ({
                               </Box>
                           </Box>
                           
-                          <Divider sx={{ mb: 2 }} />
+                          <Divider sx={{ mb: 2, borderColor: 'rgba(255, 255, 255, 0.08)' }} />
                           
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>सदस्यांची नावे (Member Names):</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: '#a1a1aa' }}>सदस्यांची नावे (Member Names):</Typography>
                           <Grid container spacing={2}>
                               {(assemblyGroup.members || ['']).map((member, mIdx) => (
                                   <Grid item xs={12} sm={6} md={4} key={mIdx}>
@@ -165,11 +173,11 @@ const WorkOrderItem = ({
                           </Grid>
                           
                           {/* PLACED SUB-TOTAL HERE */}
-                          <Box sx={{ display: 'flex', mt: 2, pt: 1, borderTop: '1px dashed #ccc', justifyContent: 'flex-end', gap: 4 }}>
-                              <Typography variant="subtitle1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                          <Box sx={{ display: 'flex', mt: 2, pt: 1, borderTop: '1px dashed rgba(255, 255, 255, 0.10)', justifyContent: 'flex-end', gap: 4 }}>
+                              <Typography variant="subtitle1" sx={{ color: '#818cf8', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>
                                   एकूण नग (Total Qty): {groupQty}
                               </Typography>
-                              <Typography variant="subtitle1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                              <Typography variant="subtitle1" sx={{ color: '#818cf8', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>
                                   रक्कम (Amount): ₹ {groupAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </Typography>
                           </Box>
@@ -194,7 +202,7 @@ const WorkOrderItem = ({
 
                       return (
                         <Grid item xs={12} key={dIdx}>
-                          <Box sx={{ p: 2, border: '1px dashed #ccc', borderRadius: 1, bgcolor: 'rgba(0,0,0,0.02)' }}>
+                          <Box sx={{ p: 2, border: '1px dashed rgba(255, 255, 255, 0.12)', borderRadius: '8px', bgcolor: 'rgba(24, 24, 27, 0.40)' }}>
                             <Grid container spacing={2} alignItems="center">
                                 {/* L x B */}
                                 <Grid item xs={12} sm={4}>
@@ -240,7 +248,7 @@ const WorkOrderItem = ({
 
                                 {/* Individual Area */}
                                 <Grid item xs={12} sm={3}>
-                                    <Typography variant="body1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                    <Typography variant="body2" sx={{ color: '#818cf8', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace' }}>
                                         = {area} {sqUnit}
                                     </Typography>
                                 </Grid>
@@ -248,7 +256,7 @@ const WorkOrderItem = ({
                                 {/* Amount & Buttons */}
                                 <Grid item xs={12} sm={3}>
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                    <Typography variant="body2" sx={{ color: '#34d399', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace' }}>
                                         (₹ {rowAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                                     </Typography>
                                     <Box>
@@ -271,7 +279,7 @@ const WorkOrderItem = ({
 
                     {/* ALIGNED SUMMARY ROW */}
                     <Grid item xs={12}>
-                        <Box sx={{ px: 2, py: 1 }}>
+                        <Box sx={{ px: 2, py: 1.5, borderRadius: '8px', bgcolor: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
                             <Grid container spacing={2} alignItems="center">
                                 {/* Spacer matching LxB length */}
                                 <Grid item xs={12} sm={4}></Grid>
@@ -287,13 +295,13 @@ const WorkOrderItem = ({
                                         fullWidth 
                                         size="small"
                                         value={item.quantity} 
-                                        InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
+                                        InputProps={{ readOnly: true, sx: { backgroundColor: 'rgba(24, 24, 27, 0.60)', fontFamily: '"JetBrains Mono", monospace' } }} 
                                     />
                                 </Grid>
 
                                 {/* Total Area */}
                                 <Grid item xs={12} sm={3}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#34d399', fontFamily: '"JetBrains Mono", monospace' }}>
                                         एकूण: {totalCalculatedArea} {sqUnit}
                                     </Typography>
                                 </Grid>
@@ -306,7 +314,7 @@ const WorkOrderItem = ({
                                         fullWidth 
                                         size="small"
                                         value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
-                                        InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5', fontWeight: 'bold' } }} 
+                                        InputProps={{ readOnly: true, sx: { backgroundColor: 'rgba(24, 24, 27, 0.60)', fontWeight: 'bold', color: '#f4f4f5', fontFamily: '"JetBrains Mono", monospace' } }} 
                                     />
                                 </Grid>
                             </Grid>
@@ -327,6 +335,7 @@ const WorkOrderItem = ({
                             value={item.quantity} 
                             onChange={(e) => handleWorkItemChange(index, e)} 
                             disabled={['Two_Camera_Setup', 'Three_Camera_Setup'].includes(item.workMain) || isAssemblyWork}
+                            InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                         />
                     </Grid>
                     <Grid item xs={12} sm={6}>
@@ -339,6 +348,7 @@ const WorkOrderItem = ({
                                 fullWidth 
                                 value={item.customRate || ''} 
                                 onChange={(e) => handleWorkItemChange(index, e)} 
+                                InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                             />
                         ) : (
                             <TextField 
@@ -346,7 +356,7 @@ const WorkOrderItem = ({
                                 type="text" 
                                 fullWidth 
                                 value={calculateItemAmount(item, selectedCompany).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
-                                InputProps={{ readOnly: true, sx: { backgroundColor: '#f5f5f5' } }} 
+                                InputProps={{ readOnly: true, sx: { backgroundColor: 'rgba(24, 24, 27, 0.60)', fontFamily: '"JetBrains Mono", monospace' } }} 
                             />
                         )}
                     </Grid>
