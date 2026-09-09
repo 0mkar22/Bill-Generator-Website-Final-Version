@@ -4,3 +4,4 @@ export { default as ReportsSkeleton } from './ReportsSkeleton';
 export { default as AmountPaidSkeleton } from './AmountPaidSkeleton';
 export { default as InvoiceSkeleton } from './InvoiceSkeleton';
 export { default as AppShellSkeleton } from './AppShellSkeleton';
+export { default as DashboardSkeleton } from './DashboardSkeleton';

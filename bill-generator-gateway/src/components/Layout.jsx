@@ -16,6 +16,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -44,7 +45,8 @@ const Layout = ({ children }) => {
   };
 
   const navItems = [
-    { path: '/', label: 'Event Data Entry', icon: <WorkIcon fontSize="small" /> },
+    { path: '/', label: 'Executive Dashboard', icon: <DashboardIcon fontSize="small" /> },
+    { path: '/work-orders', label: 'Work Orders / Events', icon: <WorkIcon fontSize="small" /> },
     { path: '/invoices', label: 'Invoices', icon: <DescriptionIcon fontSize="small" /> },
     { path: '/reports', label: 'Reports', icon: <AssessmentIcon fontSize="small" /> },
     { path: '/amount-paid', label: 'Amount Paid', icon: <AccountBalanceWalletIcon fontSize="small" /> },
@@ -80,7 +82,7 @@ const Layout = ({ children }) => {
         {/* Navigation Items */}
         <List sx={{ pt: 1 }}>
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || (item.path === '/work-orders' && location.pathname === '/work-order');
             return (
               <ListItemButton
                 key={item.path}

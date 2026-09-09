@@ -7,6 +7,7 @@ import theme from './theme';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
+import DashboardOverview from './pages/DashboardOverview';
 import WorkOrder from './pages/WorkOrder';
 import Reports from './pages/Reports';
 import WorkOrderInvoice from './pages/WorkOrderInvoice';
@@ -210,7 +211,9 @@ function App() {
         <Router>
           <Layout>
             <Routes>
-              <Route path="/" element={<WorkOrder />} />
+              <Route path="/" element={<DashboardOverview />} />
+              <Route path="/work-orders" element={<WorkOrder />} />
+              <Route path="/work-order" element={<WorkOrder />} />
               <Route path="/invoices" element={<InvoiceGenerator />} />
               <Route path="/vendor-invoice" element={<VendorInvoice />} />
               <Route path="/workorder-invoice" element={<WorkOrderInvoice />} />
