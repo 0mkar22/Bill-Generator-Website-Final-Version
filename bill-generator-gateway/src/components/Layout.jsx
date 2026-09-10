@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
   };
 
   const navItems = [
-    { path: '/', label: 'Operations Command', icon: <TerminalIcon fontSize="small" /> },
+    { path: '/', label: 'Operations Overview', icon: <TerminalIcon fontSize="small" /> },
     { path: '/dashboard', label: 'Executive Financials', icon: <DashboardIcon fontSize="small" /> },
     { path: '/work-orders', label: 'Work Orders / Events', icon: <WorkIcon fontSize="small" /> },
     { path: '/invoices', label: 'Invoices', icon: <DescriptionIcon fontSize="small" /> },

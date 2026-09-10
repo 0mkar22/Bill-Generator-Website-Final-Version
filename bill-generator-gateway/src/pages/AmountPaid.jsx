@@ -430,23 +430,6 @@ const AmountPaid = () => {
           setSaving(false);
       }
   };
-  
-  const openNewPayout = () => {
-      setEditPayoutId(null);
-      setGlobalForm({
-          eventId: null,
-          entryNumber: '',
-          eventName: '',
-          eventVenue: '',
-          eventDate: '',
-          travelExpense: '',
-          foodExpense: '',
-          stayExpense: '',
-          notes: ''
-      });
-      setBatchPersonnel([]);
-      setIsModalOpen(true);
-  };
 
   const openEventExpenseModal = (order) => {
       setEditPayoutId(null);

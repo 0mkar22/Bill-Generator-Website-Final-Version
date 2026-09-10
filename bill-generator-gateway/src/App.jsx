@@ -7,16 +7,23 @@ import theme from './theme';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
-import DashboardOverview from './pages/DashboardOverview';
-import WorkOrder from './pages/WorkOrder';
-import Reports from './pages/Reports';
-import WorkOrderInvoice from './pages/WorkOrderInvoice';
-import VendorInvoice from './pages/VendorInvoice';
-import InvoiceGenerator from './pages/InvoiceGenerator';
-import AmountPaid from './pages/AmountPaid';
-import { AppShellSkeleton } from './components/skeletons';
+import { 
+  AppShellSkeleton, 
+  DashboardSkeleton, 
+  WorkOrderSkeleton, 
+  InvoiceSkeleton, 
+  ReportsSkeleton, 
+  AmountPaidSkeleton 
+} from './components/skeletons';
 
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const DashboardOverview = React.lazy(() => import('./pages/DashboardOverview'));
+const WorkOrder = React.lazy(() => import('./pages/WorkOrder'));
+const InvoiceGenerator = React.lazy(() => import('./pages/InvoiceGenerator'));
+const VendorInvoice = React.lazy(() => import('./pages/VendorInvoice'));
+const WorkOrderInvoice = React.lazy(() => import('./pages/WorkOrderInvoice'));
+const Reports = React.lazy(() => import('./pages/Reports'));
+const AmountPaid = React.lazy(() => import('./pages/AmountPaid'));
 
 function App() {
   const [session, setSession] = useState(null);
@@ -221,14 +228,70 @@ function App() {
                   </React.Suspense>
                 } 
               />
-              <Route path="/dashboard" element={<DashboardOverview />} />
-              <Route path="/work-orders" element={<WorkOrder />} />
-              <Route path="/work-order" element={<WorkOrder />} />
-              <Route path="/invoices" element={<InvoiceGenerator />} />
-              <Route path="/vendor-invoice" element={<VendorInvoice />} />
-              <Route path="/workorder-invoice" element={<WorkOrderInvoice />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/amount-paid" element={<AmountPaid />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <React.Suspense fallback={<DashboardSkeleton />}>
+                    <DashboardOverview />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/work-orders" 
+                element={
+                  <React.Suspense fallback={<WorkOrderSkeleton />}>
+                    <WorkOrder />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/work-order" 
+                element={
+                  <React.Suspense fallback={<WorkOrderSkeleton />}>
+                    <WorkOrder />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/invoices" 
+                element={
+                  <React.Suspense fallback={<InvoiceSkeleton />}>
+                    <InvoiceGenerator />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/vendor-invoice" 
+                element={
+                  <React.Suspense fallback={<InvoiceSkeleton />}>
+                    <VendorInvoice />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/workorder-invoice" 
+                element={
+                  <React.Suspense fallback={<InvoiceSkeleton />}>
+                    <WorkOrderInvoice />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/reports" 
+                element={
+                  <React.Suspense fallback={<ReportsSkeleton />}>
+                    <Reports />
+                  </React.Suspense>
+                } 
+              />
+              <Route 
+                path="/amount-paid" 
+                element={
+                  <React.Suspense fallback={<AmountPaidSkeleton />}>
+                    <AmountPaid />
+                  </React.Suspense>
+                } 
+              />
             </Routes>
           </Layout>
         </Router>

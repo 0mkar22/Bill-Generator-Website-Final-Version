@@ -9,7 +9,8 @@ const CompanyModal = ({
     newCompany,
     setNewCompany,
     handleSaveCompany,
-    getFilteredSubWorks
+    getFilteredSubWorks,
+    handleRateChange
 }) => {
     return (
         <Dialog 

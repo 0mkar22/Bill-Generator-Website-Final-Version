@@ -809,6 +809,7 @@ renderValue={(selected) => selected}
         setNewCompany={setNewCompany}
         handleSaveCompany={handleSaveCompany}
         getFilteredSubWorks={getFilteredSubWorks}
+        handleRateChange={handleRateChange}
       />
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>

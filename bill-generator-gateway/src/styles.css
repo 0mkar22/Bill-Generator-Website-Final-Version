@@ -129,33 +129,3 @@ code, .font-mono, .lumina-mono {
 .MuiOutlinedInput-notchedOutline legend {
   float: unset !important;
 }
-
-/* Operational Command Center Animations */
-@keyframes dataStreamFlow {
-  0% {
-    stroke-dashoffset: 48;
-  }
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-
-.pipeline-data-stream {
-  stroke-dasharray: 6 6;
-  animation: dataStreamFlow 1.6s linear infinite;
-}
-
-.terminal-cursor {
-  display: inline-block;
-  width: 8px;
-  height: 15px;
-  background-color: #818cf8;
-  vertical-align: middle;
-  animation: terminalBlink 1s step-end infinite;
-}
-
-.marquee-container:hover .marquee-content {
-  animation-play-state: paused;
-}
-
-
