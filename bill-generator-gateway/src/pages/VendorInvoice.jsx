@@ -304,7 +304,7 @@ function VendorInvoice() {
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <Button variant="outlined" onClick={() => navigate('/invoices')}>Back</Button>
+          <Button variant="outlined" onClick={() => navigate(location.state?.from || '/invoices')}>Back</Button>
           <Box sx={{ display: 'flex', gap: 2 }}>
               {(!savedInvoice || isEditing) && !saveSuccess && (
                   <Button variant="contained" color="success" onClick={handleSaveToDatabase} disabled={isSaving}>
@@ -326,7 +326,7 @@ function VendorInvoice() {
                     Download Word
                 </Button>
 
-                {isONGC && (
+                {isONGC && !location.state?.from && (
                   <Button variant="contained" color="secondary" onClick={handleGenerateWorkOrderInvoice}>
                       Generate Work Order Invoice
                   </Button>

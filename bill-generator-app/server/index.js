@@ -34,6 +34,22 @@ app.use(cors({
 
 app.use(express.json());
 
+// Public Health Check Endpoint (Verifies Supabase connectivity without auth)
+app.get("/api/health", async (req, res) => {
+    const dbStatus = await supabase.testDbConnection();
+    const isHealthy = dbStatus.ok;
+    return res.status(isHealthy ? 200 : 503).json({
+        status: isHealthy ? "healthy" : "degraded",
+        service: "bill-generator-api",
+        timestamp: new Date().toISOString(),
+        database: {
+            connected: isHealthy,
+            latencyMs: dbStatus.latencyMs,
+            error: dbStatus.error || null
+        }
+    });
+});
+
 app.use("/api/workOrders", auth, require("./routes/workOrders"));
 app.use("/api/invoices", auth, require("./routes/invoices"));
 app.use("/api/companies", auth, require("./routes/companies"));
@@ -42,4 +58,12 @@ app.use("/api/personnelPayouts", auth, require("./routes/personnelPayouts"));
 app.use("/api/dashboard", auth, require("./routes/dashboard"));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, async () => {
+    console.log(`Server started on port ${PORT}`);
+    const dbTest = await supabase.testDbConnection();
+    if (dbTest.ok) {
+        console.log(`[DATABASE CONNECTED] Supabase PostgreSQL reachable (${dbTest.latencyMs}ms)`);
+    } else {
+        console.error(`[DATABASE ERROR] Failed to reach Supabase: ${dbTest.error}`);
+    }
+});

@@ -16,6 +16,8 @@ import InvoiceGenerator from './pages/InvoiceGenerator';
 import AmountPaid from './pages/AmountPaid';
 import { AppShellSkeleton } from './components/skeletons';
 
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+
 function App() {
   const [session, setSession] = useState(null);
   const [email, setEmail] = useState('');
@@ -211,7 +213,15 @@ function App() {
         <Router>
           <Layout>
             <Routes>
-              <Route path="/" element={<DashboardOverview />} />
+              <Route 
+                path="/" 
+                element={
+                  <React.Suspense fallback={<AppShellSkeleton />}>
+                    <LandingPage />
+                  </React.Suspense>
+                } 
+              />
+              <Route path="/dashboard" element={<DashboardOverview />} />
               <Route path="/work-orders" element={<WorkOrder />} />
               <Route path="/work-order" element={<WorkOrder />} />
               <Route path="/invoices" element={<InvoiceGenerator />} />

@@ -4,7 +4,8 @@ const {
   createWorkOrder,
   deleteWorkOrder,
   getWorkOrder,
-  updateWorkOrder
+  updateWorkOrder,
+  updateWorkOrderExpenses
 } = require('../controllers/workOrders');
 const { validateWorkOrder } = require('../middleware/validate');
 
@@ -14,6 +15,10 @@ router
   .route('/')
   .get(getWorkOrders)
   .post(validateWorkOrder, createWorkOrder);
+
+router
+  .route('/:id/expenses')
+  .put(updateWorkOrderExpenses);
 
 router
   .route('/:id')

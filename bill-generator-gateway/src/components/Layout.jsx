@@ -16,6 +16,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
+import TerminalIcon from '@mui/icons-material/Terminal';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -45,7 +46,8 @@ const Layout = ({ children }) => {
   };
 
   const navItems = [
-    { path: '/', label: 'Executive Dashboard', icon: <DashboardIcon fontSize="small" /> },
+    { path: '/', label: 'Operations Command', icon: <TerminalIcon fontSize="small" /> },
+    { path: '/dashboard', label: 'Executive Financials', icon: <DashboardIcon fontSize="small" /> },
     { path: '/work-orders', label: 'Work Orders / Events', icon: <WorkIcon fontSize="small" /> },
     { path: '/invoices', label: 'Invoices', icon: <DescriptionIcon fontSize="small" /> },
     { path: '/reports', label: 'Reports', icon: <AssessmentIcon fontSize="small" /> },

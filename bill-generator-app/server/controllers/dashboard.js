@@ -70,6 +70,10 @@ exports.getDashboardSummary = async (req, res) => {
 
     // 4. Financial Calculations
     let totalRevenue = 0;
+    let totalAmountReceived = 0;
+    let totalTdsAndOther = 0;
+    let totalGst = 0;
+    let totalRevenueExGst = 0;
     let outstandingReceivables = 0;
     let paidInvoicesCount = 0;
     let unpaidInvoicesCount = 0;
@@ -78,36 +82,64 @@ exports.getDashboardSummary = async (req, res) => {
 
     uniqueInvoices.forEach(inv => {
       const calcTotal = getInvoiceCalculatedTotal(inv);
-      const recAmt = Number(inv.amount_received);
 
       if (inv.status === 'paid') {
         paidInvoicesCount += 1;
-        const finalEarned = !isNaN(recAmt) && recAmt > 0 ? recAmt : calcTotal;
-        totalRevenue += finalEarned;
+        totalRevenue += calcTotal;
+
+        // Individual paid invoice GST separation (18% GST reverse calculation)
+        const invoiceGst = Math.round(calcTotal * (18 / 118));
+        const invoiceBase = calcTotal - invoiceGst;
+        totalGst += invoiceGst;
+        totalRevenueExGst += invoiceBase;
+
+        // TDS & Other is 3% of Base Amount (Without GST Invoice Amount)
+        const invoiceTds = Math.round(invoiceBase * 0.03);
+        // Amount Received is Invoice Amount - 3% of Base Amount
+        const invoiceAmountReceived = calcTotal - invoiceTds;
+
+        totalTdsAndOther += invoiceTds;
+        totalAmountReceived += invoiceAmountReceived;
 
         // Company revenue breakdown
         const comp = companiesMap.get(inv.company_id);
         const compName = comp?.company_name || 'Direct / Miscellaneous';
         const existing = companyRevenueMap.get(compName) || { revenue: 0, count: 0 };
         companyRevenueMap.set(compName, {
-          revenue: existing.revenue + finalEarned,
+          revenue: existing.revenue + invoiceAmountReceived,
           count: existing.count + 1
         });
       } else {
         unpaidInvoicesCount += 1;
-        const pendingAmount = Math.max(0, calcTotal - (!isNaN(recAmt) ? recAmt : 0));
-        outstandingReceivables += pendingAmount;
+        outstandingReceivables += calcTotal;
       }
     });
 
-    const totalDisbursed = rawPayouts.reduce(
+    const totalCrewWages = rawPayouts.reduce(
       (sum, p) => sum + (Number(p.amount_paid) || 0),
       0
     );
 
-    const netProfit = totalRevenue - totalDisbursed;
-    const profitMargin = totalRevenue > 0
-      ? Number(((netProfit / totalRevenue) * 100).toFixed(1))
+    let totalTravelExpense = 0;
+    let totalFoodExpense = 0;
+    let totalStayExpense = 0;
+
+    rawWorkOrders.forEach(order => {
+      totalTravelExpense += Number(order.travel_expense ?? order.workItems?.[0]?.travelExpense) || 0;
+      totalFoodExpense += Number(order.food_expense ?? order.workItems?.[0]?.foodExpense) || 0;
+      totalStayExpense += Number(order.stay_expense ?? order.workItems?.[0]?.stayExpense) || 0;
+    });
+
+    const totalEventExpenses = totalTravelExpense + totalFoodExpense + totalStayExpense;
+    const totalCombinedExpenses = totalCrewWages + totalEventExpenses + totalGst;
+
+    // TDS and Other from paid invoices (replaces amount yet to pay)
+    const amountYetToPay = totalTdsAndOther;
+
+    // Net Operating Profit based on Amount Received and Expenses
+    const netProfit = totalAmountReceived - totalCombinedExpenses;
+    const profitMargin = totalAmountReceived > 0
+      ? Number(((netProfit / totalAmountReceived) * 100).toFixed(1))
       : 0;
 
     // 5. Operations & Workforce Calculations
@@ -163,8 +195,11 @@ exports.getDashboardSummary = async (req, res) => {
       .slice(0, 12)
       .map(inv => {
         const comp = companiesMap.get(inv.company_id);
-        const recAmt = Number(inv.amount_received);
-        const amount = !isNaN(recAmt) && recAmt > 0 ? recAmt : getInvoiceCalculatedTotal(inv);
+        const calcTotal = getInvoiceCalculatedTotal(inv);
+        const invoiceGst = Math.round(calcTotal * (18 / 118));
+        const invoiceBase = calcTotal - invoiceGst;
+        const invoiceTds = Math.round(invoiceBase * 0.03);
+        const amount = calcTotal - invoiceTds;
         return {
           id: `inv-${inv.id}`,
           type: 'payment_received',
@@ -206,13 +241,38 @@ exports.getDashboardSummary = async (req, res) => {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
+    let twoCameraSetupCount = 0;
+    let threeCameraSetupCount = 0;
+    let singleCameraOrOtherCount = 0;
+
+    rawWorkOrders.forEach(order => {
+      (order.workItems || []).forEach(item => {
+        if (item.workMain === 'Two_Camera_Setup') twoCameraSetupCount++;
+        else if (item.workMain === 'Three_Camera_Setup') threeCameraSetupCount++;
+        else singleCameraOrOtherCount++;
+      });
+    });
+
     // 8. Return cohesive aggregated response
     return res.status(200).json({
       success: true,
       data: {
         kpis: {
           totalRevenue,
-          totalDisbursed,
+          totalAmountReceived,
+          tdsAndOther: totalTdsAndOther,
+          amountYetToPay: totalTdsAndOther,
+          totalGst,
+          totalRevenueExGst,
+          totalDisbursed: totalCombinedExpenses,
+          expenseBreakdown: {
+            crew: totalCrewWages,
+            travel: totalTravelExpense,
+            food: totalFoodExpense,
+            stay: totalStayExpense,
+            gst: totalGst,
+            total: totalCombinedExpenses
+          },
           netProfit,
           profitMargin,
           outstandingReceivables,
@@ -225,7 +285,13 @@ exports.getDashboardSummary = async (req, res) => {
           completedWorkOrders,
           totalPersonnelDeployed,
           pendingPayoutsCount,
-          totalPayoutsCompleted: rawPayouts.length
+          totalPayoutsCompleted: rawPayouts.length,
+          eventBreakdown: {
+            twoCameraSetup: twoCameraSetupCount,
+            threeCameraSetup: threeCameraSetupCount,
+            other: singleCameraOrOtherCount,
+            totalCameraDeployments: twoCameraSetupCount + threeCameraSetupCount + singleCameraOrOtherCount
+          }
         },
         recentActivity,
         companyBreakdown

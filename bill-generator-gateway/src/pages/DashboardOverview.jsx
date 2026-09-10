@@ -9,7 +9,8 @@ import {
   IconButton,
   Chip,
   Tooltip,
-  Alert
+  Alert,
+  Collapse
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -25,6 +26,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import BusinessIcon from '@mui/icons-material/Business';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 import { fetchDashboardSummary } from '../services/api';
 import { DashboardSkeleton } from '../components/skeletons';
@@ -46,6 +48,8 @@ const DashboardOverview = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [activityFilter, setActivityFilter] = useState('all'); // 'all' | 'in' | 'out'
+  const [revenueExpanded, setRevenueExpanded] = useState(false);
+  const [expensesExpanded, setExpensesExpanded] = useState(false);
 
   const loadSummary = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -94,7 +98,19 @@ const DashboardOverview = () => {
 
   const kpis = data?.kpis || {
     totalRevenue: 0,
+    totalAmountReceived: 0,
+    amountYetToPay: 0,
+    totalGst: 0,
+    totalRevenueExGst: 0,
     totalDisbursed: 0,
+    expenseBreakdown: {
+      crew: 0,
+      travel: 0,
+      food: 0,
+      stay: 0,
+      gst: 0,
+      total: 0
+    },
     netProfit: 0,
     profitMargin: 0,
     outstandingReceivables: 0,
@@ -203,7 +219,7 @@ const DashboardOverview = () => {
       )}
 
       {/* 4-Column Financial KPI Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }} alignItems="flex-start">
         {/* KPI 1: Total Revenue / Money Earned */}
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{
@@ -214,17 +230,37 @@ const DashboardOverview = () => {
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Total Revenue
               </Typography>
-              <Box sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '8px',
-                bgcolor: 'rgba(52, 211, 153, 0.12)',
-                border: '1px solid rgba(52, 211, 153, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <AccountBalanceWalletIcon sx={{ color: '#34d399', fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Tooltip title={revenueExpanded ? 'Collapse breakdown' : 'Expand breakdown'}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setRevenueExpanded(prev => !prev)}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      color: revenueExpanded ? '#34d399' : '#a1a1aa',
+                      bgcolor: revenueExpanded ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transform: revenueExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'all 0.2s ease',
+                      '&:hover': { color: '#34d399', bgcolor: 'rgba(52, 211, 153, 0.15)' }
+                    }}
+                  >
+                    <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                <Box sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  bgcolor: 'rgba(52, 211, 153, 0.12)',
+                  border: '1px solid rgba(52, 211, 153, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <AccountBalanceWalletIcon sx={{ color: '#34d399', fontSize: 18 }} />
+                </Box>
               </Box>
             </Box>
             <Typography sx={{
@@ -233,10 +269,113 @@ const DashboardOverview = () => {
               fontWeight: 800,
               color: '#34d399',
               lineHeight: 1.2,
-              mb: 1
+              mb: 1.5
             }}>
               ₹{kpis.totalRevenue.toLocaleString('en-IN')}
             </Typography>
+
+            {/* Expandable Dropdown Trigger Bar */}
+            <Box
+              onClick={() => setRevenueExpanded(prev => !prev)}
+              role="button"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 1.25,
+                py: 0.6,
+                mb: 1,
+                borderRadius: '6px',
+                bgcolor: revenueExpanded ? 'rgba(52, 211, 153, 0.12)' : 'rgba(52, 211, 153, 0.06)',
+                border: '1px solid rgba(52, 211, 153, 0.20)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease',
+                '&:hover': { bgcolor: 'rgba(52, 211, 153, 0.15)', borderColor: 'rgba(52, 211, 153, 0.35)' }
+              }}
+            >
+              <Typography sx={{ fontSize: '0.72rem', color: '#e4e4e7', fontWeight: 600 }}>
+                {revenueExpanded ? 'Hide Breakdown' : 'Received & TDS and Other'}
+              </Typography>
+              <KeyboardArrowDownIcon sx={{
+                fontSize: 16,
+                color: '#34d399',
+                transform: revenueExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }} />
+            </Box>
+
+            {/* Extended Dropdown Cell Content */}
+            <Collapse in={revenueExpanded}>
+              <Box sx={{
+                pt: 1,
+                pb: 0.5,
+                borderTop: '1px dashed rgba(255, 255, 255, 0.12)',
+                mb: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75
+              }}>
+                {/* Amount Received */}
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 1.25,
+                  py: 0.6,
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(52, 211, 153, 0.08)',
+                  border: '1px solid rgba(52, 211, 153, 0.20)'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#34d399' }} />
+                    <Typography sx={{ fontSize: '0.75rem', color: '#e4e4e7', fontWeight: 500 }}>
+                      Amount Received
+                    </Typography>
+                  </Box>
+                  <Typography sx={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#34d399'
+                  }}>
+                    ₹{(kpis.totalAmountReceived ?? 0).toLocaleString('en-IN')}
+                  </Typography>
+                </Box>
+
+                {/* TDS and Other */}
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 1.25,
+                  py: 0.6,
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(251, 191, 36, 0.08)',
+                  border: '1px solid rgba(251, 191, 36, 0.20)'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#fbbf24' }} />
+                    <Typography sx={{ fontSize: '0.75rem', color: '#e4e4e7', fontWeight: 500 }}>
+                      TDS and Other
+                    </Typography>
+                  </Box>
+                  <Typography sx={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#fbbf24'
+                  }}>
+                    ₹{(kpis.tdsAndOther ?? kpis.amountYetToPay ?? 0).toLocaleString('en-IN')}
+                  </Typography>
+                </Box>
+
+                <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.68rem', textAlign: 'right', fontStyle: 'italic' }}>
+                  Amount Received + TDS and Other = Total Revenue
+                </Typography>
+              </Box>
+            </Collapse>
+
             <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.75rem', display: 'block' }}>
               From {kpis.paidInvoicesCount} settled invoices
             </Typography>
@@ -251,19 +390,39 @@ const DashboardOverview = () => {
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Crew Expenses
+                Expenses
               </Typography>
-              <Box sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '8px',
-                bgcolor: 'rgba(251, 113, 133, 0.12)',
-                border: '1px solid rgba(251, 113, 133, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <PaymentsIcon sx={{ color: '#fb7185', fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Tooltip title={expensesExpanded ? 'Collapse bifurcation' : 'Expand bifurcation'}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setExpensesExpanded(prev => !prev)}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      color: expensesExpanded ? '#fb7185' : '#a1a1aa',
+                      bgcolor: expensesExpanded ? 'rgba(251, 113, 133, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transform: expensesExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'all 0.2s ease',
+                      '&:hover': { color: '#fb7185', bgcolor: 'rgba(251, 113, 133, 0.15)' }
+                    }}
+                  >
+                    <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                <Box sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  bgcolor: 'rgba(251, 113, 133, 0.12)',
+                  border: '1px solid rgba(251, 113, 133, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <PaymentsIcon sx={{ color: '#fb7185', fontSize: 18 }} />
+                </Box>
               </Box>
             </Box>
             <Typography sx={{
@@ -272,10 +431,92 @@ const DashboardOverview = () => {
               fontWeight: 800,
               color: '#fb7185',
               lineHeight: 1.2,
-              mb: 1
+              mb: 1.5
             }}>
               ₹{kpis.totalDisbursed.toLocaleString('en-IN')}
             </Typography>
+
+            {/* Expandable Dropdown Trigger Bar */}
+            <Box
+              onClick={() => setExpensesExpanded(prev => !prev)}
+              role="button"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 1.25,
+                py: 0.6,
+                mb: 1,
+                borderRadius: '6px',
+                bgcolor: expensesExpanded ? 'rgba(251, 113, 133, 0.12)' : 'rgba(251, 113, 133, 0.06)',
+                border: '1px solid rgba(251, 113, 133, 0.20)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease',
+                '&:hover': { bgcolor: 'rgba(251, 113, 133, 0.15)', borderColor: 'rgba(251, 113, 133, 0.35)' }
+              }}
+            >
+              <Typography sx={{ fontSize: '0.72rem', color: '#e4e4e7', fontWeight: 600 }}>
+                {expensesExpanded ? 'Hide Bifurcation' : 'Expense Bifurcation'}
+              </Typography>
+              <KeyboardArrowDownIcon sx={{
+                fontSize: 16,
+                color: '#fb7185',
+                transform: expensesExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }} />
+            </Box>
+
+            {/* Extended Dropdown Cell Content */}
+            <Collapse in={expensesExpanded}>
+              <Box sx={{
+                pt: 1,
+                pb: 0.5,
+                borderTop: '1px dashed rgba(255, 255, 255, 0.12)',
+                mb: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75
+              }}>
+                {[
+                  { label: 'Crew Wages', value: kpis.expenseBreakdown?.crew ?? kpis.totalDisbursed, color: '#fb7185' },
+                  { label: 'Travel', value: kpis.expenseBreakdown?.travel ?? 0, color: '#38bdf8' },
+                  { label: 'Food', value: kpis.expenseBreakdown?.food ?? 0, color: '#f59e0b' },
+                  { label: 'Stay', value: kpis.expenseBreakdown?.stay ?? 0, color: '#a78bfa' },
+                  { label: 'GST (18%)', value: kpis.expenseBreakdown?.gst ?? kpis.totalGst ?? 0, color: '#06b6d4' }
+                ].map((item) => (
+                  <Box
+                    key={item.label}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      px: 1.25,
+                      py: 0.5,
+                      borderRadius: '6px',
+                      bgcolor: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: item.color }} />
+                      <Typography sx={{ fontSize: '0.75rem', color: '#e4e4e7', fontWeight: 500 }}>
+                        {item.label}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: item.value > 0 ? item.color : '#71717a'
+                    }}>
+                      ₹{Number(item.value || 0).toLocaleString('en-IN')}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Collapse>
+
             <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.75rem', display: 'block' }}>
               {operations.totalPayoutsCompleted} payouts disbursed to crew
             </Typography>
@@ -315,7 +556,7 @@ const DashboardOverview = () => {
             }}>
               ₹{kpis.netProfit.toLocaleString('en-IN')}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
               <Box sx={{
                 px: 1,
                 py: 0.2,
@@ -332,6 +573,9 @@ const DashboardOverview = () => {
                 Operating Margin
               </Typography>
             </Box>
+            <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.7rem', display: 'block' }}>
+              Amount Received − Expenses (incl. GST)
+            </Typography>
           </Paper>
         </Grid>
 
