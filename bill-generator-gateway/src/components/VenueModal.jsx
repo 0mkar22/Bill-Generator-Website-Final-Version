@@ -11,7 +11,8 @@ const VenueModal = ({
     venues,
     formData,
     handleWorkItemChange,
-    setEditingVenueOldName
+    setEditingVenueOldName,
+    userId
 }) => {
     return (
         <Dialog 
@@ -78,7 +79,8 @@ const VenueModal = ({
                         newList = Array.from(new Set(newList));
                         
                         const customOnly = newList.filter(v => !venues.includes(v));
-                        localStorage.setItem('customVenues', JSON.stringify(customOnly));
+                        const storageKey = userId ? `customVenues_${userId}` : 'customVenues';
+                        localStorage.setItem(storageKey, JSON.stringify(customOnly));
                         
                         return newList;
                     });

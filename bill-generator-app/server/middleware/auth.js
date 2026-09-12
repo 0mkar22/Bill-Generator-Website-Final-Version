@@ -14,11 +14,13 @@ const auth = async (req, res, next) => {
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
-    if (error || !user) {
+    if (error || !user || !user.id) {
       return res.status(401).json({ success: false, error: 'Invalid or expired token' });
     }
 
     req.user = user;
+    req.userId = user.id;
+    req.token = token;
     next();
   } catch (err) {
     return res.status(401).json({ success: false, error: 'Authentication failed' });

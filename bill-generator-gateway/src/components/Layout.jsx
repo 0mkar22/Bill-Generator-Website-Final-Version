@@ -35,6 +35,15 @@ const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
+    // Purge cached storage and local state to prevent cross-account display bleed
+    try {
+      const keysToRemove = Object.keys(localStorage).filter(k => k.startsWith('customVenues'));
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn("Error purging client storage on logout:", e);
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error logging out:", error.message);

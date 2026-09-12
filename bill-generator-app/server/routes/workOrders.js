@@ -7,7 +7,7 @@ const {
   updateWorkOrder,
   updateWorkOrderExpenses
 } = require('../controllers/workOrders');
-const { validateWorkOrder } = require('../middleware/validate');
+const { validateWorkOrder, validateWorkOrderExpenses } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -18,7 +18,7 @@ router
 
 router
   .route('/:id/expenses')
-  .put(updateWorkOrderExpenses);
+  .put(validateWorkOrderExpenses, updateWorkOrderExpenses);
 
 router
   .route('/:id')

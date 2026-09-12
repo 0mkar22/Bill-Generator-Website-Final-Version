@@ -3,7 +3,8 @@ import { supabase } from '../supabase';
 import { calculateItemAmount } from '../utils/helpers';
 
 const API = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api'
+  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api',
+  timeout: 15000
 });
 
 API.interceptors.request.use(async (config) => {
@@ -14,6 +15,26 @@ API.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && session?.access_token) {
+          originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
+          return API(originalRequest);
+        }
+      } catch (refreshErr) {
+        console.warn('Auto-refresh token failed:', refreshErr);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const createWorkOrder = (workOrderData) => API.post('/workOrders', workOrderData);
 export const getWorkOrders = () => API.get('/workOrders');
@@ -42,11 +63,26 @@ export const updateInvoiceAmountReceived = (id, amount_received) => API.patch(`/
  * even if the Express container is rebuilding or temporarily unavailable.
  */
 export const fetchDashboardSummaryDirect = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+
+  let invoicesQuery = supabase.from('invoices').select('*').order('createdAt', { ascending: false });
+  let payoutsQuery = supabase.from('personnel_payouts').select('*, workOrders(entryNumber, eventDate)').order('created_at', { ascending: false });
+  let workOrdersQuery = supabase.from('workOrders').select('*').order('eventDate', { ascending: false });
+  let companiesQuery = supabase.from('companies').select('*');
+
+  if (userId) {
+    invoicesQuery = invoicesQuery.eq('user_id', userId);
+    payoutsQuery = payoutsQuery.eq('user_id', userId);
+    workOrdersQuery = workOrdersQuery.eq('user_id', userId);
+    companiesQuery = companiesQuery.eq('user_id', userId);
+  }
+
   const [invoicesRes, payoutsRes, workOrdersRes, companiesRes] = await Promise.all([
-    supabase.from('invoices').select('*').order('createdAt', { ascending: false }),
-    supabase.from('personnel_payouts').select('*, workOrders(entryNumber, eventDate)').order('created_at', { ascending: false }),
-    supabase.from('workOrders').select('*').order('eventDate', { ascending: false }),
-    supabase.from('companies').select('*')
+    invoicesQuery,
+    payoutsQuery,
+    workOrdersQuery,
+    companiesQuery
   ]);
 
   if (invoicesRes.error) throw invoicesRes.error;
@@ -354,11 +390,16 @@ export const updateWorkOrderExpenses = async (orderId, expenses) => {
     const foodNum = Number(food_expense) || 0;
     const stayNum = Number(stay_expense) || 0;
 
-    const { data: wo, error: getErr } = await supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    let getQuery = supabase
       .from('workOrders')
       .select('*')
-      .eq('id', orderId)
-      .single();
+      .eq('id', orderId);
+    if (userId) getQuery = getQuery.eq('user_id', userId);
+
+    const { data: wo, error: getErr } = await getQuery.single();
 
     if (getErr) throw getErr;
 
@@ -375,7 +416,7 @@ export const updateWorkOrderExpenses = async (orderId, expenses) => {
       ];
     }
 
-    const { data: updatedWo, error: updateErr } = await supabase
+    let updateQuery = supabase
       .from('workOrders')
       .update({
         workItems: updatedWorkItems,
@@ -383,15 +424,21 @@ export const updateWorkOrderExpenses = async (orderId, expenses) => {
         food_expense: foodNum,
         stay_expense: stayNum
       })
-      .eq('id', orderId)
+      .eq('id', orderId);
+    if (userId) updateQuery = updateQuery.eq('user_id', userId);
+
+    let { data: updatedWo, error: updateErr } = await updateQuery
       .select()
       .single();
 
     if (updateErr && updateErr.message && updateErr.message.includes('column')) {
-      const fallbackRes = await supabase
+      let fallbackQuery = supabase
         .from('workOrders')
         .update({ workItems: updatedWorkItems })
-        .eq('id', orderId)
+        .eq('id', orderId);
+      if (userId) fallbackQuery = fallbackQuery.eq('user_id', userId);
+
+      const fallbackRes = await fallbackQuery
         .select()
         .single();
       if (fallbackRes.error) throw fallbackRes.error;

@@ -23,6 +23,7 @@ const InvoiceGenerator = () => {
   const navigate = useNavigate();
   const [viewingInvoiceType, setViewingInvoiceType] = useState('All');
   const [vendorFilter, setVendorFilter] = useState('All Vendors');
+  const [markingPaidId, setMarkingPaidId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
 
   // Pagination & Search state
@@ -58,6 +59,7 @@ const InvoiceGenerator = () => {
   };
 
       const handleMarkAsPaid = async (id) => {
+          setMarkingPaidId(id);
           try {
               await API.patch(`/invoices/${id}/status`, { status: 'paid' });
               
@@ -74,6 +76,8 @@ const InvoiceGenerator = () => {
               console.error('Failed to mark invoice as paid:', err);
               const serverError = err.response?.data?.error || 'Failed to mark invoice as paid.';
               setSnackbar({ open: true, message: serverError, severity: 'error' });
+          } finally {
+              setMarkingPaidId(null);
           }
       };
     
@@ -491,11 +495,12 @@ const InvoiceGenerator = () => {
                                                   </Button>
                                               </>
                                           }
-                                            <Button 
-                                              variant="outlined"
-                                              size="small"
-                                              startIcon={<CheckCircleIcon fontSize="small" />}
-                                              onClick={() => handleMarkAsPaid(invoice.id)}
+                                             <Button 
+                                               variant="outlined"
+                                               size="small"
+                                               disabled={markingPaidId === invoice.id}
+                                               startIcon={<CheckCircleIcon fontSize="small" />}
+                                               onClick={() => handleMarkAsPaid(invoice.id)}
                                               sx={{
                                                 textTransform: 'none',
                                                 borderRadius: '6px',

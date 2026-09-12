@@ -2,7 +2,12 @@ const supabase = require('../config/db');
 
 exports.getCompanies = async (req, res) => {
   try {
-    const { data, error } = await supabase.from('companies').select('*');
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+
     if (error) throw error;
     res.status(200).json({ success: true, data });
   } catch (err) {
@@ -17,8 +22,15 @@ exports.getCompany = async (req, res) => {
       .from('companies')
       .select('*')
       .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
       .single();
-    if (error) throw error;
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ success: false, error: 'Company not found or unauthorized' });
+      }
+      throw error;
+    }
     res.status(200).json({ success: true, data });
   } catch (err) {
     console.error(err);
@@ -28,10 +40,16 @@ exports.getCompany = async (req, res) => {
 
 exports.createCompany = async (req, res) => {
   try {
+    const payload = {
+      ...req.body,
+      user_id: req.user.id
+    };
+
     const { data, error } = await supabase
       .from('companies')
-      .insert([req.body])
+      .insert([payload])
       .select();
+
     if (error) throw error;
     res.status(201).json({ success: true, data: data[0] });
   } catch (err) {
@@ -42,12 +60,21 @@ exports.createCompany = async (req, res) => {
 
 exports.updateCompany = async (req, res) => {
   try {
+    const { user_id, ...updateFields } = req.body;
+
     const { data, error } = await supabase
       .from('companies')
-      .update(req.body)
+      .update(updateFields)
       .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
       .select();
+
     if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ success: false, error: 'Company not found or unauthorized' });
+    }
+
     res.status(200).json({ success: true, data: data[0] });
   } catch (err) {
     console.error(err);

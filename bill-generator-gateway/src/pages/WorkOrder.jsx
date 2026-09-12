@@ -73,7 +73,8 @@ const WorkOrder = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   
   const [historicalPersonnel, setHistoricalPersonnel] = useState([]);
-    const [localVenues, setLocalVenues] = useState(() => {
+  const [userId, setUserId] = useState(null);
+  const [localVenues, setLocalVenues] = useState(() => {
         const saved = localStorage.getItem('customVenues');
         if (saved) {
             try {
@@ -123,6 +124,7 @@ const WorkOrder = () => {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [savingCompany, setSavingCompany] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
@@ -195,6 +197,21 @@ const WorkOrder = () => {
   };
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUserId = session?.user?.id;
+      if (currentUserId) {
+        setUserId(currentUserId);
+        const userKey = `customVenues_${currentUserId}`;
+        const saved = localStorage.getItem(userKey) || localStorage.getItem('customVenues');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setLocalVenues(Array.from(new Set([...venues, ...parsed])));
+          } catch (e) {}
+        }
+      }
+    });
+
     Promise.all([
       fetchCompanies(),
       fetchLatestEntry(),
@@ -418,6 +435,7 @@ const WorkOrder = () => {
 
   const handleSaveCompany = async (e) => {
     if (e) e.preventDefault();
+    setSavingCompany(true);
     try {
       const companyNameStr = newCompany.company_name?.toUpperCase() || '';
       const isONGC = newCompany.requires_po_number === true || companyNameStr.includes('ONGC') || 
@@ -465,6 +483,8 @@ const WorkOrder = () => {
     } catch (error) {
       console.error('Failed to save company:', error);
       setSnackbar({ open: true, message: 'Failed to save company data.', severity: 'error' });
+    } finally {
+      setSavingCompany(false);
     }
   };
 
@@ -810,6 +830,7 @@ renderValue={(selected) => selected}
         handleSaveCompany={handleSaveCompany}
         getFilteredSubWorks={getFilteredSubWorks}
         handleRateChange={handleRateChange}
+        savingCompany={savingCompany}
       />
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
@@ -829,6 +850,7 @@ renderValue={(selected) => selected}
           formData={formData}
           handleWorkItemChange={handleWorkItemChange}
           setEditingVenueOldName={setEditingVenueOldName}
+          userId={userId}
         />
 
       </Container>

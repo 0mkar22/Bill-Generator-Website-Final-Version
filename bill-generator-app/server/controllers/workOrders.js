@@ -4,7 +4,9 @@ exports.getWorkOrders = async (req, res) => {
   try {
     const { data: workOrders, error } = await supabase
       .from('workOrders')
-      .select('*');
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('eventDate', { ascending: false });
 
     if (error) throw error;
 
@@ -18,6 +20,20 @@ exports.getWorkOrders = async (req, res) => {
 exports.createWorkOrder = async (req, res) => {
   try {
     const { entryNumber, eventDate, vendor, workItems, company_id } = req.body;
+
+    if (company_id) {
+      const { data: comp, error: compErr } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('id', company_id)
+        .eq('user_id', req.user.id)
+        .single();
+
+      if (compErr || !comp) {
+        return res.status(403).json({ success: false, error: 'Unauthorized: Company does not belong to your account.' });
+      }
+    }
+
     let formattedWorkItems = workItems;
     if (formattedWorkItems && Array.isArray(formattedWorkItems)) {
         formattedWorkItems = formattedWorkItems.map(item => ({
@@ -25,7 +41,14 @@ exports.createWorkOrder = async (req, res) => {
             personnel: item.personnel || [] 
         }));
     }
-    const payload = { entryNumber, eventDate, vendor, workItems: formattedWorkItems, company_id };
+    const payload = { 
+      entryNumber, 
+      eventDate, 
+      vendor, 
+      workItems: formattedWorkItems, 
+      company_id,
+      user_id: req.user.id 
+    };
 
     const { data: workOrder, error } = await supabase
       .from('workOrders')
@@ -47,11 +70,12 @@ exports.getWorkOrder = async (req, res) => {
       .from('workOrders')
       .select('*')
       .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
       .single();
 
     if (error) {
         if (error.code === 'PGRST116') {
-            return res.status(404).json({ success: false, error: 'No work order found' });
+            return res.status(404).json({ success: false, error: 'No work order found or unauthorized' });
         }
         throw error;
     }
@@ -66,6 +90,20 @@ exports.getWorkOrder = async (req, res) => {
 exports.updateWorkOrder = async (req, res) => {
   try {
     const { entryNumber, eventDate, vendor, workItems, company_id } = req.body;
+
+    if (company_id) {
+      const { data: comp, error: compErr } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('id', company_id)
+        .eq('user_id', req.user.id)
+        .single();
+
+      if (compErr || !comp) {
+        return res.status(403).json({ success: false, error: 'Unauthorized: Company does not belong to your account.' });
+      }
+    }
+
     let formattedWorkItems = workItems;
     if (formattedWorkItems && Array.isArray(formattedWorkItems)) {
         formattedWorkItems = formattedWorkItems.map(item => ({
@@ -79,12 +117,13 @@ exports.updateWorkOrder = async (req, res) => {
       .from('workOrders')
       .update(payload)
       .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
       .select()
       .single();
 
     if (error) {
         if (error.code === 'PGRST116') {
-            return res.status(404).json({ success: false, error: 'No work order found' });
+            return res.status(404).json({ success: false, error: 'No work order found or unauthorized' });
         }
         throw error;
     }
@@ -102,12 +141,13 @@ exports.deleteWorkOrder = async (req, res) => {
       .from('workOrders')
       .delete()
       .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
       .select()
       .single();
 
     if (error) {
         if (error.code === 'PGRST116') {
-            return res.status(404).json({ success: false, error: 'No work order found' });
+            return res.status(404).json({ success: false, error: 'No work order found or unauthorized' });
         }
         throw error;
     }
@@ -124,18 +164,19 @@ exports.updateWorkOrderExpenses = async (req, res) => {
     const { id } = req.params;
     const { travel_expense, food_expense, stay_expense } = req.body;
 
-    const travelNum = Number(travel_expense) || 0;
-    const foodNum = Number(food_expense) || 0;
-    const stayNum = Number(stay_expense) || 0;
+    const travelNum = Math.max(0, Number(travel_expense) || 0);
+    const foodNum = Math.max(0, Number(food_expense) || 0);
+    const stayNum = Math.max(0, Number(stay_expense) || 0);
 
     const { data: currentWo, error: getErr } = await supabase
       .from('workOrders')
       .select('*')
       .eq('id', id)
+      .eq('user_id', req.user.id)
       .single();
 
     if (getErr || !currentWo) {
-      return res.status(404).json({ success: false, error: 'Work order not found' });
+      return res.status(404).json({ success: false, error: 'Work order not found or unauthorized' });
     }
 
     let updatedWorkItems = currentWo.workItems || [];
@@ -160,6 +201,7 @@ exports.updateWorkOrderExpenses = async (req, res) => {
         stay_expense: stayNum
       })
       .eq('id', id)
+      .eq('user_id', req.user.id)
       .select()
       .single();
 
@@ -168,6 +210,7 @@ exports.updateWorkOrderExpenses = async (req, res) => {
         .from('workOrders')
         .update({ workItems: updatedWorkItems })
         .eq('id', id)
+        .eq('user_id', req.user.id)
         .select()
         .single();
       updatedWo = fallbackRes.data;

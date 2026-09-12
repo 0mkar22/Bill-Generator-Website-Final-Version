@@ -8,12 +8,12 @@ const { calculateItemAmount } = require('../utils/helpers');
  */
 exports.getDashboardSummary = async (req, res) => {
   try {
-    // 1. Parallel fetch of all primary datasets
+    // 1. Parallel fetch of all primary datasets scoped strictly to authenticated tenant
     const [invoicesRes, payoutsRes, workOrdersRes, companiesRes] = await Promise.all([
-      supabase.from('invoices').select('*').order('createdAt', { ascending: false }),
-      supabase.from('personnel_payouts').select('*, workOrders(entryNumber, eventDate)').order('created_at', { ascending: false }),
-      supabase.from('workOrders').select('*').order('eventDate', { ascending: false }),
-      supabase.from('companies').select('*')
+      supabase.from('invoices').select('*').eq('user_id', req.user.id).order('createdAt', { ascending: false }),
+      supabase.from('personnel_payouts').select('*, workOrders(entryNumber, eventDate)').eq('user_id', req.user.id).order('created_at', { ascending: false }),
+      supabase.from('workOrders').select('*').eq('user_id', req.user.id).order('eventDate', { ascending: false }),
+      supabase.from('companies').select('*').eq('user_id', req.user.id)
     ]);
 
     if (invoicesRes.error) throw invoicesRes.error;

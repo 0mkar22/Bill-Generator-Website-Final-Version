@@ -363,26 +363,27 @@ const AmountPaid = () => {
   const handleSubmitPayout = async () => {
       setSaving(true);
       try {
-          // If event expenses were provided or modified, persist them to work order
-          if (globalForm.eventId && (globalForm.travelExpense !== '' || globalForm.foodExpense !== '' || globalForm.stayExpense !== '')) {
-              await updateWorkOrderExpenses(globalForm.eventId, {
-                  travel_expense: Number(globalForm.travelExpense) || 0,
-                  food_expense: Number(globalForm.foodExpense) || 0,
-                  stay_expense: Number(globalForm.stayExpense) || 0
-              });
-          }
-
           if (editPayoutId) {
               const singlePayload = {
                   event_id: globalForm.eventId,
                   personnel_name: batchPersonnel[0].personnelName,
                   work_name: batchPersonnel[0].workName,
                   duration: batchPersonnel[0].duration,
-                  amount_paid: Number(batchPersonnel[0].amountPaid),
+                  amount_paid: Math.max(0, Number(batchPersonnel[0].amountPaid) || 0),
                   payment_date: batchPersonnel[0].paymentDate,
                   notes: globalForm.notes
               };
               await updatePayout(editPayoutId, singlePayload);
+
+              // If event expenses were provided or modified, persist them to work order
+              if (globalForm.eventId && (globalForm.travelExpense !== '' || globalForm.foodExpense !== '' || globalForm.stayExpense !== '')) {
+                  await updateWorkOrderExpenses(globalForm.eventId, {
+                      travel_expense: Math.max(0, Number(globalForm.travelExpense) || 0),
+                      food_expense: Math.max(0, Number(globalForm.foodExpense) || 0),
+                      stay_expense: Math.max(0, Number(globalForm.stayExpense) || 0)
+                  });
+              }
+
               setSnackbar({ open: true, message: 'Payout updated successfully!', severity: 'success' });
           } else {
               const eligiblePersonnel = batchPersonnel.filter(
@@ -400,17 +401,32 @@ const AmountPaid = () => {
                       personnel_name: person.personnelName,
                       work_name: person.workName,
                       duration: person.duration,
-                      amount_paid: Number(person.amountPaid),
+                      amount_paid: Math.max(0, Number(person.amountPaid) || 0),
                       payment_date: person.paymentDate,
                       notes: globalForm.notes
                   }));
                   await API.post('/personnelPayouts', payloadArray);
+
+                  // Only persist work order expenses after payouts succeed
+                  if (globalForm.eventId && (globalForm.travelExpense !== '' || globalForm.foodExpense !== '' || globalForm.stayExpense !== '')) {
+                      await updateWorkOrderExpenses(globalForm.eventId, {
+                          travel_expense: Math.max(0, Number(globalForm.travelExpense) || 0),
+                          food_expense: Math.max(0, Number(globalForm.foodExpense) || 0),
+                          stay_expense: Math.max(0, Number(globalForm.stayExpense) || 0)
+                      });
+                  }
+
                   setSnackbar({ 
                       open: true, 
                       message: `Payout logged for ${eligiblePersonnel.length} personnel successfully!`, 
                       severity: 'success' 
                   });
               } else if (globalForm.travelExpense !== '' || globalForm.foodExpense !== '' || globalForm.stayExpense !== '') {
+                  await updateWorkOrderExpenses(globalForm.eventId, {
+                      travel_expense: Math.max(0, Number(globalForm.travelExpense) || 0),
+                      food_expense: Math.max(0, Number(globalForm.foodExpense) || 0),
+                      stay_expense: Math.max(0, Number(globalForm.stayExpense) || 0)
+                  });
                   setSnackbar({ 
                       open: true, 
                       message: 'Event expenses updated successfully!', 

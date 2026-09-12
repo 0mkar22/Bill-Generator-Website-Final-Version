@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Typography, Box, Divider } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Typography, Box, Divider, CircularProgress } from '@mui/material';
 import { subWorks, vidhanMandalWorks } from '../constants/data';
 
 const CompanyModal = ({
@@ -10,7 +10,8 @@ const CompanyModal = ({
     setNewCompany,
     handleSaveCompany,
     getFilteredSubWorks,
-    handleRateChange
+    handleRateChange,
+    savingCompany = false
 }) => {
     return (
         <Dialog 
@@ -157,9 +158,9 @@ const CompanyModal = ({
 
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <Button type="button" onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
-          <Button type="button" onClick={handleSaveCompany} variant="contained" disabled={!newCompany.company_name}>
-            {editingCompanyId ? 'Update' : 'Save'}
+          <Button type="button" onClick={() => setIsCompanyModalOpen(false)} disabled={savingCompany}>Cancel</Button>
+          <Button type="button" onClick={handleSaveCompany} variant="contained" disabled={!newCompany.company_name || savingCompany}>
+            {savingCompany ? <CircularProgress size={20} color="inherit" /> : (editingCompanyId ? 'Update' : 'Save')}
           </Button>
         </DialogActions>
       </Dialog>
