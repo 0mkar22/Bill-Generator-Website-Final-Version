@@ -59,9 +59,18 @@ const VenueModal = ({
               type="text"
               fullWidth
               variant="outlined"
+              multiline
+              minRows={1}
+              maxRows={4}
               value={newVenueText}
               onChange={(e) => setNewVenueText(e.target.value)}
-              sx={{ mt: 2 }}
+              sx={{ 
+                mt: 2,
+                '& .MuiInputBase-input': {
+                  wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
+                }
+              }}
             />
           </DialogContent>
           <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>

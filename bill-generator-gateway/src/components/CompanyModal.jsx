@@ -60,9 +60,18 @@ const CompanyModal = ({
             type="text"
             fullWidth
             variant="outlined"
+            multiline
+            minRows={1}
+            maxRows={4}
             value={newCompany.company_name}
             onChange={(e) => setNewCompany({...newCompany, company_name: e.target.value})}
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              '& .MuiInputBase-input': {
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+              }
+            }}
           />
           <TextField
             margin="dense"
@@ -74,6 +83,12 @@ const CompanyModal = ({
             rows={3}
             value={newCompany.address}
             onChange={(e) => setNewCompany({...newCompany, address: e.target.value})}
+            sx={{
+              '& .MuiInputBase-input': {
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+              }
+            }}
           />
           <TextField
             margin="dense"

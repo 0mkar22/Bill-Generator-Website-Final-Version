@@ -131,6 +131,20 @@ const theme = createTheme({
         },
       },
     },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          '&.MuiInputBase-multiline': {
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
+          },
+        },
+        inputMultiline: {
+          wordBreak: 'break-word',
+          overflowWrap: 'anywhere',
+        },
+      },
+    },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
@@ -147,6 +161,10 @@ const theme = createTheme({
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: '#e4e4e7',
             borderWidth: '1px',
+          },
+          '& .MuiInputBase-inputMultiline': {
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
           },
         },
       },

@@ -739,8 +739,17 @@ renderValue={(selected) => selected}
                           label="कक्ष क्रमांक" 
                           required 
                           fullWidth 
+                          multiline
+                          minRows={1}
+                          maxRows={4}
                           value={formData.workItems[0].roomNumber || ''} 
                           onChange={(e) => handleWorkItemChange(0, e)} 
+                          sx={{
+                            '& .MuiInputBase-input': {
+                              wordBreak: 'break-word',
+                              overflowWrap: 'anywhere',
+                            }
+                          }}
                         />
                       </Grid>
                     ) : (
@@ -760,6 +769,15 @@ renderValue={(selected) => selected}
                                 label="Contact Person"
                                 required
                                 fullWidth
+                                multiline
+                                minRows={1}
+                                maxRows={4}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'anywhere',
+                                  }
+                                }}
                               />
                             )}
                           />

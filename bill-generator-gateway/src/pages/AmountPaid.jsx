@@ -658,10 +658,38 @@ const AmountPaid = () => {
                             <TextField label="Entry Number" fullWidth value={globalForm.entryNumber} disabled InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }} />
                         </Grid>
                         <Grid item xs={12} sm={3}>
-                            <TextField label="Event Name" fullWidth value={globalForm.eventName} disabled />
+                            <TextField 
+                                label="Event Name" 
+                                fullWidth 
+                                multiline
+                                minRows={1}
+                                maxRows={4}
+                                value={globalForm.eventName} 
+                                disabled 
+                                sx={{
+                                    '& .MuiInputBase-input': {
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'anywhere',
+                                    }
+                                }}
+                            />
                         </Grid>
                         <Grid item xs={12} sm={3}>
-                            <TextField label="Event Venue" fullWidth value={globalForm.eventVenue} disabled />
+                            <TextField 
+                                label="Event Venue" 
+                                fullWidth 
+                                multiline
+                                minRows={1}
+                                maxRows={4}
+                                value={globalForm.eventVenue} 
+                                disabled 
+                                sx={{
+                                    '& .MuiInputBase-input': {
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'anywhere',
+                                    }
+                                }}
+                            />
                         </Grid>
                         <Grid item xs={12} sm={3}>
                             <TextField label="Event Date" fullWidth value={globalForm.eventDate} disabled InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }} />
@@ -721,9 +749,57 @@ const AmountPaid = () => {
                                 batchPersonnel.map((person, idx) => (
                                     <Paper key={idx} variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: '10px' }}>
                                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <TextField label="Personnel Name" sx={{ flex: 1, minWidth: '130px' }} value={person.personnelName} disabled size="small" />
-                                            <TextField label="Work Name" sx={{ flex: 1, minWidth: '130px' }} value={person.workName} disabled size="small" />
-                                            <TextField label="Duration / Subcategory" sx={{ flex: 1, minWidth: '130px' }} value={person.duration} disabled size="small" />
+                                            <TextField 
+                                                label="Personnel Name" 
+                                                sx={{ 
+                                                    flex: 1, 
+                                                    minWidth: '130px',
+                                                    '& .MuiInputBase-input': {
+                                                        wordBreak: 'break-word',
+                                                        overflowWrap: 'anywhere',
+                                                    }
+                                                }} 
+                                                multiline
+                                                minRows={1}
+                                                maxRows={3}
+                                                value={person.personnelName} 
+                                                disabled 
+                                                size="small" 
+                                            />
+                                            <TextField 
+                                                label="Work Name" 
+                                                sx={{ 
+                                                    flex: 1, 
+                                                    minWidth: '130px',
+                                                    '& .MuiInputBase-input': {
+                                                        wordBreak: 'break-word',
+                                                        overflowWrap: 'anywhere',
+                                                    }
+                                                }} 
+                                                multiline
+                                                minRows={1}
+                                                maxRows={3}
+                                                value={person.workName} 
+                                                disabled 
+                                                size="small" 
+                                            />
+                                            <TextField 
+                                                label="Duration / Subcategory" 
+                                                sx={{ 
+                                                    flex: 1, 
+                                                    minWidth: '130px',
+                                                    '& .MuiInputBase-input': {
+                                                        wordBreak: 'break-word',
+                                                        overflowWrap: 'anywhere',
+                                                    }
+                                                }} 
+                                                multiline
+                                                minRows={1}
+                                                maxRows={3}
+                                                value={person.duration} 
+                                                disabled 
+                                                size="small" 
+                                            />
                                             <TextField
                                                 label="Amount Paid (Rs)"
                                                 type="number"
@@ -759,6 +835,12 @@ const AmountPaid = () => {
                                 fullWidth
                                 value={globalForm.notes}
                                 onChange={e => setGlobalForm({ ...globalForm, notes: e.target.value })}
+                                sx={{
+                                    '& .MuiInputBase-input': {
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'anywhere',
+                                    }
+                                }}
                             />
                         </Grid>
                     </Grid>
@@ -1468,10 +1550,38 @@ const AmountPaid = () => {
                       <TextField label="Entry Number" fullWidth value={globalForm.entryNumber} disabled InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }} />
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                      <TextField label="Event Name" fullWidth value={globalForm.eventName} disabled />
+                      <TextField 
+                          label="Event Name" 
+                          fullWidth 
+                          multiline
+                          minRows={1}
+                          maxRows={4}
+                          value={globalForm.eventName} 
+                          disabled 
+                          sx={{
+                              '& .MuiInputBase-input': {
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
+                              }
+                          }}
+                      />
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                      <TextField label="Event Venue" fullWidth value={globalForm.eventVenue} disabled />
+                      <TextField 
+                          label="Event Venue" 
+                          fullWidth 
+                          multiline
+                          minRows={1}
+                          maxRows={4}
+                          value={globalForm.eventVenue} 
+                          disabled 
+                          sx={{
+                              '& .MuiInputBase-input': {
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
+                              }
+                          }}
+                      />
                   </Grid>
                   <Grid item xs={12} sm={3}>
                       <TextField label="Event Date" fullWidth value={globalForm.eventDate} disabled InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }} />
@@ -1529,9 +1639,57 @@ const AmountPaid = () => {
                           batchPersonnel.map((person, idx) => (
                               <Paper key={idx} variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: '10px' }}>
                                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                                      <TextField label="Personnel Name" sx={{ flex: 1, minWidth: '130px' }} value={person.personnelName} disabled size="small" />
-                                      <TextField label="Work Name" sx={{ flex: 1, minWidth: '130px' }} value={person.workName} disabled size="small" />
-                                      <TextField label="Duration / Subcategory" sx={{ flex: 1, minWidth: '130px' }} value={person.duration} disabled size="small" />
+                                      <TextField 
+                                          label="Personnel Name" 
+                                          sx={{ 
+                                              flex: 1, 
+                                              minWidth: '130px',
+                                              '& .MuiInputBase-input': {
+                                                  wordBreak: 'break-word',
+                                                  overflowWrap: 'anywhere',
+                                              }
+                                          }} 
+                                          multiline
+                                          minRows={1}
+                                          maxRows={3}
+                                          value={person.personnelName} 
+                                          disabled 
+                                          size="small" 
+                                      />
+                                      <TextField 
+                                          label="Work Name" 
+                                          sx={{ 
+                                              flex: 1, 
+                                              minWidth: '130px',
+                                              '& .MuiInputBase-input': {
+                                                  wordBreak: 'break-word',
+                                                  overflowWrap: 'anywhere',
+                                              }
+                                          }} 
+                                          multiline
+                                          minRows={1}
+                                          maxRows={3}
+                                          value={person.workName} 
+                                          disabled 
+                                          size="small" 
+                                      />
+                                      <TextField 
+                                          label="Duration / Subcategory" 
+                                          sx={{ 
+                                              flex: 1, 
+                                              minWidth: '130px',
+                                              '& .MuiInputBase-input': {
+                                                  wordBreak: 'break-word',
+                                                  overflowWrap: 'anywhere',
+                                              }
+                                          }} 
+                                          multiline
+                                          minRows={1}
+                                          maxRows={3}
+                                          value={person.duration} 
+                                          disabled 
+                                          size="small" 
+                                      />
                                       <TextField
                                           label="Amount Paid (Rs)"
                                           type="number"
@@ -1569,6 +1727,12 @@ const AmountPaid = () => {
                           fullWidth
                           value={globalForm.notes}
                           onChange={e => setGlobalForm({...globalForm, notes: e.target.value})}
+                          sx={{
+                              '& .MuiInputBase-input': {
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
+                              }
+                          }}
                       />
                   </Grid>
               </Grid>

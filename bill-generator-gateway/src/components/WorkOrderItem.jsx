@@ -96,7 +96,23 @@ const WorkOrderItem = ({
                 {/* --- 2. Work Subcategory --- */}
                 {item.workMain === 'Others' ? (
                     <Grid item xs={12} sm={6}>
-                        <TextField name="customWorkMain" label="Custom Work Name" required fullWidth value={item.customWorkMain} onChange={(e) => handleWorkItemChange(index, e)} />
+                        <TextField 
+                            name="customWorkMain" 
+                            label="Custom Work Name" 
+                            required 
+                            fullWidth 
+                            multiline
+                            minRows={1}
+                            maxRows={6}
+                            value={item.customWorkMain} 
+                            onChange={(e) => handleWorkItemChange(index, e)} 
+                            sx={{
+                                '& .MuiInputBase-input': {
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'anywhere',
+                                }
+                            }}
+                        />
                     </Grid>
                 ) : (
                     <Grid item xs={12} sm={6}>
@@ -156,8 +172,17 @@ const WorkOrderItem = ({
                                               required
                                               size="small"
                                               fullWidth
+                                              multiline
+                                              minRows={1}
+                                              maxRows={4}
                                               value={member || ''}
                                               onChange={(e) => handleMemberNameChange(index, gIdx, mIdx, e.target.value)}
+                                              sx={{
+                                                '& .MuiInputBase-input': {
+                                                  wordBreak: 'break-word',
+                                                  overflowWrap: 'anywhere',
+                                                }
+                                              }}
                                           />
                                           <IconButton color="primary" onClick={() => addMemberRow(index, gIdx)} sx={{ p: 0.5 }}>
                                             <AddCircleOutlineIcon />
@@ -386,6 +411,15 @@ const WorkOrderItem = ({
                                 label={person.role ? `${person.role} Name` : `Photographer/Videographer ${pIdx + 1} Name`}
                                 fullWidth
                                 size="small"
+                                multiline
+                                minRows={1}
+                                maxRows={4}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'anywhere',
+                                  }
+                                }}
                               />
                             )}
                           />

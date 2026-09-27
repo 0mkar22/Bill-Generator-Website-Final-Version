@@ -48,7 +48,16 @@ const EditableField = ({
             disableUnderline: true,
             style: { fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }
         }}
-        sx={{ ...sx, p: 0, '& .MuiInputBase-root': { p: 0 }, '& .MuiInputBase-input': { p: 0 } }}
+        sx={{ 
+          ...sx, 
+          p: 0, 
+          '& .MuiInputBase-root': { p: 0 }, 
+          '& .MuiInputBase-input': { 
+            p: 0, 
+            wordBreak: 'break-word', 
+            overflowWrap: 'anywhere' 
+          } 
+        }}
       />
     );
   }
