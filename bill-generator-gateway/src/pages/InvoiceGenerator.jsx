@@ -37,7 +37,8 @@ const InvoiceGenerator = () => {
   const fetchCompanies = async () => {
     try {
       const response = await getCompanies();
-      setCompanies(response.data.data || []);
+      const list = response?.data?.data || response?.data || [];
+      setCompanies(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("Failed to fetch companies:", error);
     }
@@ -46,7 +47,8 @@ const InvoiceGenerator = () => {
   const fetchWorkItems = async () => {
     try {
       const response = await getWorkOrders();
-      const allItems = (response.data.data || []).flatMap(order =>
+      const rawOrders = response?.data?.data || response?.data || [];
+      const allItems = (Array.isArray(rawOrders) ? rawOrders : []).flatMap(order =>
              (order.workItems || []).map((item, index) => {
              const uniqueId = item.id || `entry-${order.entryNumber}-item-${index}`;
              return { ...item, id: uniqueId, parent: order };

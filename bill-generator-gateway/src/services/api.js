@@ -36,26 +36,230 @@ API.interceptors.response.use(
   }
 );
 
-export const createWorkOrder = (workOrderData) => API.post('/workOrders', workOrderData);
-export const getWorkOrders = () => API.get('/workOrders');
+export const createWorkOrder = async (workOrderData) => {
+  try {
+    return await API.post('/workOrders', workOrderData);
+  } catch (err) {
+    console.warn('Backend /workOrders create unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const payload = { ...workOrderData };
+    if (userId && !payload.user_id) payload.user_id = userId;
+    const { data, error } = await supabase.from('workOrders').insert([payload]).select().single();
+    if (error) throw error;
+    return { data: { success: true, data } };
+  }
+};
 
-export const getCompanies = () => API.get('/companies');
-export const createCompany = (data) => API.post('/companies', data);
-export const updateCompany = (id, data) => API.put(`/companies/${id}`, data);
+export const getWorkOrders = async () => {
+  try {
+    return await API.get('/workOrders');
+  } catch (err) {
+    console.warn('Backend /workOrders unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('workOrders').select('*').order('eventDate', { ascending: false });
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: { success: true, data: data || [] } };
+  }
+};
 
-export const getTeam = () => API.get('/team');
-export const upsertTeam = (data) => API.post('/team', data);
+export const getCompanies = async () => {
+  try {
+    return await API.get('/companies');
+  } catch (err) {
+    console.warn('Backend /companies unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('companies').select('*').order('created_at', { ascending: false });
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: { success: true, data: data || [] } };
+  }
+};
+
+export const createCompany = async (data) => {
+  try {
+    return await API.post('/companies', data);
+  } catch (err) {
+    console.warn('Backend /companies create unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const payload = { ...data };
+    if (userId && !payload.user_id) payload.user_id = userId;
+    const { data: inserted, error } = await supabase.from('companies').insert([payload]).select().single();
+    if (error) throw error;
+    return { data: { success: true, data: inserted } };
+  }
+};
+
+export const updateCompany = async (id, data) => {
+  try {
+    return await API.put(`/companies/${id}`, data);
+  } catch (err) {
+    console.warn('Backend /companies update unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const { user_id, ...updateFields } = data;
+    let query = supabase.from('companies').update(updateFields).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data: updated, error } = await query.select().single();
+    if (error) throw error;
+    return { data: { success: true, data: updated } };
+  }
+};
+
+export const getTeam = async () => {
+  try {
+    return await API.get('/team');
+  } catch (err) {
+    console.warn('Backend /team unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('team').select('*').order('name', { ascending: true });
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: { success: true, data: data || [] } };
+  }
+};
+
+export const upsertTeam = async (data) => {
+  try {
+    return await API.post('/team', data);
+  } catch (err) {
+    console.warn('Backend /team upsert unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const payload = { ...data };
+    if (userId && !payload.user_id) payload.user_id = userId;
+    const { data: upserted, error } = await supabase
+      .from('team')
+      .upsert([payload], { onConflict: 'user_id, name' })
+      .select()
+      .single();
+    if (error) throw error;
+    return { data: { success: true, data: upserted } };
+  }
+};
+
+export const getInvoices = async () => {
+  try {
+    return await API.get('/invoices');
+  } catch (err) {
+    console.warn('Backend /invoices unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('invoices').select('*').order('createdAt', { ascending: false });
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: { success: true, data: data || [] } };
+  }
+};
 
 export default API;
 
-export const updateInvoiceStatus = (id, status) => API.patch(`/invoices/${id}/status`, { status });
-export const getPayouts = () => API.get('/personnelPayouts');
-export const createPayout = (data) => API.post('/personnelPayouts', data);
-export const deletePayout = (id) => API.delete(`/personnelPayouts/${id}`);
+export const updateInvoiceStatus = async (id, status) => {
+  try {
+    return await API.patch(`/invoices/${id}/status`, { status });
+  } catch (err) {
+    console.warn('Backend updateInvoiceStatus unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('invoices').update({ status }).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data: updated, error } = await query.select().single();
+    if (error) throw error;
+    return { data: { success: true, data: updated } };
+  }
+};
 
-export const updatePayout = (id, data) => API.put(`/personnelPayouts/${id}`, data);
+export const getPayouts = async () => {
+  try {
+    return await API.get('/personnelPayouts');
+  } catch (err) {
+    console.warn('Backend /personnelPayouts unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase
+      .from('personnel_payouts')
+      .select('*, workOrders(entryNumber, eventDate)')
+      .order('created_at', { ascending: false });
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: { success: true, data: data || [] } };
+  }
+};
 
-export const updateInvoiceAmountReceived = (id, amount_received) => API.patch(`/invoices/${id}/amount-received`, { amount_received });
+export const createPayout = async (data) => {
+  try {
+    return await API.post('/personnelPayouts', data);
+  } catch (err) {
+    console.warn('Backend /personnelPayouts create unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const payload = Array.isArray(data)
+      ? data.map(p => ({ ...p, user_id: userId }))
+      : { ...data, user_id: userId };
+    const { data: inserted, error } = await supabase
+      .from('personnel_payouts')
+      .insert(Array.isArray(payload) ? payload : [payload])
+      .select();
+    if (error) throw error;
+    return { data: { success: true, data: inserted } };
+  }
+};
+
+export const deletePayout = async (id) => {
+  try {
+    return await API.delete(`/personnelPayouts/${id}`);
+  } catch (err) {
+    console.warn('Backend /personnelPayouts delete unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('personnel_payouts').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { error } = await query;
+    if (error) throw error;
+    return { data: { success: true } };
+  }
+};
+
+export const updatePayout = async (id, data) => {
+  try {
+    return await API.put(`/personnelPayouts/${id}`, data);
+  } catch (err) {
+    console.warn('Backend /personnelPayouts update unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const { user_id, ...updateFields } = data;
+    let query = supabase.from('personnel_payouts').update(updateFields).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data: updated, error } = await query.select().single();
+    if (error) throw error;
+    return { data: { success: true, data: updated } };
+  }
+};
+
+export const updateInvoiceAmountReceived = async (id, amount_received) => {
+  try {
+    return await API.patch(`/invoices/${id}/amount-received`, { amount_received });
+  } catch (err) {
+    console.warn('Backend updateInvoiceAmountReceived unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('invoices').update({ amount_received }).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data: updated, error } = await query.select().single();
+    if (error) throw error;
+    return { data: { success: true, data: updated } };
+  }
+};
 
 /**
  * Direct client-side Supabase aggregation fallback.

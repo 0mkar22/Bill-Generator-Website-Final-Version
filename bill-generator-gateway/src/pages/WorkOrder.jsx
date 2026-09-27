@@ -143,7 +143,8 @@ const WorkOrder = () => {
   const fetchCompanies = async () => {
     try {
       const response = await getCompanies();
-      setCompanies(response.data.data || []);
+      const list = response?.data?.data || response?.data || [];
+      setCompanies(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("Failed to fetch companies:", error);
     }
@@ -152,7 +153,8 @@ const WorkOrder = () => {
   const fetchTeamData = async () => {
     try {
       const response = await getTeam();
-      setHistoricalPersonnel(response.data.data || []);
+      const list = response?.data?.data || response?.data || [];
+      setHistoricalPersonnel(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("Failed to fetch team data:", error);
     }
@@ -161,7 +163,7 @@ const WorkOrder = () => {
   const fetchLatestEntry = async () => {
     try {
         const response = await getWorkOrders();
-        const workOrders = response.data.data || [];
+        const workOrders = response?.data?.data || response?.data || [];
         if (workOrders.length > 0) {
             const latest = workOrders.reduce((max, order) =>
                 parseInt(order.entryNumber, 10) > parseInt(max.entryNumber, 10) ? order : max,
