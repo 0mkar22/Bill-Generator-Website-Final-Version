@@ -83,18 +83,16 @@ const MinimalHero = ({ operations = {}, kpis = {} }) => {
 
       {/* Main Headline & Subtitle */}
       <div className="max-w-3xl">
-        {/* Brand Supertitle */}
-        <div className="mb-2.5 flex items-center gap-2.5">
-          <span className="font-brand text-xs sm:text-sm md:text-base font-bold uppercase tracking-[0.24em] bg-gradient-to-r from-indigo-300 via-sky-200 to-indigo-400 bg-clip-text text-transparent drop-shadow-[0_2px_12px_rgba(99,102,241,0.35)]">
+        <h1 className="font-brand text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] text-white">
+          <span className="bg-gradient-to-r from-white via-zinc-100 to-indigo-200 bg-clip-text text-transparent drop-shadow-[0_2px_24px_rgba(99,102,241,0.28)]">
             Icomp Systems
           </span>
-          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.9)] animate-pulse" />
-          <span className="h-px w-8 sm:w-16 bg-gradient-to-r from-indigo-500/40 to-transparent" />
-        </div>
-
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight">
-          Event Operations <span className="text-zinc-500 font-light">&amp;</span> Invoicing
         </h1>
+
+        <h2 className="mt-3 text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-zinc-300">
+          Event Operations <span className="text-zinc-500 font-light">&amp;</span> Invoicing
+        </h2>
+
         <p className="mt-4 text-base sm:text-lg text-zinc-400 leading-relaxed max-w-2xl font-normal">
           Coordinate multi-camera broadcasting setup, manage technical crew rosters, 
           and generate invoices with full audit readiness.
