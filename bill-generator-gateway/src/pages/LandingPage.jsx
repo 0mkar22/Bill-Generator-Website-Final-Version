@@ -65,12 +65,23 @@ const LandingPage = () => {
     <div className="min-h-screen bg-[#09090b] text-zinc-100 pb-16 pt-2 px-3 sm:px-6 lg:px-8 bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgba(99,102,241,0.06),transparent)]">
       <div className="max-w-5xl mx-auto">
         {/* Quiet Top Utility Bar */}
-        <div className="flex items-center justify-between py-3 border-b border-zinc-800/60 text-xs font-mono text-zinc-400">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between py-3 border-b border-zinc-800/60 text-xs font-mono text-zinc-400 gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
             <span className="text-zinc-300 font-medium">Operations Portal</span>
             <span className="text-zinc-600 hidden sm:inline">•</span>
             <span className="hidden sm:inline text-zinc-400">Synced {lastRefreshed.toLocaleTimeString('en-GB')}</span>
+          </div>
+
+          {/* Production Workspace Status Badge on the same line */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-zinc-900/60 px-3 py-1 text-xs text-zinc-400 backdrop-blur-md shadow-sm shrink-0">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <span className="font-mono text-[11px] text-zinc-300 font-medium tracking-tight">
+              Production Workspace <span className="text-zinc-500 hidden sm:inline">• System Operational</span>
+            </span>
           </div>
         </div>
 

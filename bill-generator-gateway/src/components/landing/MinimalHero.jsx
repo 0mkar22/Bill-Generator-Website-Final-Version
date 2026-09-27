@@ -72,15 +72,6 @@ const MinimalHero = ({ operations = {}, kpis = {} }) => {
 
   return (
     <div className="pt-6 pb-12 animate-fade-in">
-      {/* Top Status Pip */}
-      <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-zinc-900/60 px-3.5 py-1 text-xs text-zinc-400 mb-6 backdrop-blur-md shadow-sm">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-        </span>
-        <span className="font-mono text-[11px] text-zinc-300 font-medium tracking-tight">Production Workspace • System Operational</span>
-      </div>
-
       {/* Main Headline & Subtitle */}
       <div className="max-w-3xl">
         <h1 className="font-brand text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] text-white">
