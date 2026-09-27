@@ -706,7 +706,7 @@ function VendorInvoice() {
               
               return (
                 <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell sx={tableCellStyle} align="center">{idx + 1}</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{idx + 1}</TableCell>
                   <TableCell sx={tableCellStyle}>
                     <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#000' }}>
                       <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
@@ -719,10 +719,10 @@ function VendorInvoice() {
                       {dimensionsText}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center' }}>{quantity}</TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center' }}>99838</TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{quantity}</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>99838</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 </TableRow>
               );
             })}
@@ -812,7 +812,7 @@ function VendorInvoice() {
             <Box sx={{ flex: '0 0 280px', textAlign: 'center', p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>For {parentOrder.vendor || 'Vendor'}</Typography>
               <Box sx={{ flex: 1, minHeight: 40, maxHeight: 52, width: '100%', maxWidth: 160, mx: 'auto', my: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 110, height: 'auto', maxHeight: '48px', objectFit: 'contain' }} />
+                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 120, height: 'auto', objectFit: 'contain' }} />
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
             </Box>
