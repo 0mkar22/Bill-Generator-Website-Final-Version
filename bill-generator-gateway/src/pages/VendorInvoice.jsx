@@ -7,7 +7,7 @@ import {
 
 import './VendorInvoice.css';
 import invoiceTheme from '../invoiceTheme';
-import API from '../services/api';
+import API, { getCompanyById } from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglishToMarathiNumbers } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
@@ -255,9 +255,9 @@ function VendorInvoice() {
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
-      API.get('/companies/' + parentOrder.company_id)
+      getCompanyById(parentOrder.company_id)
         .then(response => {
-          const data = response.data.data;
+          const data = response?.data?.data || response?.data;
           if (data) {
             setCompanyDetails(data);
             if (passedRecipient === undefined) {

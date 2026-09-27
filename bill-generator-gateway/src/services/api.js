@@ -51,6 +51,22 @@ export const createWorkOrder = async (workOrderData) => {
   }
 };
 
+export const updateWorkOrder = async (id, workOrderData) => {
+  try {
+    return await API.put(`/workOrders/${id}`, workOrderData);
+  } catch (err) {
+    console.warn('Backend /workOrders update unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    const { user_id, ...updateFields } = workOrderData;
+    let query = supabase.from('workOrders').update(updateFields).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data: updated, error } = await query.select().single();
+    if (error) throw error;
+    return { data: { success: true, data: updated } };
+  }
+};
+
 export const getWorkOrders = async () => {
   try {
     return await API.get('/workOrders');
@@ -78,6 +94,17 @@ export const getCompanies = async () => {
     const { data, error } = await query;
     if (error) throw error;
     return { data: { success: true, data: data || [] } };
+  }
+};
+
+export const getCompanyById = async (id) => {
+  try {
+    return await API.get(`/companies/${id}`);
+  } catch (err) {
+    console.warn(`Backend /companies/${id} unavailable, using direct Supabase fallback:`, err.message);
+    const { data, error } = await supabase.from('companies').select('*').eq('id', id).single();
+    if (error) throw error;
+    return { data: { success: true, data } };
   }
 };
 

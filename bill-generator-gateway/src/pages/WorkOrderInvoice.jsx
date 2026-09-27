@@ -7,7 +7,7 @@ import {
 
 import './WorkOrderInvoice.css';
 import invoiceTheme from '../invoiceTheme';
-import API from '../services/api';
+import API, { getCompanyById } from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
@@ -216,9 +216,10 @@ const WorkOrderInvoice = () => {
 
   useEffect(() => {
     if (parentOrder && parentOrder.company_id) {
-      API.get('/companies/' + parentOrder.company_id)
+      getCompanyById(parentOrder.company_id)
         .then(response => {
-          if (response.data.data) setCompanyDetails(response.data.data);
+          const compData = response?.data?.data || response?.data;
+          if (compData) setCompanyDetails(compData);
         })
         .catch(console.error)
         .finally(() => {

@@ -8,7 +8,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import API, { getWorkOrders, createWorkOrder, getCompanies, getTeam, createCompany, updateCompany, upsertTeam } from '../services/api';
+import API, { getWorkOrders, createWorkOrder, updateWorkOrder, getCompanies, getTeam, createCompany, updateCompany, upsertTeam } from '../services/api';
 import { supabase } from '../supabase';
 import { subWorks, venues, vendors, vidhanMandalWorks, noPersonnelWorks, bannerSubs } from '../constants/data';
 import { calculateItemAmount, convertMarathiToEnglishNumbers } from '../utils/helpers';
@@ -565,7 +565,7 @@ const WorkOrder = () => {
       }
 
       if (editData) {
-        await API.put(`/workOrders/${formData.id}`, payloadToSubmit);
+        await updateWorkOrder(formData.id, payloadToSubmit);
         setSnackbar({ open: true, message: 'Work Order updated successfully!', severity: 'success' });
         setTimeout(() => navigate('/reports'), 1000);
       } else {

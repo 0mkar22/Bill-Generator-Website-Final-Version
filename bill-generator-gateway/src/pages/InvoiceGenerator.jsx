@@ -9,8 +9,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import { getWorkOrders, getCompanies } from '../services/api';
-import API from '../services/api';
+import API, { getWorkOrders, getCompanies, getInvoices, updateInvoiceStatus } from '../services/api';
 import { supabase } from '../supabase';
 import { TableSkeleton } from '../components/skeletons';
 
@@ -63,7 +62,7 @@ const InvoiceGenerator = () => {
       const handleMarkAsPaid = async (id) => {
           setMarkingPaidId(id);
           try {
-              await API.patch(`/invoices/${id}/status`, { status: 'paid' });
+              await updateInvoiceStatus(id, 'paid');
               
               setAllInvoices(prev => {
                   const paidInvoice = prev.find(inv => inv.id === id);
@@ -76,7 +75,7 @@ const InvoiceGenerator = () => {
               setSnackbar({ open: true, message: 'Invoice marked as paid!', severity: 'success' });
           } catch (err) {
               console.error('Failed to mark invoice as paid:', err);
-              const serverError = err.response?.data?.error || 'Failed to mark invoice as paid.';
+              const serverError = err.response?.data?.error || err.message || 'Failed to mark invoice as paid.';
               setSnackbar({ open: true, message: serverError, severity: 'error' });
           } finally {
               setMarkingPaidId(null);
@@ -85,8 +84,9 @@ const InvoiceGenerator = () => {
     
     const fetchAllInvoices = async () => {
       try {
-          const response = await API.get('/invoices');
-          let invoices = response.data.data || [];
+          const response = await getInvoices();
+          let invoices = response?.data?.data || response?.data || [];
+          if (!Array.isArray(invoices)) invoices = [];
           
           const normalized = invoices.map(inv => {
               let parsedItems = [];

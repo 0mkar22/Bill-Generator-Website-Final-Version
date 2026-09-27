@@ -11,9 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx-js-style';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import API from '../services/api';
+import API, { getCompanies, getWorkOrders } from '../services/api';
 import { calculateItemAmount } from '../utils/helpers';
-import { getCompanies } from '../services/api';
 import { supabase } from '../supabase';
 import { TableSkeleton } from '../components/skeletons';
 
@@ -44,19 +43,22 @@ const Reports = () => {
 
             let fetchedCompanies = [];
             try {
-                const response = await getCompanies();
-                fetchedCompanies = response.data.data || [];
+                const compRes = await getCompanies();
+                fetchedCompanies = compRes?.data?.data || compRes?.data || [];
+                if (!Array.isArray(fetchedCompanies)) fetchedCompanies = [];
                 setFetchedCompaniesList(fetchedCompanies);
             } catch (err) {
                 console.warn("Could not fetch companies, proceeding without names.", err);
             }
 
-            const response = await API.get('/workOrders');
+            const response = await getWorkOrders();
             let orders = [];
-            if (Array.isArray(response.data)) {
-                orders = response.data;
-            } else if (response.data && Array.isArray(response.data.data)) {
+            if (Array.isArray(response?.data?.data)) {
                 orders = response.data.data;
+            } else if (Array.isArray(response?.data)) {
+                orders = response.data;
+            } else if (Array.isArray(response)) {
+                orders = response;
             }
             
             let allWorkTypesForFilter = new Set();
