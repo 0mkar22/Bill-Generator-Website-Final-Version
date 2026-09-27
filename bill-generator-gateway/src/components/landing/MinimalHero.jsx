@@ -84,12 +84,12 @@ const MinimalHero = ({ operations = {}, kpis = {} }) => {
       {/* Main Headline & Subtitle */}
       <div className="max-w-3xl">
         <h1 className="font-brand text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] text-white">
-          <span className="bg-gradient-to-r from-white via-zinc-100 to-indigo-200 bg-clip-text text-transparent drop-shadow-[0_2px_24px_rgba(99,102,241,0.28)]">
+          <span className="bg-gradient-to-r from-red-400 via-zinc-100 to-yellow-200 bg-clip-text text-transparent drop-shadow-[0_2px_24px_rgba(99,102,241,0.28)]">
             Icomp Systems
           </span>
         </h1>
 
-        <h2 className="mt-3 sm:mt-4 text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] font-bold tracking-tight text-zinc-200 leading-tight">
+        <h2 className="mt-3 sm:mt-4 text-2xl sm:text-3xl md:text-4xl lg:text-[2.2rem] font-bold tracking-tight text-zinc-200 leading-tight">
           Event Operations <span className="text-zinc-500 font-light">&amp;</span> Invoicing
         </h2>
 
