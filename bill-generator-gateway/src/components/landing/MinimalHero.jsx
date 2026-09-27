@@ -89,7 +89,7 @@ const MinimalHero = ({ operations = {}, kpis = {} }) => {
           </span>
         </h1>
 
-        <h2 className="mt-3 text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-zinc-300">
+        <h2 className="mt-3 sm:mt-4 text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] font-bold tracking-tight text-zinc-200 leading-tight">
           Event Operations <span className="text-zinc-500 font-light">&amp;</span> Invoicing
         </h2>
 
