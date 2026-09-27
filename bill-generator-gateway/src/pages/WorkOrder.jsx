@@ -671,8 +671,25 @@ const WorkOrder = () => {
             </Grid>
             
 
-              {/* --- Common Fields --- */}
-              <Grid item xs={12} sm={6}><TextField name="eventName" label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} required fullWidth value={formData.workItems[0].eventName} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField 
+                  name="eventName" 
+                  label={isVidhanMandalSelected ? 'कामाचे नांव' : 'Event Name'} 
+                  required 
+                  fullWidth 
+                  multiline
+                  minRows={1}
+                  maxRows={6}
+                  value={formData.workItems[0].eventName} 
+                  onChange={(e) => handleWorkItemChange(0, e)} 
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      wordBreak: 'break-word',
+                      overflowWrap: 'anywhere',
+                    }
+                  }}
+                />
+              </Grid>
                       <Grid item xs={12} sm={6}><FormControl fullWidth required><InputLabel>{isVidhanMandalSelected ? 'कामाचे स्थळ' : 'Event Venue'}</InputLabel><Select name="eventVenue" 
   value={formData.workItems[0].eventVenue} label={isVidhanMandalSelected ? 'ठिकाण निवडा' : 'Event Venue'} 
   onChange={(e) => {
