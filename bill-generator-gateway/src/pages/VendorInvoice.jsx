@@ -361,11 +361,13 @@ function VendorInvoice() {
             <Typography variant="body2" sx={{ mb: 1, px: 1 }}>E-mail : bhogtevijay@gmail.com</Typography>
             
             <Box sx={{ display: 'flex', borderTop: '1px solid #000', mt: 'auto' }}>
-                <Box sx={{ flex: 1, borderRight: '1px solid #000', p: 1 }}>
-                    <Typography variant="body2">Invoice No. : <EditableField value={invoiceNumber} onChange={setInvoiceNumber} isEditing={editingInvoiceNumber} setEditing={setEditingInvoiceNumber} isReadOnly={isReadOnly} /></Typography>
+                <Box sx={{ flex: 1, borderRight: '1px solid #000', p: 1, display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
+                    <EditableField value={invoiceNumber} onChange={setInvoiceNumber} isEditing={editingInvoiceNumber} setEditing={setEditingInvoiceNumber} isReadOnly={isReadOnly} sx={{ ml: 0.5 }} textSx={{ whiteSpace: 'nowrap' }} />
                 </Box>
-                <Box sx={{ flex: 1, p: 1 }}>
-                    <Typography variant="body2">Date : <EditableField value={invoiceDate} onChange={setInvoiceDate} isEditing={editingInvoiceDate} setEditing={setEditingInvoiceDate} isReadOnly={isReadOnly} /></Typography>
+                <Box sx={{ flex: 1, p: 1, display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
+                    <EditableField value={invoiceDate} onChange={setInvoiceDate} isEditing={editingInvoiceDate} setEditing={setEditingInvoiceDate} isReadOnly={isReadOnly} sx={{ ml: 0.5 }} textSx={{ whiteSpace: 'nowrap' }} />
                 </Box>
             </Box>
         </Box>
@@ -523,7 +525,7 @@ function VendorInvoice() {
           <Box sx={{ width: '50%', ...borderRightStyle, p: 1, pl: 2, fontSize: '1.2rem' }}>
             {isONGC && (
             <>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold' }}>Dealing Officer :</span>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Dealing Officer:</span>
               <EditableField
               value={dealingOfficer}
               onChange={setDealingOfficer}
@@ -534,7 +536,7 @@ function VendorInvoice() {
               textSx={{ fontSize: '1.2rem' }}
             />
             </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>Email ID :</span>
+            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Email ID:</span>
               <EditableField
               value={emailId}
               onChange={setEmailId}
@@ -547,7 +549,7 @@ function VendorInvoice() {
             </Typography>
             </>
             )}
-              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>GST No. :</span>
+              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>GST No.:</span>
                 <EditableField
                 value={gstNo}
                 onChange={setGstNo}
@@ -560,7 +562,7 @@ function VendorInvoice() {
               </Typography>
             {isONGC && (
             <>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO No. :</span>
+            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>PO No.:</span>
               <EditableField
               value={poNumber}
               onChange={setPoNumber}
@@ -571,7 +573,7 @@ function VendorInvoice() {
               textSx={{ fontSize: '1.2rem' }}
             />
             </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold' }}>PO Date :</span>
+            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>PO Date:</span>
               <EditableField
               value={poDate}
               onChange={setPoDate}
@@ -588,50 +590,50 @@ function VendorInvoice() {
           
           <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
             <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: 1, ...borderRightStyle }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Invoice No. :</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
                 <EditableField
                   value={invoiceNumber}
                   onChange={setInvoiceNumber}
                   isEditing={editingInvoiceNumber}
                   setEditing={setEditingInvoiceNumber}
                   isReadOnly={isReadOnly}
-                  sx={{ width: 100, ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
-                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+                  sx={{ ml: 0.5, fontSize: '1.2rem', fontWeight: 'bold', minWidth: '40px' }}
+                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
                   fallback="Click to set"
                 />
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Date :</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', flexWrap: 'nowrap' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
                 <EditableField
                   value={invoiceDate}
                   onChange={setInvoiceDate}
                   isEditing={editingInvoiceDate}
                   setEditing={setEditingInvoiceDate}
                   isReadOnly={isReadOnly}
-                  sx={{ ml: 1, fontSize: '1.1rem', fontWeight: 'bold' }}
-                  textSx={{ fontSize: '1.1rem', fontWeight: 'bold' }}
+                  sx={{ ml: 0.5, fontSize: '1.1rem', fontWeight: 'bold' }}
+                  textSx={{ fontSize: '1.1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
                 />
               </Box>
             </Box>
             <Box sx={{ p: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               {isONGC && (
               <>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Vendor Code :</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, ml: 1, whiteSpace: 'nowrap' }}>Vendor Code:</Typography>
                 <EditableField
                   value={vendorCode}
                   onChange={setVendorCode}
                   isEditing={editingVendorCode}
                   setEditing={setEditingVendorCode}
                   isReadOnly={isReadOnly}
-                  sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold' }}
+                  sx={{ ml: 0.5, fontSize: '1.2rem', fontWeight: 'bold' }}
                   textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
                 />
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Place Of Supply :</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 1 }}>Mumbai</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, ml: 1, whiteSpace: 'nowrap' }}>Place Of Supply:</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 0.5, whiteSpace: 'nowrap' }}>Mumbai</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
@@ -811,7 +813,7 @@ function VendorInvoice() {
             <Box sx={{ flex: '0 0 280px', textAlign: 'center', ml: 0, py: '8px', ...flexEndColumnStyle }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2 }}>For {parentOrder.vendor || 'Vendor'}</Typography>
               <Box sx={{ height: 100, width: '100%', maxWidth: 220, mx: 'auto', mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }} />
+                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 120, height: 'auto', objectFit: 'contain', paddingBottom: '40px' }} />
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
             </Box>
