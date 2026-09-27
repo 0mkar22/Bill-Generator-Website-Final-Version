@@ -11,6 +11,7 @@ export default {
       fontFamily: {
         sans: ['Geist', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'Menlo', 'monospace'],
+        brand: ['"Plus Jakarta Sans"', 'Outfit', 'sans-serif'],
       },
       backgroundImage: {
         'glass-radial': 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, rgba(24, 24, 27, 0) 70%)',
