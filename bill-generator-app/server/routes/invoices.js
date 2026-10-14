@@ -1,5 +1,5 @@
 const express = require('express');
-const { getInvoices, createInvoice, updateInvoice, updateInvoiceStatus, updateInvoiceAmountReceived } = require('../controllers/invoices');
+const { getInvoices, createInvoice, updateInvoice, updateInvoiceStatus, updateInvoiceAmountReceived, deleteInvoice } = require('../controllers/invoices');
 const { validateInvoice, validateInvoiceStatus, validateInvoiceAmountReceived } = require('../middleware/validate');
 
 const router = express.Router();
@@ -11,7 +11,8 @@ router
 
 router
   .route('/:id')
-  .put(validateInvoice, updateInvoice);
+  .put(validateInvoice, updateInvoice)
+  .delete(deleteInvoice);
 
 router.patch('/:id/status', validateInvoiceStatus, updateInvoiceStatus);
 router.patch('/:id/amount-received', validateInvoiceAmountReceived, updateInvoiceAmountReceived);

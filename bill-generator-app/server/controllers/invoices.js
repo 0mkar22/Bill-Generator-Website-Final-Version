@@ -260,3 +260,34 @@ exports.updateInvoiceAmountReceived = async (req, res) => {
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
+
+exports.deleteInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: currentInvoice, error: fetchErr } = await supabase
+      .from('invoices')
+      .select('id, invoiceNumber')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (fetchErr || !currentInvoice) {
+      return res.status(404).json({ success: false, error: 'Invoice not found or unauthorized.' });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.user.id);
+
+    if (deleteError) throw deleteError;
+
+    res.status(200).json({ success: true, message: 'Invoice deleted successfully' });
+  } catch (err) {
+    console.error('Delete invoice error:', err);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+

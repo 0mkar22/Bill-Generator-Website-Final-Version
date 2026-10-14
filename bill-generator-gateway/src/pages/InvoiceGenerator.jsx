@@ -3,14 +3,15 @@ import {
   Container, Paper, Typography, Box, Button, Checkbox,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ButtonGroup,
   Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert, TablePagination, TextField, InputAdornment, CircularProgress,
-  TableSortLabel
+  TableSortLabel, Chip, Tooltip, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import API, { getWorkOrders, getCompanies, getInvoices, updateInvoiceStatus } from '../services/api';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import API, { getWorkOrders, getCompanies, getInvoices, updateInvoiceStatus, deleteInvoice } from '../services/api';
 import { supabase } from '../supabase';
 import { TableSkeleton } from '../components/skeletons';
 
@@ -24,6 +25,8 @@ const InvoiceGenerator = () => {
   const [viewingInvoiceType, setViewingInvoiceType] = useState('All');
   const [vendorFilter, setVendorFilter] = useState('All Vendors');
   const [markingPaidId, setMarkingPaidId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteConfirmInvoice, setDeleteConfirmInvoice] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
 
   // Pagination & Search state
@@ -55,7 +58,7 @@ const InvoiceGenerator = () => {
       const allItems = (Array.isArray(rawOrders) ? rawOrders : []).flatMap(order =>
              (order.workItems || []).map((item, index) => {
              const uniqueId = item.id || `entry-${order.entryNumber}-item-${index}`;
-             return { ...item, id: uniqueId, parent: order };
+             return { ...item, id: uniqueId, itemIndex: index, parent: order };
          })
       );
       setWorkItems(allItems);
@@ -63,6 +66,7 @@ const InvoiceGenerator = () => {
       console.error("Failed to fetch work items", error);
     }
   };
+
 
       const handleMarkAsPaid = async (id) => {
           setMarkingPaidId(id);
@@ -161,7 +165,11 @@ const InvoiceGenerator = () => {
 
   const handleViewSavedInvoice = (savedInvoice, type, isEditing = false) => {
     const invItems = Array.isArray(savedInvoice.workItems) ? savedInvoice.workItems : [];
-    const itemsForInvoice = workItems.filter(item => invItems.includes(item.id));
+    const itemsForInvoice = workItems.filter(item => {
+      if (invItems.includes(item.id)) return true;
+      const fallbackId = `entry-${item.parent?.entryNumber}-item-${item.itemIndex ?? 0}`;
+      return invItems.includes(fallbackId);
+    });
 
     if (itemsForInvoice.length === 0) {
         setSnackbar({ open: true, message: 'Corrupted Invoice Data. This invoice was saved with a broken reference. Please generate a new invoice.', severity: 'error' });
@@ -186,9 +194,31 @@ const InvoiceGenerator = () => {
         poNumber: savedInvoice.poNumber, 
         poDate: savedInvoice.poDate, 
         serviceDescription: savedInvoice.serviceDescription, 
-        gstNo: savedInvoice.gstNo 
+        gstNo: savedInvoice.gstno || savedInvoice.gstNo 
       } 
     });
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!deleteConfirmInvoice) return;
+    const invId = deleteConfirmInvoice.id;
+    setDeletingId(invId);
+    try {
+      await deleteInvoice(invId);
+      setAllInvoices(prev => prev.filter(inv => inv.id !== invId));
+      setSnackbar({
+        open: true,
+        message: `Invoice ${deleteConfirmInvoice.invoiceNumber || ''} deleted successfully.`,
+        severity: 'success'
+      });
+      setDeleteConfirmInvoice(null);
+    } catch (err) {
+      console.error('Failed to delete invoice:', err);
+      const serverError = err.response?.data?.error || err.message || 'Failed to delete invoice.';
+      setSnackbar({ open: true, message: serverError, severity: 'error' });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleEditWorkItem = (parentOrder) => {
@@ -212,26 +242,24 @@ const InvoiceGenerator = () => {
   }, [savedInvoices]);
 
   const filteredSavedInvoices = useMemo(() => {
-      let invoices = savedInvoices;
-      if (viewingInvoiceType !== 'All') {
-          invoices = invoices.filter(invoice => invoice.invoiceType === viewingInvoiceType);
-      }
-      if (vendorFilter !== 'All Vendors') {
-          invoices = invoices.filter(invoice => invoice.parentOrderInfo?.vendor === vendorFilter);
-      }
+    let invoices = [...savedInvoices];
+    // Sort descending by creation date (newest first)
+    invoices.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-      if (viewingInvoiceType === 'All') {
-          const groupedInvoices = new Map();
-          invoices.forEach(invoice => {
-              if (!groupedInvoices.has(invoice.invoiceNumber)) {
-                  groupedInvoices.set(invoice.invoiceNumber, { ...invoice, types: new Set() });
-              }
-              groupedInvoices.get(invoice.invoiceNumber).types.add(invoice.invoiceType);
-          });
-          return Array.from(groupedInvoices.values());
-      }
-      return invoices;
+    if (viewingInvoiceType !== 'All') {
+      invoices = invoices.filter(invoice => invoice.invoiceType === viewingInvoiceType);
+    }
+    if (vendorFilter !== 'All Vendors') {
+      invoices = invoices.filter(invoice => invoice.parentOrderInfo?.vendor === vendorFilter);
+    }
+
+    return invoices;
   }, [savedInvoices, viewingInvoiceType, vendorFilter]);
+
+  useEffect(() => {
+    setSavedPage(0);
+  }, [viewingInvoiceType, vendorFilter]);
+
 
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -663,122 +691,331 @@ const InvoiceGenerator = () => {
           </Grid>
           <Divider sx={{ mb: 3 }} />
           {filteredSavedInvoices.length > 0 ? (
-            <TableContainer sx={{ border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px' }}>
-                <Table>
-                    <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Date Saved</TableCell>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Invoice Number</TableCell>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Company</TableCell>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Name(s)</TableCell>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>PO/NPO</TableCell>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Vendor</TableCell>
-                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {paginatedSavedInvoices.map((invoice, i) => {
-                            const invItems = Array.isArray(invoice.workItems) ? invoice.workItems : [];
-                            const eventNames = workItems.filter(item => invItems.includes(item.id)).map(item => item.eventName);
-                            const uniqueEventNames = [...new Set(eventNames)];
-                            const displayEventName = uniqueEventNames.join(' and ') || 'N/A';
-                            const displayPoNpo = workItems.find(item => invItems.includes(item.id))?.poNpo || 'N/A';
-                            
-                            const isInvoiceONGC = isONGCCompany(invoice.company_id, invoice.recipient);
+            <>
+              <TableContainer sx={{ border: '1px solid rgba(255, 255, 255, 0.10)', borderRadius: '12px 12px 0 0' }}>
+                  <Table>
+                      <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
+                          <TableRow>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>Date Saved</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>Invoice Number</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>Type</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', minWidth: 160 }}>Company</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', minWidth: 200, maxWidth: 260 }}>Event Name(s)</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>PO/NPO</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', minWidth: 120 }}>Vendor</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', minWidth: 260 }}>Actions</TableCell>
+                          </TableRow>
+                      </TableHead>
+                      <TableBody>
+                          {paginatedSavedInvoices.map((invoice, i) => {
+                              const invItems = Array.isArray(invoice.workItems) ? invoice.workItems : [];
+                              const matchedItems = workItems.filter(item => {
+                                if (invItems.includes(item.id)) return true;
+                                const fallbackId = `entry-${item.parent?.entryNumber}-item-${item.itemIndex ?? 0}`;
+                                return invItems.includes(fallbackId);
+                              });
+                              const rawEventNames = matchedItems.map(item => item.eventName).filter(Boolean);
+                              const uniqueEventNames = Array.from(new Set(rawEventNames.map(s => String(s).trim()))).filter(Boolean);
+                              const displayPoNpo = matchedItems[0]?.poNpo || 'N/A';
+                              const companyObj = companies.find(c => c.id === invoice.company_id);
+                              const companyName = companyObj?.company_name || invoice.recipient || 'N/A';
+                              const isWorkOrder = invoice.invoiceType === 'WorkOrder';
 
-                            return (
-                              <TableRow key={invoice.invoiceNumber || invoice.id || i} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
-                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem' }}>{new Date(invoice.createdAt).toLocaleString()}</TableCell>
-                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600 }}>{invoice.invoiceNumber}</TableCell>
-                                  <TableCell>{companies.find(c => c.id === invoice.company_id)?.company_name || 'N/A'}</TableCell>
-                                  <TableCell>{displayEventName}</TableCell>
-                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{displayPoNpo}</TableCell>
-                                  <TableCell>{invoice.parentOrderInfo?.vendor}</TableCell>
-                                  <TableCell>
-                                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                                          { (viewingInvoiceType === 'All' ? invoice.types.has('Vendor') : true) && viewingInvoiceType !== 'WorkOrder' &&
-                                              <>
-                                                  <Button 
-                                                    variant="contained" 
-                                                    color="primary" 
-                                                    size="small"
-                                                    startIcon={<ReceiptIcon fontSize="small" />}
-                                                    onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}
-                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem' }}
-                                                  >
-                                                      Vendor Invoice
-                                                  </Button>
-                                                  <Button 
-                                                    variant="outlined" 
-                                                    size="small"
-                                                    startIcon={<EditIcon fontSize="small" />}
-                                                    onClick={() => handleViewSavedInvoice(invoice, 'Vendor', true)}
-                                                    sx={{ textTransform: 'none', borderRadius: '6px', borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem' }}
-                                                  >
-                                                      Edit Vendor
-                                                  </Button>
-                                              </>
-                                          }
-                                          { (viewingInvoiceType === 'All' ? invoice.types.has('WorkOrder') : true) && viewingInvoiceType !== 'Vendor' && isInvoiceONGC &&
-                                              <>
-                                                  <Button 
-                                                    variant="contained" 
-                                                    color="secondary" 
-                                                    size="small"
-                                                    startIcon={<AssignmentIcon fontSize="small" />}
-                                                    onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}
-                                                    sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem' }}
-                                                  >
-                                                      Work Order Invoice
-                                                  </Button>
-                                                  <Button 
-                                                    variant="outlined" 
-                                                    size="small"
-                                                    startIcon={<EditIcon fontSize="small" />}
-                                                    onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder', true)}
-                                                    sx={{ textTransform: 'none', borderRadius: '6px', borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem' }}
-                                                  >
-                                                      Edit Work Order
-                                                  </Button>
-                                              </>
-                                          }
-                                             <Button 
-                                               variant="outlined"
-                                               size="small"
-                                               disabled={markingPaidId === invoice.id}
-                                               startIcon={<CheckCircleIcon fontSize="small" />}
-                                               onClick={() => handleMarkAsPaid(invoice.id)}
+                              return (
+                                <TableRow key={invoice.id || `${invoice.invoiceNumber}-${i}`} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
+                                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                      {invoice.createdAt ? new Date(invoice.createdAt).toLocaleString(undefined, {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit',
+                                        hour12: false
+                                      }) : 'N/A'}
+                                    </TableCell>
+                                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                      {invoice.invoiceNumber || 'N/A'}
+                                    </TableCell>
+                                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                                      {isWorkOrder ? (
+                                        <Chip
+                                          label="Work Order"
+                                          size="small"
+                                          sx={{
+                                            bgcolor: 'rgba(168, 85, 247, 0.15)',
+                                            color: '#c084fc',
+                                            fontWeight: 600,
+                                            fontSize: '0.72rem',
+                                            border: '1px solid rgba(168, 85, 247, 0.35)',
+                                            borderRadius: '6px'
+                                          }}
+                                        />
+                                      ) : (
+                                        <Chip
+                                          label="Vendor"
+                                          size="small"
+                                          sx={{
+                                            bgcolor: 'rgba(59, 130, 246, 0.15)',
+                                            color: '#60a5fa',
+                                            fontWeight: 600,
+                                            fontSize: '0.72rem',
+                                            border: '1px solid rgba(59, 130, 246, 0.35)',
+                                            borderRadius: '6px'
+                                          }}
+                                        />
+                                      )}
+                                    </TableCell>
+                                    <TableCell sx={{ minWidth: 160, fontSize: '0.82rem' }}>
+                                      {companyName}
+                                    </TableCell>
+                                    <TableCell sx={{ maxWidth: 260, verticalAlign: 'middle' }}>
+                                      {uniqueEventNames.length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                          {invoice.serviceDescription ? String(invoice.serviceDescription).slice(0, 40) : (invoice.parentOrderInfo?.entryNumber ? `Entry #${invoice.parentOrderInfo.entryNumber}` : 'N/A')}
+                                        </Typography>
+                                      ) : uniqueEventNames.length === 1 ? (
+                                        <Tooltip title={uniqueEventNames[0]} arrow enterDelay={300}>
+                                          <Typography variant="body2" noWrap sx={{ fontSize: '0.8rem', fontWeight: 500, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {uniqueEventNames[0]}
+                                          </Typography>
+                                        </Tooltip>
+                                      ) : uniqueEventNames.length === 2 ? (
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+                                          {uniqueEventNames.map((name, idx) => (
+                                            <Tooltip key={idx} title={name} arrow enterDelay={300}>
+                                              <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                • {name}
+                                              </Typography>
+                                            </Tooltip>
+                                          ))}
+                                        </Box>
+                                      ) : (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, flexWrap: 'nowrap' }}>
+                                          <Tooltip title={uniqueEventNames[0]} arrow enterDelay={300}>
+                                            <Typography variant="body2" noWrap sx={{ fontSize: '0.8rem', fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                              {uniqueEventNames[0]}
+                                            </Typography>
+                                          </Tooltip>
+                                          <Tooltip
+                                            arrow
+                                            componentsProps={{
+                                              tooltip: {
+                                                sx: {
+                                                  bgcolor: 'rgba(15, 23, 42, 0.95)',
+                                                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                                                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                                                  maxWidth: 400,
+                                                  p: 1.5
+                                                }
+                                              }
+                                            }}
+                                            title={
+                                              <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
+                                                <Typography variant="caption" sx={{ fontWeight: 700, color: '#818cf8', display: 'block', mb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 0.5 }}>
+                                                  All Events ({uniqueEventNames.length}):
+                                                </Typography>
+                                                {uniqueEventNames.map((name, idx) => (
+                                                  <Typography key={idx} variant="caption" sx={{ display: 'block', py: 0.3, color: '#e4e4e7', fontSize: '0.75rem' }}>
+                                                    {idx + 1}. {name}
+                                                  </Typography>
+                                                ))}
+                                              </Box>
+                                            }
+                                          >
+                                            <Chip
+                                              label={`+${uniqueEventNames.length - 1} more`}
+                                              size="small"
+                                              clickable
+                                              sx={{
+                                                height: 22,
+                                                fontSize: '0.7rem',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                bgcolor: 'rgba(99, 102, 241, 0.18)',
+                                                color: '#c7d2fe',
+                                                border: '1px solid rgba(99, 102, 241, 0.35)',
+                                                '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.35)' }
+                                              }}
+                                            />
+                                          </Tooltip>
+                                        </Box>
+                                      )}
+                                    </TableCell>
+                                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                      {displayPoNpo}
+                                    </TableCell>
+                                    <TableCell sx={{ fontSize: '0.8rem', minWidth: 120 }}>
+                                      {invoice.parentOrderInfo?.vendor || 'N/A'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                                            {isWorkOrder ? (
+                                                <>
+                                                    <Button 
+                                                      variant="contained" 
+                                                      color="secondary" 
+                                                      size="small"
+                                                      startIcon={<AssignmentIcon fontSize="small" />}
+                                                      onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder')}
+                                                      sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        Work Order
+                                                    </Button>
+                                                    <Button 
+                                                      variant="outlined" 
+                                                      size="small"
+                                                      startIcon={<EditIcon fontSize="small" />}
+                                                      onClick={() => handleViewSavedInvoice(invoice, 'WorkOrder', true)}
+                                                      sx={{ textTransform: 'none', borderRadius: '6px', borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Button 
+                                                      variant="contained" 
+                                                      color="primary" 
+                                                      size="small"
+                                                      startIcon={<ReceiptIcon fontSize="small" />}
+                                                      onClick={() => handleViewSavedInvoice(invoice, 'Vendor')}
+                                                      sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        Vendor Invoice
+                                                    </Button>
+                                                    <Button 
+                                                      variant="outlined" 
+                                                      size="small"
+                                                      startIcon={<EditIcon fontSize="small" />}
+                                                      onClick={() => handleViewSavedInvoice(invoice, 'Vendor', true)}
+                                                      sx={{ textTransform: 'none', borderRadius: '6px', borderColor: 'rgba(255, 255, 255, 0.15)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            <Button 
+                                              variant="outlined"
+                                              size="small"
+                                              disabled={markingPaidId === invoice.id}
+                                              startIcon={<CheckCircleIcon fontSize="small" />}
+                                              onClick={() => handleMarkAsPaid(invoice.id)}
                                               sx={{
                                                 textTransform: 'none',
                                                 borderRadius: '6px',
                                                 fontWeight: 600,
                                                 fontSize: '0.75rem',
+                                                whiteSpace: 'nowrap',
                                                 color: '#34d399',
                                                 bgcolor: 'rgba(16, 185, 129, 0.10)',
                                                 border: '1px solid rgba(16, 185, 129, 0.20)',
                                                 '&:hover': {
                                                   bgcolor: 'rgba(16, 185, 129, 0.20)',
                                                   borderColor: 'rgba(16, 185, 129, 0.35)'
-                                                },
-                                                ml: 'auto'
+                                                }
                                               }}
                                             >
                                                 Mark as Paid
                                             </Button>
-                                      </Box>
-                                  </TableCell>
-                              </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+
+                                            <Tooltip title="Delete Invoice" arrow>
+                                              <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => setDeleteConfirmInvoice(invoice)}
+                                                sx={{
+                                                  borderRadius: '6px',
+                                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                                  bgcolor: 'rgba(239, 68, 68, 0.08)',
+                                                  '&:hover': {
+                                                    bgcolor: 'rgba(239, 68, 68, 0.20)',
+                                                    borderColor: 'rgba(239, 68, 68, 0.45)'
+                                                  }
+                                                }}
+                                              >
+                                                <DeleteOutlineIcon fontSize="small" />
+                                              </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    </TableCell>
+                                </TableRow>
+                              )
+                          })}
+                      </TableBody>
+                  </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={filteredSavedInvoices.length}
+                page={savedPage}
+                onPageChange={(e, newPage) => setSavedPage(newPage)}
+                rowsPerPage={savedRowsPerPage}
+                onRowsPerPageChange={(e) => {
+                  setSavedRowsPerPage(parseInt(e.target.value, 10));
+                  setSavedPage(0);
+                }}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  border: '1px solid rgba(255, 255, 255, 0.10)',
+                  borderTop: 'none',
+                  borderRadius: '0 0 12px 12px',
+                  bgcolor: 'rgba(9, 9, 11, 0.40)'
+                }}
+              />
+            </>
           ) : (
-              <Typography align="center" color="text.secondary">
+              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
                   {`No ${vendorFilter === 'All Vendors' ? '' : vendorFilter} ${viewingInvoiceType === 'All' ? '' : viewingInvoiceType} invoices found.`}
               </Typography>
           )}
       </Paper>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={Boolean(deleteConfirmInvoice)}
+        onClose={() => !deletingId && setDeleteConfirmInvoice(null)}
+        PaperProps={{
+          sx: {
+            bgcolor: '#18181b',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '12px',
+            color: '#fff',
+            p: 1,
+            minWidth: 360
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600, pb: 1 }}>
+          Delete Saved Invoice
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: '#a1a1aa' }}>
+            Are you sure you want to delete invoice <strong style={{ color: '#fff' }}>{deleteConfirmInvoice?.invoiceNumber || 'N/A'}</strong> ({deleteConfirmInvoice?.invoiceType === 'WorkOrder' ? 'Work Order Invoice' : 'Vendor Invoice'})? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setDeleteConfirmInvoice(null)}
+            disabled={Boolean(deletingId)}
+            sx={{ textTransform: 'none', color: '#a1a1aa' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteInvoice}
+            disabled={Boolean(deletingId)}
+            startIcon={deletingId ? <CircularProgress size={16} color="inherit" /> : <DeleteOutlineIcon />}
+            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600 }}
+          >
+            {deletingId ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
         <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>

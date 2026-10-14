@@ -344,6 +344,22 @@ export const updateInvoiceStatus = async (id, status) => {
   }
 };
 
+export const deleteInvoice = async (id) => {
+  try {
+    return await API.delete(`/invoices/${id}`);
+  } catch (err) {
+    console.warn(`Backend /invoices/${id} delete unavailable, using direct Supabase fallback:`, err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    let query = supabase.from('invoices').delete().eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query.select();
+    if (error) throw error;
+    return { data: { success: true, data } };
+  }
+};
+
+
 export const getPayouts = async () => {
   try {
     return await API.get('/personnelPayouts');
