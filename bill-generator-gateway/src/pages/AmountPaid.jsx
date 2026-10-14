@@ -13,7 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import API, { getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived, updateWorkOrderExpenses } from '../services/api';
+import API, { getInvoices, getPayouts, createPayout, getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived, updateWorkOrderExpenses } from '../services/api';
 import { calculateItemAmount } from '../utils/helpers';
 import { AmountPaidSkeleton } from '../components/skeletons';
 
@@ -58,8 +58,8 @@ const AmountPaid = () => {
       setLoading(true);
       try {
           const [invoicesRes, payoutsRes, companiesRes, ordersRes] = await Promise.allSettled([
-              API.get('/invoices'),
-              API.get('/personnelPayouts'),
+              getInvoices(),
+              getPayouts(),
               getCompanies(),
               getWorkOrders()
           ]);
@@ -405,7 +405,7 @@ const AmountPaid = () => {
                       payment_date: person.paymentDate,
                       notes: globalForm.notes
                   }));
-                  await API.post('/personnelPayouts', payloadArray);
+                  await createPayout(payloadArray);
 
                   // Only persist work order expenses after payouts succeed
                   if (globalForm.eventId && (globalForm.travelExpense !== '' || globalForm.foodExpense !== '' || globalForm.stayExpense !== '')) {

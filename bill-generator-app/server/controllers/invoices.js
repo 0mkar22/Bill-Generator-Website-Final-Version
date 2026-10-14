@@ -43,11 +43,15 @@ exports.createInvoice = async (req, res) => {
 
     const { invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription, gstNo, company_id, company_address } = req.body;
 
-    if (company_id) {
+    const cleanCompanyId = (company_id && typeof company_id === 'string' && company_id.trim()) ? company_id : null;
+    const cleanPoDate = (poDate && typeof poDate === 'string' && poDate.trim()) ? poDate : (poDate || null);
+    const gstVal = req.body.gstno || gstNo || null;
+
+    if (cleanCompanyId) {
       const { data: comp, error: compErr } = await supabase
         .from('companies')
         .select('id')
-        .eq('id', company_id)
+        .eq('id', cleanCompanyId)
         .eq('user_id', req.user.id)
         .single();
 
@@ -65,10 +69,10 @@ exports.createInvoice = async (req, res) => {
         emailId,
         vendorCode,
         poNumber,
-        poDate,
+        poDate: cleanPoDate,
         serviceDescription,
-        gstno: gstNo,
-        company_id,
+        gstno: gstVal,
+        company_id: cleanCompanyId,
         company_address,
         user_id: req.user.id
     };
@@ -95,11 +99,15 @@ exports.updateInvoice = async (req, res) => {
     const { id } = req.params;
     const { invoiceNumber, invoiceType, workItems, parentOrderInfo, recipient, dealingOfficer, emailId, vendorCode, poNumber, poDate, serviceDescription, gstNo, company_id, company_address } = req.body;
 
-    if (company_id) {
+    const cleanCompanyId = company_id !== undefined ? ((company_id && typeof company_id === 'string' && company_id.trim()) ? company_id : null) : undefined;
+    const cleanPoDate = poDate !== undefined ? ((poDate && typeof poDate === 'string' && poDate.trim()) ? poDate : (poDate || null)) : undefined;
+    const gstVal = req.body.gstno !== undefined ? req.body.gstno : gstNo;
+
+    if (cleanCompanyId) {
       const { data: comp, error: compErr } = await supabase
         .from('companies')
         .select('id')
-        .eq('id', company_id)
+        .eq('id', cleanCompanyId)
         .eq('user_id', req.user.id)
         .single();
 
@@ -108,22 +116,21 @@ exports.updateInvoice = async (req, res) => {
       }
     }
 
-    const invoiceData = {
-        invoiceNumber,
-        invoiceType,
-        workItems,
-        parentOrderInfo,
-        recipient,
-        dealingOfficer,
-        emailId,
-        vendorCode,
-        poNumber,
-        poDate,
-        serviceDescription,
-        gstno: gstNo,
-        company_id,
-        company_address
-    };
+    const invoiceData = {};
+    if (invoiceNumber !== undefined) invoiceData.invoiceNumber = invoiceNumber;
+    if (invoiceType !== undefined) invoiceData.invoiceType = invoiceType;
+    if (workItems !== undefined) invoiceData.workItems = workItems;
+    if (parentOrderInfo !== undefined) invoiceData.parentOrderInfo = parentOrderInfo;
+    if (recipient !== undefined) invoiceData.recipient = recipient;
+    if (dealingOfficer !== undefined) invoiceData.dealingOfficer = dealingOfficer;
+    if (emailId !== undefined) invoiceData.emailId = emailId;
+    if (vendorCode !== undefined) invoiceData.vendorCode = vendorCode;
+    if (poNumber !== undefined) invoiceData.poNumber = poNumber;
+    if (cleanPoDate !== undefined) invoiceData.poDate = cleanPoDate;
+    if (serviceDescription !== undefined) invoiceData.serviceDescription = serviceDescription;
+    if (gstVal !== undefined) invoiceData.gstno = gstVal;
+    if (cleanCompanyId !== undefined) invoiceData.company_id = cleanCompanyId;
+    if (company_address !== undefined) invoiceData.company_address = company_address;
 
     const { data: invoice, error: updateError } = await supabase
         .from('invoices')

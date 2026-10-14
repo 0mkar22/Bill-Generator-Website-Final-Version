@@ -201,6 +201,132 @@ export const getInvoices = async () => {
   }
 };
 
+export const createInvoice = async (invoiceData) => {
+  try {
+    return await API.post('/invoices', invoiceData);
+  } catch (err) {
+    console.warn('Backend /invoices create unavailable, using direct Supabase fallback:', err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    let invoiceNumberToSave = invoiceData.invoiceNumber;
+    if (!invoiceNumberToSave) {
+      let query = supabase.from('invoices').select('invoiceNumber');
+      if (userId) query = query.eq('user_id', userId);
+      const { data: existingInvoices, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+
+      let maxNum = 0;
+      (existingInvoices || []).forEach(inv => {
+        if (inv.invoiceNumber) {
+          const parsed = parseInt(String(inv.invoiceNumber).replace(/[^0-9]/g, ''), 10);
+          if (!isNaN(parsed) && parsed > maxNum) {
+            maxNum = parsed;
+          }
+        }
+      });
+      invoiceNumberToSave = String(maxNum + 1).padStart(4, '0');
+    }
+
+    const {
+      invoiceType,
+      workItems,
+      parentOrderInfo,
+      recipient,
+      dealingOfficer,
+      emailId,
+      vendorCode,
+      poNumber,
+      poDate,
+      serviceDescription,
+      gstno,
+      gstNo,
+      company_id,
+      company_address,
+      status
+    } = invoiceData;
+
+    const payload = {
+      invoiceNumber: invoiceNumberToSave,
+      invoiceType: invoiceType || 'WorkOrder',
+      workItems: workItems || [],
+      parentOrderInfo: parentOrderInfo || null,
+      recipient: recipient || null,
+      dealingOfficer: dealingOfficer || null,
+      emailId: emailId || null,
+      vendorCode: vendorCode || null,
+      poNumber: poNumber || null,
+      poDate: (poDate && typeof poDate === 'string' && poDate.trim()) ? poDate : (poDate || null),
+      serviceDescription: serviceDescription || null,
+      gstno: gstno || gstNo || null,
+      company_id: (company_id && typeof company_id === 'string' && company_id.trim()) ? company_id : (company_id || null),
+      company_address: company_address || null,
+      status: status || 'saved'
+    };
+
+    if (userId) payload.user_id = userId;
+
+    const { data, error } = await supabase.from('invoices').insert([payload]).select().single();
+    if (error) throw error;
+    return { data: { success: true, data } };
+  }
+};
+
+export const updateInvoice = async (id, invoiceData) => {
+  try {
+    return await API.put(`/invoices/${id}`, invoiceData);
+  } catch (err) {
+    console.warn(`Backend /invoices/${id} update unavailable, using direct Supabase fallback:`, err.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    const {
+      invoiceNumber,
+      invoiceType,
+      workItems,
+      parentOrderInfo,
+      recipient,
+      dealingOfficer,
+      emailId,
+      vendorCode,
+      poNumber,
+      poDate,
+      serviceDescription,
+      gstno,
+      gstNo,
+      company_id,
+      company_address,
+      status,
+      amount_received
+    } = invoiceData;
+
+    const updateFields = {};
+    if (invoiceNumber !== undefined) updateFields.invoiceNumber = invoiceNumber;
+    if (invoiceType !== undefined) updateFields.invoiceType = invoiceType;
+    if (workItems !== undefined) updateFields.workItems = workItems;
+    if (parentOrderInfo !== undefined) updateFields.parentOrderInfo = parentOrderInfo;
+    if (recipient !== undefined) updateFields.recipient = recipient;
+    if (dealingOfficer !== undefined) updateFields.dealingOfficer = dealingOfficer;
+    if (emailId !== undefined) updateFields.emailId = emailId;
+    if (vendorCode !== undefined) updateFields.vendorCode = vendorCode;
+    if (poNumber !== undefined) updateFields.poNumber = poNumber;
+    if (poDate !== undefined) updateFields.poDate = (poDate && typeof poDate === 'string' && poDate.trim()) ? poDate : (poDate || null);
+    if (serviceDescription !== undefined) updateFields.serviceDescription = serviceDescription;
+    if (gstno !== undefined || gstNo !== undefined) updateFields.gstno = gstno || gstNo || null;
+    if (company_id !== undefined) updateFields.company_id = (company_id && typeof company_id === 'string' && company_id.trim()) ? company_id : (company_id || null);
+    if (company_address !== undefined) updateFields.company_address = company_address;
+    if (status !== undefined) updateFields.status = status;
+    if (amount_received !== undefined) updateFields.amount_received = amount_received;
+
+    let query = supabase.from('invoices').update(updateFields).eq('id', id);
+    if (userId) query = query.eq('user_id', userId);
+
+    const { data: updated, error } = await query.select().single();
+    if (error) throw error;
+    return { data: { success: true, data: updated } };
+  }
+};
+
 export default API;
 
 export const updateInvoiceStatus = async (id, status) => {

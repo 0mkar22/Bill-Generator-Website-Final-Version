@@ -7,7 +7,7 @@ import {
 
 import './WorkOrderInvoice.css';
 import invoiceTheme from '../invoiceTheme';
-import API, { getCompanyById } from '../services/api';
+import API, { getCompanyById, createInvoice, updateInvoice } from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
@@ -180,6 +180,7 @@ const WorkOrderInvoice = () => {
   const handleSaveToDatabase = async () => {
     setIsSaving(true);
     try {
+        const gstVal = companyDetails ? companyDetails.gst_number : '';
         const invoicePayload = {
             invoiceNumber,
             invoiceType: invoiceType || 'WorkOrder',
@@ -191,20 +192,21 @@ const WorkOrderInvoice = () => {
             poNumber: poNumber,
             company_id: parentOrder.company_id || null,
             company_address: companyDetails ? companyDetails.address : '',
-            gstNo: companyDetails ? companyDetails.gst_number : '',
+            gstNo: gstVal,
+            gstno: gstVal,
             recipient: companyDetails ? companyDetails.company_name : parentOrder.vendor
         };
         if (isEditing && invoiceId) {
-            await API.put(`/invoices/${invoiceId}`, invoicePayload);
+            await updateInvoice(invoiceId, invoicePayload);
             setSnackbar({ open: true, message: 'Invoice updated successfully!', severity: 'success' });
         } else {
-            await API.post('/invoices', invoicePayload);
+            await createInvoice(invoicePayload);
             setSnackbar({ open: true, message: 'Invoice saved successfully!', severity: 'success' });
         }
         setSaveSuccess(true);
     } catch (error) {
         console.error("Failed to save invoice:", error);
-        const serverError = error.response?.data?.error;
+        const serverError = error.response?.data?.error || error.message;
         const msg = Array.isArray(serverError) ? serverError.join(', ') : (typeof serverError === 'string' ? serverError : 'Could not save the invoice. Please try again.');
         setSnackbar({ open: true, message: msg, severity: 'error' });
     } finally {
