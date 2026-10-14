@@ -861,8 +861,8 @@ function VendorInvoice() {
                                     <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
                                     <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
                                     
-                                    {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : 'Location and Duration:'}</span>} 
-                                    {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
+                                    {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : (item.workMain === 'Photo_Print' || item.workMain === 'Storage' ? 'Size:' : 'Location and Duration:')}</span>} 
+                                    {item.workMain !== '32_GB_Pendrive' && item.workSub && ` ${item.workSub.replaceAll('_', ' ')}`}
                                     {dimensionsText}
                                   </Typography>
                                 </TableCell>

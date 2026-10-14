@@ -85,7 +85,8 @@ const WorkOrderItem = ({
                                   <MenuItem key="2cam" value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>,
                                   <MenuItem key="3cam" value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>,
                                   <MenuItem key="live" value="Live_Telecast">Live Telecast Setup</MenuItem>,
-                                  <MenuItem key="storage" value="Storage">Storage</MenuItem>
+                                  <MenuItem key="storage" value="Storage">Storage</MenuItem>,
+                                  <MenuItem key="photo_print" value="Photo_Print">Photo Print</MenuItem>
                                 ]
                             )}
                             <MenuItem value="Others">Others</MenuItem>

@@ -613,7 +613,7 @@ const WorkOrderInvoice = () => {
                               <Typography variant="body2" component="div" sx={{ color: '#000', fontWeight: 'bold' }}>{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
                               <>
                                   <Typography variant="body2" component="div" sx={{ color: '#000' }}>
-                                      {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`)}
+                                      {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : (item.workMain === 'Photo_Print' || item.workMain === 'Storage' ? `Size : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`))}
                                       {dimensionsText}
                                   </Typography>
                                   <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
@@ -803,7 +803,7 @@ const WorkOrderInvoice = () => {
                     <TableCell sx={{ border: '1px solid #000' }}>
                       <Typography variant="body2" component="div" sx={{ fontWeight: 'bold' }}>{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
                       <Typography variant="body2" component="div">
-                        {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`)}
+                        {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : (item.workMain === 'Photo_Print' || item.workMain === 'Storage' ? `Size : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`))}
                         {dimensionsText}
                       </Typography>
                       <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>

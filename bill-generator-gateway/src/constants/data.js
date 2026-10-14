@@ -7,6 +7,7 @@ export const subWorks = {
   "Three_Camera_Setup": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
   "Live_Telecast": ["Mumbai_Upto_4_Hrs", "Mumbai_Above_4_and_upto_8_Hrs", "Panvel_Upto_4_Hrs", "Panvel_Above_4_and_upto_8_Hrs", "Uran_Upto_4_Hrs", "Uran_Above_4_and_upto_8_Hrs", "Nhava_Upto_4_Hrs", "Nhava_Above_4_and_upto_8_Hrs", "Outstation_Upto_4_Hrs", "Outstation_Above_4_and_upto_8_Hrs"],
   "Storage": ["32GB", "64GB", "128GB", "256GB", "1TB", "2TB"],
+  "Photo_Print": ['Colour 10" X 12"'],
   "Others": []
 };
 
@@ -141,6 +142,7 @@ export const vidhanMandalWorks = {
 
 export const noPersonnelWorks = [
   'Storage', 
+  'Photo_Print',
   '32_GB_Pendrive', 
   'पासपोर्ट फोटो एक्सपोझिंग चार्जेस सह',
   'फोटो प्रिंटिंग',

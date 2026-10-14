@@ -59,7 +59,8 @@ const getRatesTemplateForCompany = (companyName = '') => {
     Two_Camera_Setup: generateCategoryRates('Two_Camera_Setup'),
     Three_Camera_Setup: generateCategoryRates('Three_Camera_Setup'),
     Live_Telecast: generateCategoryRates('Live_Telecast'),
-    Storage: { '32GB': '', '64GB': '', '128GB': '', '256GB': '', '1TB': '', '2TB': '' }
+    Storage: { '32GB': '', '64GB': '', '128GB': '', '256GB': '', '1TB': '', '2TB': '' },
+    Photo_Print: { 'Colour 10" X 12"': '' }
   };
 };
 
@@ -353,6 +354,10 @@ const WorkOrder = () => {
         return subWorks['Storage'] || ['32GB', '64GB', '128GB', '256GB', '1TB', '2TB'];
     }
 
+    if (workMain === 'Photo_Print') {
+        return subWorks['Photo_Print'] || ['Colour 10" X 12"'];
+    }
+
     const isONGC = company?.requires_po_number === true || companyName.includes('ONGC') || 
                    companyName.includes('OIL & NATURAL GAS') || 
                    companyName.includes('OIL AND NATURAL GAS');
@@ -453,7 +458,7 @@ const WorkOrder = () => {
 
       if (!isModalVidhan) {
           Object.keys(cleanedRates).forEach(category => {
-            if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null && category !== 'Storage') {
+            if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null && category !== 'Storage' && category !== 'Photo_Print') {
               Object.keys(cleanedRates[category]).forEach(subKey => {
                 const isAllowed = allowedLocations.some(loc => subKey.includes(loc));
                 if (!isAllowed) {
