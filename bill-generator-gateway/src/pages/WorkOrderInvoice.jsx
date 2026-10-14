@@ -376,7 +376,7 @@ const WorkOrderInvoice = () => {
             >
               {/* TOP CONTENT */}
               <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                {isFirstPage ? (
+                {isFirstPage && (
                   <>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
                       <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
@@ -449,45 +449,18 @@ const WorkOrderInvoice = () => {
                       </Typography>
                     </Box>
                   </>
-                ) : (
-                  /* Continuation Header for Page 2+ */
-                  <Box sx={{ borderBottom: '2px solid #000', p: 1.5, pb: 1, backgroundColor: '#fff', mb: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 42 }} />
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#000', lineHeight: 1.2 }}>
-                            निगमित संचार विभाग - ओएनजीसी मुंबई
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#444', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                            {isVidhanMandal 
-                              ? `कामाचा आदेश (अनुक्रम पत्र - पान ${pageIdx + 1} / ${totalPages})` 
-                              : `Work Order (Continuation Sheet - Page ${pageIdx + 1} of ${totalPages})`}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000', fontSize: '0.9rem' }}>
-                          Work Order{isPO && poNumber ? ` PO No. ${poNumber}` : ''}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#000', display: 'block', fontSize: '0.8rem' }}>
-                          सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || ''} | DT: {invoiceDate}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
                 )}
 
                 {/* Table of items */}
-                <TableContainer sx={{ p: 2, pt: 0, pb: 0, backgroundColor: '#fff', boxShadow: 'none' }}>
-                  <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+                <TableContainer sx={{ p: 2, pt: isFirstPage ? 0 : 2.5, pb: 0, backgroundColor: '#fff', boxShadow: 'none' }}>
+                  <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff', tableLayout: 'fixed', width: '100%' }}>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: '#fff' }}>
                         <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 60 }}>Sr.<br />No.</TableCell>
                         <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
                         <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 70 }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
                         <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 110 }}>Rate</TableCell>
-                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 130 }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 140 }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -548,7 +521,7 @@ const WorkOrderInvoice = () => {
                             </TableCell>
                             <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 70 }}>{quantity}</TableCell>
                             <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 110 }}>{rate.toLocaleString('en-IN')}</TableCell>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 130 }}>{amount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 140 }}>{amount.toLocaleString('en-IN')}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -568,27 +541,27 @@ const WorkOrderInvoice = () => {
                   <>
                     <Box sx={{ p: 2, pt: 1, pb: 0 }}>
                       <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
-                        <Table size="small" sx={{ borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+                        <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff', tableLayout: 'fixed', width: '100%' }}>
                           <TableBody>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                                   <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total Cost</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: '25%', backgroundColor: '#fff', color: '#000' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                                   <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>CGST 9%</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                                   <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>SGST 9%</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                                   <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140, backgroundColor: '#fff', color: '#000' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                                   <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140, backgroundColor: '#fff', color: '#000' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                           </TableBody>
                         </Table>
@@ -620,7 +593,7 @@ const WorkOrderInvoice = () => {
                         </Table>
                       </TableContainer>
                     </Box>
-                    <Box sx={{ p: 2, pt: 1, mt: 3, mb: 2, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+                    <Box sx={{ p: 2, pt: 1, mt: 10, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
                       <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
                         केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
                       </Typography>
@@ -629,15 +602,17 @@ const WorkOrderInvoice = () => {
                 )}
               </Box>
 
-              {/* FOOTER AT BOTTOM OF EVERY PAGE */}
-              <Box sx={{ p: 1.5, borderTop: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' }}>
-                <Typography variant="caption" sx={{ color: '#555', fontSize: '0.8rem' }}>
-                  Work Order{isPO && poNumber ? ` PO No. ${poNumber}` : ''} | सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || ''}
-                </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#000', fontSize: '0.85rem' }}>
-                  {isVidhanMandal ? `पान ${pageIdx + 1} / ${totalPages}` : `Page ${pageIdx + 1} of ${totalPages}`}
-                </Typography>
-              </Box>
+              {/* FOOTER - ONLY FOR FIRST PAGE */}
+              {isFirstPage && (
+                <Box sx={{ p: 1.5, borderTop: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' }}>
+                  <Typography variant="caption" sx={{ color: '#555', fontSize: '0.8rem' }}>
+                    Work Order{isPO && poNumber ? ` PO No. ${poNumber}` : ''} | सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || ''}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#000', fontSize: '0.85rem' }}>
+                    {isVidhanMandal ? `पान ${pageIdx + 1} / ${totalPages}` : `Page ${pageIdx + 1} of ${totalPages}`}
+                  </Typography>
+                </Box>
+              )}
             </Paper>
           );
         })}
