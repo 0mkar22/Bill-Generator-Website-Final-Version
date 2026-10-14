@@ -385,15 +385,6 @@ function VendorInvoice() {
       navigate('/workorder-invoice', { state: { items: selectedItems, invoiceType: 'WorkOrder' } });
   };
 
-  if (selectedItems.length === 0) {
-    return (
-        <Container sx={{ textAlign: 'center', mt: 5 }}>
-            <Typography variant="h6">No items to display.</Typography>
-            <Button sx={{mt: 2}} variant="contained" onClick={() => navigate('/invoices')}>Back to Invoices</Button>
-        </Container>
-    );
-  }
-
   const parentOrder = selectedItems[0]?.parent || {};
   const [loadingDetails, setLoadingDetails] = useState(Boolean(parentOrder?.company_id));
 
@@ -419,29 +410,16 @@ function VendorInvoice() {
     }
   }, [parentOrder, passedRecipient, passedGstNo]);
 
-  if (loadingDetails) {
-    return <InvoiceSkeleton />;
-  }
-
-  const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
-  
-  const addressString = (companyDetails?.address || parentOrder?.companyDetails?.address || recipient || '').toLowerCase();
-  const pincodeMatch = addressString.match(/\b\d{6}\b/);
-  const isIGST = pincodeMatch && !pincodeMatch[0].startsWith('4') && !addressString.includes('maharashtra');
-
-  const cgst = amountBeforeTax * 0.09;
-  const sgst = amountBeforeTax * 0.09;
-  const igst = amountBeforeTax * 0.18;
-  
-  const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
-  const rounded = Math.round(total);
-
   const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || recipient?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
   const companyNameStr = (companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient || '').toUpperCase();
   const isONGC = companyDetails?.requires_po_number === true || parentOrder?.companyDetails?.requires_po_number === true || companyNameStr.includes('ONGC') || 
                  companyNameStr.includes('OIL & NATURAL GAS') || 
                  companyNameStr.includes('OIL AND NATURAL GAS');
+
+  const addressString = (companyDetails?.address || parentOrder?.companyDetails?.address || recipient || '').toLowerCase();
+  const pincodeMatch = addressString.match(/\b\d{6}\b/);
+  const isIGST = pincodeMatch && !pincodeMatch[0].startsWith('4') && !addressString.includes('maharashtra');
 
   useLayoutEffect(() => {
     if (!probeRowsRef.current || selectedItems.length === 0) return;
@@ -471,6 +449,26 @@ function VendorInvoice() {
     return getVendorInvoicePages(selectedItems);
   }, [measuredPageSplits, selectedItems]);
   const totalPages = invoicePages.length;
+
+  if (selectedItems.length === 0) {
+    return (
+        <Container sx={{ textAlign: 'center', mt: 5 }}>
+            <Typography variant="h6">No items to display.</Typography>
+            <Button sx={{mt: 2}} variant="contained" onClick={() => navigate('/invoices')}>Back to Invoices</Button>
+        </Container>
+    );
+  }
+
+  if (loadingDetails) {
+    return <InvoiceSkeleton />;
+  }
+
+  const amountBeforeTax = selectedItems.reduce((sum, item) => sum + calculateItemAmount(item, companyDetails), 0);
+  const cgst = amountBeforeTax * 0.09;
+  const sgst = amountBeforeTax * 0.09;
+  const igst = amountBeforeTax * 0.18;
+  const total = isIGST ? (amountBeforeTax + igst) : (amountBeforeTax + cgst + sgst);
+  const rounded = Math.round(total);
 
   return (
     <Container>

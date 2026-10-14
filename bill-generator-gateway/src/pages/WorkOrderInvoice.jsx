@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -75,6 +75,71 @@ const EditableField = ({
   );
 };
 
+const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeight, continuedHeight, maxPageHeight = 1240) => {
+  const n = rowHeights.length;
+  if (n === 0) return [[]];
+
+  // 1. Check if everything fits cleanly on a single page:
+  const singlePageNeeded = headerHeight + tableHeadHeight + rowHeights.reduce((a, b) => a + b, 0) + footerHeight;
+  if (singlePageNeeded <= maxPageHeight) {
+    return [Array.from({ length: n }, (_, i) => i)];
+  }
+
+  const pages = [];
+  let currentIndex = 0;
+
+  while (currentIndex < n) {
+    const isFirstPage = pages.length === 0;
+    const pageItems = [];
+    let currentHeight = isFirstPage ? (headerHeight + tableHeadHeight) : tableHeadHeight;
+
+    const remainingCount = n - currentIndex;
+
+    // Check if ALL remaining items fit on this page with the footer:
+    let remainingTotalHeight = footerHeight;
+    for (let r = currentIndex; r < n; r++) {
+      remainingTotalHeight += rowHeights[r];
+    }
+
+    if (currentHeight + remainingTotalHeight <= maxPageHeight) {
+      // All remaining items fit on this page!
+      for (let r = currentIndex; r < n; r++) {
+        pageItems.push(r);
+      }
+      pages.push(pageItems);
+      break;
+    }
+
+    // Otherwise, this page must continue to the next page.
+    // Ensure we leave at least 1 item for the subsequent page.
+    const maxItemsThisPage = Math.max(1, remainingCount - 1);
+
+    while (currentIndex < n && pageItems.length < maxItemsThisPage) {
+      const nextRowHeight = rowHeights[currentIndex];
+      
+      // Check if adding nextRowHeight + continuedHeight fits within maxPageHeight:
+      if (currentHeight + nextRowHeight + continuedHeight <= maxPageHeight) {
+        pageItems.push(currentIndex);
+        currentHeight += nextRowHeight;
+        currentIndex++;
+      } else {
+        // Page is full!
+        break;
+      }
+    }
+
+    // Safety fallback: if no item fit, force at least 1 item
+    if (pageItems.length === 0) {
+      pageItems.push(currentIndex);
+      currentIndex++;
+    }
+
+    pages.push(pageItems);
+  }
+
+  return pages;
+};
+
 const getInvoicePages = (items) => {
   const total = items.length;
   // If 4 or fewer items, they fit cleanly on a single page with all totals and signatures
@@ -82,26 +147,26 @@ const getInvoicePages = (items) => {
     return [items];
   }
 
-  // For 5 to 8 items, split into 2 balanced pages:
-  if (total <= 8) {
-    const page1Count = Math.min(5, Math.ceil(total / 2));
+  // If 5 to 24 items, standard items can fit cleanly across 2 pages:
+  if (total <= 24) {
+    const page1Count = Math.min(13, Math.ceil(total / 2));
     return [
       items.slice(0, page1Count),
       items.slice(page1Count)
     ];
   }
 
-  // For 9 or more items:
-  // Page 1 gets 5 items
-  const pages = [items.slice(0, 5)];
-  let remaining = items.slice(5);
+  // For 25 or more items:
+  // Page 1 gets up to 13 items
+  const pages = [items.slice(0, 13)];
+  let remaining = items.slice(13);
 
   while (remaining.length > 0) {
-    if (remaining.length <= 6) {
+    if (remaining.length <= 13) {
       pages.push(remaining);
       remaining = [];
     } else {
-      const chunk = Math.min(7, remaining.length - 2);
+      const chunk = Math.min(15, remaining.length - 2);
       pages.push(remaining.slice(0, chunk));
       remaining = remaining.slice(chunk);
     }
@@ -115,7 +180,14 @@ const WorkOrderInvoice = () => {
   const location = useLocation();
   const invoiceRef = useRef();
 
-  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, poNumber: passedPoNumber } = location.state || { items: [] };
+  const [measuredPageSplits, setMeasuredPageSplits] = useState(null);
+  const probeHeaderRef = useRef(null);
+  const probeTableHeadRef = useRef(null);
+  const probeRowsRef = useRef(null);
+  const probeFooterRef = useRef(null);
+  const probeContinuedRef = useRef(null);
+
+  const { items: selectedItems = [], invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, poNumber: passedPoNumber } = location.state || { items: [] };
 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [editingInvoiceNumber, setEditingInvoiceNumber] = useState(false);
@@ -142,7 +214,9 @@ const WorkOrderInvoice = () => {
   }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
 
   const handleDownload = async () => {
-    const pageElements = document.querySelectorAll('.invoice-page');
+    const pageElements = invoiceRef.current 
+      ? invoiceRef.current.querySelectorAll('.invoice-page') 
+      : document.querySelectorAll('#generated-invoice .invoice-page');
     if (!pageElements || pageElements.length === 0) return;
 
     setIsGenerating(true);
@@ -189,7 +263,9 @@ const WorkOrderInvoice = () => {
   };
 
   const handleDownloadWord = () => {
-    const pageElements = document.querySelectorAll('.invoice-page');
+    const pageElements = invoiceRef.current 
+      ? invoiceRef.current.querySelectorAll('.invoice-page') 
+      : document.querySelectorAll('#generated-invoice .invoice-page');
     if (!pageElements || pageElements.length === 0) return;
 
     let combinedHtml = '';
@@ -271,15 +347,6 @@ const WorkOrderInvoice = () => {
     }
   };
 
-  if (selectedItems.length === 0) {
-    return (
-        <Container sx={{ textAlign: 'center', mt: 5 }}>
-            <Typography variant="h6">No items to display.</Typography>
-            <Button sx={{mt: 2}} variant="contained" onClick={() => navigate('/invoices')}>Back to Invoices</Button>
-        </Container>
-    );
-  }
-
   const parentOrder = selectedItems[0]?.parent || {};
   const [loadingDetails, setLoadingDetails] = useState(Boolean(parentOrder?.company_id));
 
@@ -298,6 +365,47 @@ const WorkOrderInvoice = () => {
       setLoadingDetails(false);
     }
   }, [parentOrder]);
+
+  const isPO = selectedItems[0]?.poNpo === 'PO';
+  const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
+
+  useLayoutEffect(() => {
+    if (!probeRowsRef.current || selectedItems.length === 0) return;
+
+    const headerH = probeHeaderRef.current ? probeHeaderRef.current.offsetHeight : 420;
+    const tableHeadH = probeTableHeadRef.current ? probeTableHeadRef.current.offsetHeight : 40;
+    const footerH = probeFooterRef.current ? probeFooterRef.current.offsetHeight : 360;
+    const continuedH = probeContinuedRef.current ? probeContinuedRef.current.offsetHeight : 35;
+    const rowElements = Array.from(probeRowsRef.current.children);
+    const rowHeights = rowElements.map(el => el.offsetHeight || 65);
+
+    const splits = computePageSplits(rowHeights, headerH, tableHeadH, footerH, continuedH, 1230);
+    
+    setMeasuredPageSplits(prev => {
+      if (!prev) return splits;
+      if (JSON.stringify(prev) !== JSON.stringify(splits)) {
+        return splits;
+      }
+      return prev;
+    });
+  }, [selectedItems, isVidhanMandal, companyDetails, isPO, invoiceNumber, invoiceDate, poNumber]);
+
+  const invoicePages = useMemo(() => {
+    if (measuredPageSplits && measuredPageSplits.length > 0) {
+      return measuredPageSplits.map(indices => indices.map(idx => selectedItems[idx]));
+    }
+    return getInvoicePages(selectedItems);
+  }, [measuredPageSplits, selectedItems]);
+  const totalPages = invoicePages.length;
+
+  if (selectedItems.length === 0) {
+    return (
+        <Container sx={{ textAlign: 'center', mt: 5 }}>
+            <Typography variant="h6">No items to display.</Typography>
+            <Button sx={{mt: 2}} variant="contained" onClick={() => navigate('/invoices')}>Back to Invoices</Button>
+        </Container>
+    );
+  }
 
   if (loadingDetails) {
     return <InvoiceSkeleton />;
@@ -320,12 +428,6 @@ const WorkOrderInvoice = () => {
 
   const eventDateDetails = Array.from(uniqueEvents.values());
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
-
-  const isPO = selectedItems[0]?.poNpo === 'PO';
-  const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
-
-  const invoicePages = getInvoicePages(selectedItems);
-  const totalPages = invoicePages.length;
 
   return (
     <Container>
@@ -605,6 +707,187 @@ const WorkOrderInvoice = () => {
             </Paper>
           );
         })}
+      </Box>
+
+      {/* Hidden probe container for exact pixel measurement of row and header/footer heights */}
+      <Box
+        sx={{
+          position: 'absolute',
+          left: -99999,
+          top: -99999,
+          width: '900px',
+          visibility: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -999,
+        }}
+      >
+        <Box ref={probeHeaderRef}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
+            <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
+            <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>बांद्रा (ईस्ट) , मुंबई - ४०००५१</Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>दूरभाष: 022-26274105 /4134  email : ongcmumbaice@ongc.co.in</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, pb: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+              सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || 'preview'}
+            </Typography>
+            <Typography variant="body2">DT: {invoiceDate}</Typography>
+          </Box>
+          <Box sx={{ p: 2, pb: 0 }}>
+            <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
+              To,{'\n'}{`${parentOrder.vendor || 'Vendor'}\n21, Nilkanth Apartment, Samata Nagar,\nPokharan Road No. 1, Thane (W) 400606`}
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Work Order {isPO ? `PO No. ${poNumber}` : ''}</Typography>
+            </Box>
+            <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
+              The Following Photography Assignment Is Assigned To Your Agency.
+            </Typography>
+          </Box>
+        </Box>
+
+        <TableContainer sx={{ p: 2, pt: 0, pb: 0 }}>
+          <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
+            <TableHead ref={probeTableHeadRef}>
+              <TableRow>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', width: 60 }}>Sr.<br />No.</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', width: 70 }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', width: 110 }}>Rate</TableCell>
+                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', width: 140 }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody ref={probeRowsRef}>
+              {selectedItems.map((item, idx) => {
+                const amount = calculateItemAmount(item, companyDetails);
+                let companyCustomRate = null;
+                if (companyDetails?.work_rates) {
+                  if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
+                    companyCustomRate = companyDetails.work_rates[item.workMain];
+                  } else {
+                    companyCustomRate = companyDetails.work_rates[item.workMain]?.[item.workSub];
+                  }
+                }
+                const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                              ? Number(companyCustomRate) 
+                              : 0;
+                const quantity = item.quantity || 1;
+
+                let dimensionsText = '';
+                if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
+                  const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
+                  const unit = isLamination ? 'इंच' : 'फूट';
+                  const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
+                  
+                  if (item.dimensions && item.dimensions.length > 0) {
+                    let totalArea = 0;
+                    const dimsStr = item.dimensions.map(d => {
+                      const l = Number(d.length) || 0; 
+                      const b = Number(d.breadth) || 0;
+                      const q = Number(d.qty) || 1;
+                      totalArea += (l * b * q);
+                      return `${l}x${b} (${q} नग)`;
+                    }).join(', ');
+                    dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
+                  } else if (item.length && item.breadth) {
+                    dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
+                  }
+                }
+
+                return (
+                  <TableRow key={item.id || idx} sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'center', width: 60 }}>{idx + 1}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000' }}>
+                      <Typography variant="body2" component="div" sx={{ fontWeight: 'bold' }}>{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
+                      <Typography variant="body2" component="div">
+                        {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`)}
+                        {dimensionsText}
+                      </Typography>
+                      <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                      <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
+                      <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'center', width: 70 }}>{quantity}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 110 }}>{rate.toLocaleString('en-IN')}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140 }}>{amount.toLocaleString('en-IN')}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+            <TableBody>
+              <TableRow ref={probeContinuedRef}>
+                <TableCell colSpan={5} sx={{ border: '1px solid #000', textAlign: 'right', py: 1, fontStyle: 'italic', fontWeight: 'bold' }}>
+                  {isVidhanMandal ? '(पुढे चालू - पान 2)' : '(Continued on Page 2...)'}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <Box ref={probeFooterRef}>
+          <Box sx={{ p: 2, pt: 1, pb: 0 }}>
+            <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
+              <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff', tableLayout: 'fixed', width: '100%' }}>
+                <TableBody>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>Total Cost</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140 }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>CGST 9%</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140 }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right' }}>SGST 9%</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140 }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>Total</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140 }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140 }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+          <Box sx={{ p: 2, pt: 1, pb: 0 }}>
+            <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
+              <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+                <TableBody>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव' : 'Event'}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000' }}>
+                      {selectedItems.every(item => 
+                          item.eventName === selectedItems[0]?.eventName && 
+                          item.eventVenue === selectedItems[0]?.eventVenue && 
+                          item.customVenue === selectedItems[0]?.customVenue
+                      ) 
+                        ? (isVidhanMandal ? `कामाचे नांव ${selectedItems[0]?.eventName} कामाचे स्थळ ${selectedItems[0]?.eventVenue === 'Others' ? selectedItems[0]?.customVenue : selectedItems[0]?.eventVenue}` : `For ${selectedItems[0]?.eventName} at ${selectedItems[0]?.eventVenue === 'Others' ? selectedItems[0]?.customVenue : selectedItems[0]?.eventVenue}`) 
+                        : (isVidhanMandal ? 'विविध ठिकाणी विविध कार्यक्रमांसाठी.' : 'For Various events at various places.')}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow sx={{ backgroundColor: '#fff' }}>
+                    <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000' }}>
+                      {uniqueDates.join(', ')}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+          <Box sx={{ p: 2, pt: 1, mt: 16, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+            <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
+              केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
+            </Typography>
+          </Box>
+        </Box>
       </Box>
       </ThemeProvider>
 
