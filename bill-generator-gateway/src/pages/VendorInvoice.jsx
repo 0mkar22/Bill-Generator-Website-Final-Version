@@ -214,7 +214,7 @@ function VendorInvoice() {
               invoiceType: invoiceType || 'Vendor',
               workItems: selectedItems.map(item => item.id),
               parentOrderInfo: {
-                  entryNumber: selectedItems[0]?.parent?.entryNumber,
+                  entryNumber: Array.from(new Set(selectedItems.map(i => i.parent?.entryNumber).filter(Boolean))).join(', ') || selectedItems[0]?.parent?.entryNumber,
                   vendor: selectedItems[0]?.parent?.vendor
               },
               recipient: companyDetails?.company_name || parentOrder?.companyDetails?.company_name || recipient,

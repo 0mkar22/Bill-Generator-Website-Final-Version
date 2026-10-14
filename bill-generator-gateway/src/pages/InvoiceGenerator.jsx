@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container, Paper, Typography, Box, Button, Checkbox,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ButtonGroup,
-  Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert, TablePagination, TextField, InputAdornment, CircularProgress
+  Divider, FormControl, InputLabel, Select, MenuItem, Grid, Snackbar, Alert, TablePagination, TextField, InputAdornment, CircularProgress,
+  TableSortLabel
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ReceiptIcon from '@mui/icons-material/Receipt';
@@ -29,6 +30,10 @@ const InvoiceGenerator = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Sorting state for work items table
+  const [orderBy, setOrderBy] = useState('entryNumber');
+  const [order, setOrder] = useState('desc');
   
   const [savedPage, setSavedPage] = useState(0);
   const [savedRowsPerPage, setSavedRowsPerPage] = useState(10);
@@ -115,15 +120,11 @@ const InvoiceGenerator = () => {
 
   const isONGCCompany = (companyId, fallbackName = '') => {
     const comp = companies.find(c => c.id === companyId);
-    if (comp && comp.requires_po_number !== undefined) {
-      return comp.requires_po_number === true;
-    }
-    if (comp) {
-      const nameStr = (comp.company_name || fallbackName).toUpperCase();
-      return nameStr.includes('ONGC') || nameStr.includes('OIL & NATURAL GAS') || nameStr.includes('OIL AND NATURAL GAS');
-    }
-    const nameStr = fallbackName.toUpperCase();
-    return nameStr.includes('ONGC') || nameStr.includes('OIL & NATURAL GAS') || nameStr.includes('OIL AND NATURAL GAS');
+    const nameStr = (comp?.company_name || fallbackName || '').toUpperCase();
+    return comp?.requires_po_number === true || 
+           nameStr.includes('ONGC') || 
+           nameStr.includes('OIL & NATURAL GAS') || 
+           nameStr.includes('OIL AND NATURAL GAS');
   };
 
   const invoiceStatusMap = useMemo(() => {
@@ -231,24 +232,131 @@ const InvoiceGenerator = () => {
       return invoices;
   }, [savedInvoices, viewingInvoiceType, vendorFilter]);
 
-  const selectedItemsList = getSelectedItems();
-  const showWorkOrderBtn = selectedItemsList.length === 0 || isONGCCompany(selectedItemsList[0].parent.company_id);
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
 
-  const activeEntryNumber = selectedItemsList.length > 0 ? selectedItemsList[0].parent.entryNumber : null;
+  const selectedItemsList = getSelectedItems();
+  
+  const isONGCSelected = selectedItemsList.length > 0 && isONGCCompany(
+    selectedItemsList[0].parent?.company_id,
+    companies.find(c => c.id === selectedItemsList[0].parent?.company_id)?.company_name
+  );
+
+  const showWorkOrderBtn = selectedItemsList.length === 0 || isONGCSelected;
+
+  const activeEntryNumber = selectedItemsList.length > 0 ? selectedItemsList[0].parent?.entryNumber : null;
 
   const filteredWorkItems = workItems.filter(item => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
+    const compName = (companies.find(c => c.id === item.parent?.company_id)?.company_name || '').toLowerCase();
     return (
       (item.eventName || '').toLowerCase().includes(term) ||
       (item.poNpo || '').toLowerCase().includes(term) ||
       (item.parent?.entryNumber?.toString() || '').includes(term) ||
-      (item.workMain || '').toLowerCase().includes(term)
+      (item.workMain || '').toLowerCase().includes(term) ||
+      compName.includes(term)
     );
   });
 
-  const paginatedWorkItems = filteredWorkItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const sortedWorkItems = useMemo(() => {
+    return [...filteredWorkItems].sort((a, b) => {
+      let comparison = 0;
+      switch (orderBy) {
+        case 'entryNumber': {
+          const valA = String(a.parent?.entryNumber || '');
+          const valB = String(b.parent?.entryNumber || '');
+          comparison = valA.localeCompare(valB, undefined, { numeric: true });
+          break;
+        }
+        case 'company': {
+          const compA = companies.find(c => c.id === a.parent?.company_id)?.company_name || '';
+          const compB = companies.find(c => c.id === b.parent?.company_id)?.company_name || '';
+          comparison = compA.localeCompare(compB);
+          break;
+        }
+        case 'vendorInvoice': {
+          const valA = invoiceStatusMap[a.id]?.Vendor ? 'Generated' : 'None';
+          const valB = invoiceStatusMap[b.id]?.Vendor ? 'Generated' : 'None';
+          comparison = valA.localeCompare(valB);
+          break;
+        }
+        case 'workOrderInvoice': {
+          const valA = invoiceStatusMap[a.id]?.WorkOrder ? 'Generated' : 'None';
+          const valB = invoiceStatusMap[b.id]?.WorkOrder ? 'Generated' : 'None';
+          comparison = valA.localeCompare(valB);
+          break;
+        }
+        case 'eventName': {
+          comparison = (a.eventName || '').localeCompare(b.eventName || '');
+          break;
+        }
+        case 'poNpo': {
+          comparison = (a.poNpo || '').localeCompare(b.poNpo || '');
+          break;
+        }
+        case 'eventDate': {
+          const dateA = a.parent?.eventDate ? new Date(a.parent.eventDate).getTime() : 0;
+          const dateB = b.parent?.eventDate ? new Date(b.parent.eventDate).getTime() : 0;
+          comparison = dateA - dateB;
+          break;
+        }
+        case 'workType': {
+          comparison = (a.workMain || '').localeCompare(b.workMain || '');
+          break;
+        }
+        default:
+          comparison = 0;
+      }
+      return order === 'desc' ? -comparison : comparison;
+    });
+  }, [filteredWorkItems, orderBy, order, companies, invoiceStatusMap]);
+
+  const paginatedWorkItems = sortedWorkItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const paginatedSavedInvoices = filteredSavedInvoices.slice(savedPage * savedRowsPerPage, savedPage * savedRowsPerPage + savedRowsPerPage);
+
+  const selectablePageItems = useMemo(() => {
+    if (selectedItemsList.length > 0) {
+      if (isONGCSelected) {
+        return paginatedWorkItems.filter(item => isONGCCompany(
+          item.parent?.company_id,
+          companies.find(c => c.id === item.parent?.company_id)?.company_name
+        ));
+      }
+      return paginatedWorkItems.filter(item => item.parent?.entryNumber === activeEntryNumber);
+    }
+    const allPageAreONGC = paginatedWorkItems.length > 0 && paginatedWorkItems.every(item => isONGCCompany(
+      item.parent?.company_id,
+      companies.find(c => c.id === item.parent?.company_id)?.company_name
+    ));
+    if (allPageAreONGC) {
+      return paginatedWorkItems;
+    }
+    return [];
+  }, [paginatedWorkItems, selectedItemsList, isONGCSelected, activeEntryNumber, companies]);
+
+  const numSelectedOnPage = useMemo(() => {
+    return selectablePageItems.filter(item => selected[item.id]).length;
+  }, [selectablePageItems, selected]);
+
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      const newSelected = { ...selected };
+      selectablePageItems.forEach(item => {
+        newSelected[item.id] = true;
+      });
+      setSelected(newSelected);
+    } else {
+      const newSelected = { ...selected };
+      selectablePageItems.forEach(item => {
+        delete newSelected[item.id];
+      });
+      setSelected(newSelected);
+    }
+  };
 
   return (
     <Container>
@@ -270,7 +378,9 @@ const InvoiceGenerator = () => {
           Generate Invoice
         </Typography>
           <Typography variant="body1" align="center" sx={{ mb: 3 }}>
-            Select work items from the same event to generate a consolidated invoice.
+            {isONGCSelected 
+              ? 'Selecting work items for ONGC — multiple work items from different Entry Numbers can be combined.' 
+              : 'Select work items from the same event (or across different Entry Numbers for ONGC) to generate a consolidated invoice.'}
           </Typography>
           
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
@@ -286,15 +396,132 @@ const InvoiceGenerator = () => {
           <Table>
             <TableHead sx={{ bgcolor: 'rgba(9, 9, 11, 0.60)' }}>
                 <TableRow>
-                    <TableCell padding="checkbox"></TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Entry No.</TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Company</TableCell>
-                    <TableCell align="center" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Vendor Invoice</TableCell>
-                    <TableCell align="center" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Work Order Invoice</TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Name</TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>PO/NPO</TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Event Date</TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Work Type</TableCell>
+                    <TableCell padding="checkbox">
+                      {selectablePageItems.length > 0 && (
+                        <Checkbox
+                          color="primary"
+                          indeterminate={numSelectedOnPage > 0 && numSelectedOnPage < selectablePageItems.length}
+                          checked={selectablePageItems.length > 0 && numSelectedOnPage === selectablePageItems.length}
+                          onChange={handleSelectAllClick}
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.3)',
+                            '&.Mui-checked, &.MuiCheckbox-indeterminate': { color: '#818cf8' }
+                          }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'entryNumber'}
+                        direction={orderBy === 'entryNumber' ? order : 'asc'}
+                        onClick={() => handleRequestSort('entryNumber')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Entry No.
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'company'}
+                        direction={orderBy === 'company' ? order : 'asc'}
+                        onClick={() => handleRequestSort('company')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Company
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'vendorInvoice'}
+                        direction={orderBy === 'vendorInvoice' ? order : 'asc'}
+                        onClick={() => handleRequestSort('vendorInvoice')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Vendor Invoice
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'workOrderInvoice'}
+                        direction={orderBy === 'workOrderInvoice' ? order : 'asc'}
+                        onClick={() => handleRequestSort('workOrderInvoice')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Work Order Invoice
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'eventName'}
+                        direction={orderBy === 'eventName' ? order : 'asc'}
+                        onClick={() => handleRequestSort('eventName')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Event Name
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'poNpo'}
+                        direction={orderBy === 'poNpo' ? order : 'asc'}
+                        onClick={() => handleRequestSort('poNpo')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        PO/NPO
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'eventDate'}
+                        direction={orderBy === 'eventDate' ? order : 'asc'}
+                        onClick={() => handleRequestSort('eventDate')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Event Date
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>
+                      <TableSortLabel
+                        active={orderBy === 'workType'}
+                        direction={orderBy === 'workType' ? order : 'asc'}
+                        onClick={() => handleRequestSort('workType')}
+                        sx={{
+                          color: 'inherit',
+                          '&.Mui-active': { color: '#818cf8' },
+                          '& .MuiTableSortLabel-icon': { color: '#818cf8 !important' }
+                        }}
+                      >
+                        Work Type
+                      </TableSortLabel>
+                    </TableCell>
                 </TableRow>
             </TableHead>
             <TableBody>
@@ -303,9 +530,26 @@ const InvoiceGenerator = () => {
                 const hasWorkOrderInvoice = invoiceStatusMap[item.id]?.WorkOrder || false;
                 
                 const isSelected = !!selected[item.id];
-                const isSameEntryNumber = activeEntryNumber !== null && item.parent.entryNumber === activeEntryNumber;
-                const isDisabled = activeEntryNumber !== null && !isSameEntryNumber;
-                const isHighlighted = isSameEntryNumber && !isSelected;
+                const itemIsONGC = isONGCCompany(
+                  item.parent?.company_id,
+                  companies.find(c => c.id === item.parent?.company_id)?.company_name
+                );
+
+                let isDisabled = false;
+                let isHighlighted = false;
+
+                if (selectedItemsList.length > 0) {
+                  if (isONGCSelected) {
+                    // For ONGC work items, allow selecting multiple work items from different Entry Numbers!
+                    isDisabled = !itemIsONGC;
+                    isHighlighted = itemIsONGC && !isSelected;
+                  } else {
+                    // For non-ONGC companies, restrict selection to the same Entry Number
+                    const isSameEntryNumber = item.parent?.entryNumber === activeEntryNumber;
+                    isDisabled = !isSameEntryNumber;
+                    isHighlighted = isSameEntryNumber && !isSelected;
+                  }
+                }
 
                 return (
                   <TableRow 

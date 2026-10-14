@@ -100,7 +100,8 @@ const WorkOrderInvoice = () => {
   const [companyDetails, setCompanyDetails] = useState(null);
 
   useEffect(() => {
-    setInvoiceNumber(passedInvoiceNumber || selectedItems[0]?.parent?.entryNumber || '');
+    const entryNos = Array.from(new Set(selectedItems.map(i => i.parent?.entryNumber).filter(Boolean))).join(', ');
+    setInvoiceNumber(passedInvoiceNumber || entryNos || '');
     if (passedPoNumber) setPoNumber(passedPoNumber);
     if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
   }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
@@ -184,7 +185,7 @@ const WorkOrderInvoice = () => {
             invoiceType: invoiceType || 'WorkOrder',
             workItems: selectedItems.map(item => item.id),
             parentOrderInfo: {
-                entryNumber: selectedItems[0]?.parent?.entryNumber,
+                entryNumber: Array.from(new Set(selectedItems.map(i => i.parent?.entryNumber).filter(Boolean))).join(', ') || selectedItems[0]?.parent?.entryNumber,
                 vendor: selectedItems[0]?.parent?.vendor
             },
             poNumber: poNumber,
