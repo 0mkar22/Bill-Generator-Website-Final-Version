@@ -435,7 +435,6 @@ function VendorInvoice() {
                       borderRadius: 0, 
                       boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                       minHeight: '1273px',
-                      justifyContent: 'space-between',
                       boxSizing: 'border-box'
                     }}
                   >
@@ -561,10 +560,9 @@ function VendorInvoice() {
                               )}
                           </TableBody>
                       </Table>
-                    </Box>
 
-                    {isLastPage && (
-                        <Box sx={{ display: 'flex', width: '100%', mt: 'auto', borderTop: 'none' }}>
+                      {isLastPage && (
+                        <Box sx={{ display: 'flex', width: '100%', borderTop: 'none', borderBottom: '1px solid #000' }}>
                             <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column' }}>
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>GST No. 27ABJPB2133M5ZO</Typography>
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Pan No. ABJPB2133M</Typography>
@@ -591,7 +589,8 @@ function VendorInvoice() {
                                 <Typography variant="body2" sx={{ fontWeight: 'bold', borderTop: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>Authorised Signatory</Typography>
                             </Box>
                         </Box>
-                    )}
+                      )}
+                    </Box>
                   </Paper>
                 );
               })
@@ -617,7 +616,6 @@ function VendorInvoice() {
                       borderRadius: 0, 
                       boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                       minHeight: '1273px',
-                      justifyContent: 'space-between',
                       boxSizing: 'border-box'
                     }}
                   >
@@ -945,42 +943,42 @@ function VendorInvoice() {
                           )}
                         </TableBody>
                       </Table>
-                    </Box>
 
-                    {isLastPage && (
-                      <Box>
-                        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-                          <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
-                          </Box>
-                          <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Round up Rs.:</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-                          </Box>
-                        </Box>
-                        
-                        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
-                          <Box sx={{ width: '32%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
-                            <Typography variant="body2">Bank Name: State Bank Of India</Typography>
-                            <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
-                            <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
-                          </Box>
-                          <Box sx={{ flex: 1, textAlign: 'center', ...borderRightStyle, p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
-                          </Box>
-                          <Box sx={{ flex: '0 0 280px', textAlign: 'center', p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>For {parentOrder.vendor || 'Vendor'}</Typography>
-                            <Box sx={{ flex: 1, minHeight: 40, maxHeight: 52, width: '100%', maxWidth: 160, mx: 'auto', my: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 120, height: 'auto', objectFit: 'contain' }} />
+                      {isLastPage && (
+                        <Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+                            <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
                             </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
+                            <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Round up Rs.:</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+                            <Box sx={{ width: '32%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
+                              <Typography variant="body2">Bank Name: State Bank Of India</Typography>
+                              <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
+                              <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
+                            </Box>
+                            <Box sx={{ flex: 1, textAlign: 'center', ...borderRightStyle, p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
+                            </Box>
+                            <Box sx={{ flex: '0 0 280px', textAlign: 'center', p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>For {parentOrder.vendor || 'Vendor'}</Typography>
+                              <Box sx={{ flex: 1, minHeight: 40, maxHeight: 52, width: '100%', maxWidth: 160, mx: 'auto', my: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 120, height: 'auto', objectFit: 'contain' }} />
+                              </Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
+                            </Box>
                           </Box>
                         </Box>
-                      </Box>
-                    )}
+                      )}
+                    </Box>
                   </Paper>
                 );
               })
