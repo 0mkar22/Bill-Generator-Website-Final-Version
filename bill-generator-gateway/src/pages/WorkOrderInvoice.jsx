@@ -602,17 +602,6 @@ const WorkOrderInvoice = () => {
                 )}
               </Box>
 
-              {/* FOOTER - ONLY FOR FIRST PAGE */}
-              {isFirstPage && (
-                <Box sx={{ p: 1.5, borderTop: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' }}>
-                  <Typography variant="caption" sx={{ color: '#555', fontSize: '0.8rem' }}>
-                    Work Order{isPO && poNumber ? ` PO No. ${poNumber}` : ''} | सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || ''}
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#000', fontSize: '0.85rem' }}>
-                    {isVidhanMandal ? `पान ${pageIdx + 1} / ${totalPages}` : `Page ${pageIdx + 1} of ${totalPages}`}
-                  </Typography>
-                </Box>
-              )}
             </Paper>
           );
         })}
