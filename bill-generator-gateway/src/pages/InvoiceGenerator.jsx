@@ -615,8 +615,22 @@ const InvoiceGenerator = () => {
                     </TableCell>
                     <TableCell sx={{ fontWeight: 500 }}>{item.eventName}</TableCell>
                     <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{item.poNpo}</TableCell>
-                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{item.parent.eventDate ? new Date(item.parent.eventDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
+                      {item.parent?.eventDate ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+                          <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', color: '#e4e4e7' }}>
+                            {new Date(item.parent.eventDate).toLocaleDateString('en-GB')}
+                          </Typography>
+                          {item.eventTime && (
+                            <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem', color: '#a1a1aa' }}>
+                              {item.eventTime}
+                            </Typography>
+                          )}
+                        </Box>
+                      ) : 'N/A'}
+                    </TableCell>
                     <TableCell>{item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A'}</TableCell>
+
                   </TableRow>
                 );
               })}
@@ -723,17 +737,19 @@ const InvoiceGenerator = () => {
 
                               return (
                                 <TableRow key={invoice.id || `${invoice.invoiceNumber}-${i}`} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
-                                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                      {invoice.createdAt ? new Date(invoice.createdAt).toLocaleString(undefined, {
-                                        year: 'numeric',
-                                        month: '2-digit',
-                                        day: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                        second: '2-digit',
-                                        hour12: false
-                                      }) : 'N/A'}
+                                    <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
+                                      {invoice.createdAt ? (
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+                                          <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', fontWeight: 600, color: '#e4e4e7' }}>
+                                            {new Date(invoice.createdAt).toLocaleDateString('en-GB')}
+                                          </Typography>
+                                          <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem', color: '#a1a1aa' }}>
+                                            {new Date(invoice.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                                          </Typography>
+                                        </Box>
+                                      ) : 'N/A'}
                                     </TableCell>
+
                                     <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#818cf8', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                       {invoice.invoiceNumber || 'N/A'}
                                     </TableCell>

@@ -1020,7 +1020,18 @@ const AmountPaid = () => {
                                   const { baseAmount, invoiceAmount, tdsAmount, amountReceived } = getInvoiceFinancials(inv);
                                   return (
                                       <TableRow key={inv.id} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
-                                          <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{new Date(inv.createdAt).toLocaleString()}</TableCell>
+                                          <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
+                                            {inv.createdAt ? (
+                                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+                                                <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', fontWeight: 600, color: '#e4e4e7' }}>
+                                                  {new Date(inv.createdAt).toLocaleDateString('en-GB')}
+                                                </Typography>
+                                                <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem', color: '#a1a1aa' }}>
+                                                  {new Date(inv.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                                                </Typography>
+                                              </Box>
+                                            ) : 'N/A'}
+                                          </TableCell>
                                           <TableCell sx={{ whiteSpace: 'nowrap' }}>
                                               <Tooltip title={`Click to review saved invoice #${inv.invoiceNumber}`} arrow>
                                                   <Typography
