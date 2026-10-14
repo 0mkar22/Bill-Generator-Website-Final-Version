@@ -161,13 +161,26 @@ export const upsertTeam = async (data) => {
     console.warn('Backend /team upsert unavailable, using direct Supabase fallback:', err.message);
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
-    const payload = { ...data };
-    if (userId && !payload.user_id) payload.user_id = userId;
+    const rawData = Array.isArray(data) ? data : [data];
+    const payload = rawData
+      .filter(item => item && (item.name || item.personnelName))
+      .map(item => {
+        const entry = {
+          name: (item.name || item.personnelName).trim(),
+          number: item.number ? String(item.number).trim() : ''
+        };
+        if (userId) entry.user_id = userId;
+        return entry;
+      });
+
+    if (payload.length === 0) {
+      return { data: { success: true, data: [] } };
+    }
+
     const { data: upserted, error } = await supabase
       .from('team')
-      .upsert([payload], { onConflict: 'user_id, name' })
-      .select()
-      .single();
+      .upsert(payload, { onConflict: 'user_id,name' })
+      .select();
     if (error) throw error;
     return { data: { success: true, data: upserted } };
   }

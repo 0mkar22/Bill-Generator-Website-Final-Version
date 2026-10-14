@@ -560,8 +560,12 @@ const WorkOrder = () => {
       });
 
       if (newTeamMembers.length > 0) {
+        try {
           await upsertTeam(newTeamMembers);
-          fetchTeamData(); 
+          fetchTeamData();
+        } catch (teamError) {
+          console.warn('Non-critical: Failed to auto-save personnel names to team cache:', teamError);
+        }
       }
 
       if (editData) {
@@ -579,7 +583,7 @@ const WorkOrder = () => {
       }
     } catch (error) {
       console.error('Failed to save work order:', error);
-      const serverError = error.response?.data?.error;
+      const serverError = error.response?.data?.error || error.message;
       const msg = Array.isArray(serverError) ? serverError.join(', ') : (serverError || 'Failed to save work order. Please ensure all required fields are filled correctly.');
       setSnackbar({ open: true, message: msg, severity: 'error' });
     } finally {
