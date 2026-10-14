@@ -593,7 +593,7 @@ const WorkOrderInvoice = () => {
                         </Table>
                       </TableContainer>
                     </Box>
-                    <Box sx={{ p: 2, pt: 1, mt: 10, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+                    <Box sx={{ p: 2, pt: 1, mt: 16, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
                       <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
                         केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
                       </Typography>
