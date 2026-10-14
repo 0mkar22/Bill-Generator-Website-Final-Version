@@ -157,8 +157,22 @@ function VendorInvoice() {
           const imgData = canvas.toDataURL('image/jpeg', 1.0);
           const pdf = new jsPDF('p', 'mm', 'a4');
           const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfPageHeight = pdf.internal.pageSize.getHeight();
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+          let heightLeft = pdfHeight;
+          let position = 0;
+
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pdfPageHeight;
+
+          while (heightLeft > 0) {
+            position -= pdfPageHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pdfPageHeight;
+          }
+
           pdf.save(filename);
           setIsGenerating(false);
         }).catch(err => {

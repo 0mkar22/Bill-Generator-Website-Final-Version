@@ -75,6 +75,41 @@ const EditableField = ({
   );
 };
 
+const getInvoicePages = (items) => {
+  const total = items.length;
+  // If 4 or fewer items, they fit cleanly on a single page with all totals and signatures
+  if (total <= 4) {
+    return [items];
+  }
+
+  // For 5 to 8 items, split into 2 balanced pages:
+  if (total <= 8) {
+    const page1Count = Math.min(5, Math.ceil(total / 2));
+    return [
+      items.slice(0, page1Count),
+      items.slice(page1Count)
+    ];
+  }
+
+  // For 9 or more items:
+  // Page 1 gets 5 items
+  const pages = [items.slice(0, 5)];
+  let remaining = items.slice(5);
+
+  while (remaining.length > 0) {
+    if (remaining.length <= 6) {
+      pages.push(remaining);
+      remaining = [];
+    } else {
+      const chunk = Math.min(7, remaining.length - 2);
+      pages.push(remaining.slice(0, chunk));
+      remaining = remaining.slice(chunk);
+    }
+  }
+
+  return pages;
+};
+
 const WorkOrderInvoice = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,17 +141,25 @@ const WorkOrderInvoice = () => {
     if (passedInvoiceDate) setInvoiceDate(new Date(passedInvoiceDate).toLocaleDateString('en-GB'));
   }, [passedInvoiceNumber, passedPoNumber, passedInvoiceDate, selectedItems]);
 
-  const handleDownload = () => {
-    const originalElement = document.getElementById('generated-invoice');
-    if (!originalElement) return;
+  const handleDownload = async () => {
+    const pageElements = document.querySelectorAll('.invoice-page');
+    if (!pageElements || pageElements.length === 0) return;
 
     setIsGenerating(true);
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
     const filename = `WorkOrder_${safeInvoiceNumber}.pdf`;
 
-    import('html2canvas').then(({ default: html2canvas }) => {
-      import('jspdf').then(({ jsPDF }) => {
-        html2canvas(originalElement, {
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { jsPDF } = await import('jspdf');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           logging: false,
@@ -124,25 +167,38 @@ const WorkOrderInvoice = () => {
           width: 900,
           scrollY: -window.scrollY,
           backgroundColor: '#ffffff'
-        }).then((canvas) => {
-          const imgData = canvas.toDataURL('image/jpeg', 1.0);
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-          pdf.save(filename);
-          setIsGenerating(false);
-        }).catch(err => {
-          console.error(err);
-          setIsGenerating(false);
         });
-      });
-    });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const renderedHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, Math.min(renderedHeight, pdfHeight));
+      }
+
+      pdf.save(filename);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      setSnackbar({ open: true, message: 'Failed to generate PDF. Please try again.', severity: 'error' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDownloadWord = () => {
-    const invoiceElement = document.getElementById('generated-invoice');
-    if (!invoiceElement) return;
+    const pageElements = document.querySelectorAll('.invoice-page');
+    if (!pageElements || pageElements.length === 0) return;
+
+    let combinedHtml = '';
+    pageElements.forEach((pageEl, idx) => {
+      combinedHtml += `<div class="word-page">${pageEl.innerHTML}</div>`;
+      if (idx < pageElements.length - 1) {
+        combinedHtml += '<br clear="all" style="page-break-before: always; mso-break-type: section-break;" />';
+      }
+    });
 
     const html = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -156,10 +212,11 @@ const WorkOrderInvoice = () => {
           .word-flex-fallback { display: block; width: 100%; clear: both; }
           .word-float-left { float: left; width: 50%; }
           .word-float-right { float: right; width: 50%; text-align: right; }
+          .word-page { width: 100%; page-break-after: always; }
         </style>
       </head>
       <body>
-        ${invoiceElement.innerHTML}
+        ${combinedHtml}
       </body>
       </html>
     `;
@@ -267,6 +324,9 @@ const WorkOrderInvoice = () => {
   const isPO = selectedItems[0]?.poNpo === 'PO';
   const isVidhanMandal = companyDetails?.uses_marathi_labels === true || parentOrder?.companyDetails?.uses_marathi_labels === true || companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || parentOrder?.companyDetails?.company_name?.includes('महाराष्ट्र विधान मंडळ सचिवालय') || false;
 
+  const invoicePages = getInvoicePages(selectedItems);
+  const totalPages = invoicePages.length;
+
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -288,212 +348,300 @@ const WorkOrderInvoice = () => {
       {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>{isEditing ? 'Invoice updated successfully!' : 'Invoice saved successfully!'}</Alert>}
 
       <ThemeProvider theme={invoiceTheme}>
-      <Paper ref={invoiceRef} id="generated-invoice" className="invoice-container" sx={{ p: 0, border: '2px solid #000', width: '900px', minWidth: '900px', margin: '0 auto', background: '#fff', borderRadius: 0, boxShadow: 'none', fontFamily: 'Arial, sans-serif' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
-          <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
-          <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>बांद्रा (ईस्ट) , मुंबई - ४०००५१</Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>दूरभाष: 022-26274105 /4134  email : ongcmumbaice@ongc.co.in</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, pb: 0 }}>
-             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                सं. प.अ.क्षे.का./नि.सं./
-                {editingInvoiceNumber ? (
-                    <TextField
-                        value={invoiceNumber}
-                        onChange={(e) => setInvoiceNumber(e.target.value)}
-                        onBlur={() => setEditingInvoiceNumber(false)}
-                        autoFocus
-                        size="small"
-                        variant="standard"
-                        sx={{ ml: 1, width: '100px' }}
-                        disabled={isReadOnly}
-                    />
-                ) : (
-                    <Box component="span" onClick={() => !isReadOnly && setEditingInvoiceNumber(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}>
-                        {invoiceNumber || 'Click to set'}
+      <Box id="generated-invoice" ref={invoiceRef}>
+        {invoicePages.map((pageItems, pageIdx) => {
+          const isFirstPage = pageIdx === 0;
+          const isLastPage = pageIdx === totalPages - 1;
+
+          return (
+            <Paper
+              key={pageIdx}
+              className="invoice-page invoice-container"
+              sx={{
+                p: 0,
+                border: '2px solid #000',
+                width: '900px',
+                minWidth: '900px',
+                margin: '0 auto',
+                background: '#fff',
+                borderRadius: 0,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                fontFamily: 'Arial, sans-serif',
+                minHeight: '1273px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box'
+              }}
+            >
+              {/* TOP CONTENT */}
+              <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                {isFirstPage ? (
+                  <>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid #000', p: 1 }}>
+                      <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 100, marginBottom: 8 }} />
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>निगमित संचार विभाग</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>बांद्रा (ईस्ट) , मुंबई - ४०००५१</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>दूरभाष: 022-26274105 /4134  email : ongcmumbaice@ongc.co.in</Typography>
                     </Box>
-                )}
-             </Typography>
-             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ mr: 0.5 }}>DT:</Typography>
-                <EditableField
-                  value={invoiceDate}
-                  onChange={setInvoiceDate}
-                  isEditing={editingInvoiceDate}
-                  setEditing={setEditingInvoiceDate}
-                  isReadOnly={isReadOnly}
-                  sx={{ ml: 0.5 }}
-                  textSx={{ fontSize: '0.875rem' }}
-                />
-             </Box>
-        </Box>
-        <Box sx={{ p: 2, pb: 0 }}>
-          <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
-            To,{'\n'}{`${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar,\nPokharan Road No. 1, Thane (W) 400606`}
-          </Typography>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 3 }}>
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', borderBottom: '1.5px solid #000', pb: 0.2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', m: 0 }}>
-                Work Order{isPO ? ' PO No.\u00A0' : ''}
-              </Typography>
-              {isPO && (
-                <EditableField
-                  value={poNumber}
-                  onChange={setPoNumber}
-                  isEditing={editingPoNumber}
-                  setEditing={setEditingPoNumber}
-                  isReadOnly={isReadOnly}
-                  sx={{ '&:hover': { borderBottom: 'none' } }}
-                  textSx={{ fontSize: '1.25rem', fontWeight: 'bold' }}
-                  fallback="Click to set"
-                />
-              )}
-            </Box>
-          </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, pb: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        सं. प.अ.क्षे.का./नि.सं./
+                        {editingInvoiceNumber ? (
+                          <TextField
+                            value={invoiceNumber}
+                            onChange={(e) => setInvoiceNumber(e.target.value)}
+                            onBlur={() => setEditingInvoiceNumber(false)}
+                            autoFocus
+                            size="small"
+                            variant="standard"
+                            sx={{ ml: 1, width: '100px' }}
+                            disabled={isReadOnly}
+                          />
+                        ) : (
+                          <Box component="span" onClick={() => !isReadOnly && setEditingInvoiceNumber(true)} sx={{ cursor: isReadOnly ? 'default' : 'pointer', borderBottom: '1px dashed #aaa', ml: 1 }}>
+                            {invoiceNumber || 'Click to set'}
+                          </Box>
+                        )}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ mr: 0.5 }}>DT:</Typography>
+                        <EditableField
+                          value={invoiceDate}
+                          onChange={setInvoiceDate}
+                          isEditing={editingInvoiceDate}
+                          setEditing={setEditingInvoiceDate}
+                          isReadOnly={isReadOnly}
+                          sx={{ ml: 0.5 }}
+                          textSx={{ fontSize: '0.875rem' }}
+                        />
+                      </Box>
+                    </Box>
+                    <Box sx={{ p: 2, pb: 0 }}>
+                      <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
+                        To,{'\n'}{`${parentOrder.vendor}\n21, Nilkanth Apartment, Samata Nagar,\nPokharan Road No. 1, Thane (W) 400606`}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 3 }}>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', borderBottom: '1.5px solid #000', pb: 0.2 }}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', m: 0 }}>
+                            Work Order{isPO ? ' PO No.\u00A0' : ''}
+                          </Typography>
+                          {isPO && (
+                            <EditableField
+                              value={poNumber}
+                              onChange={setPoNumber}
+                              isEditing={editingPoNumber}
+                              setEditing={setEditingPoNumber}
+                              isReadOnly={isReadOnly}
+                              sx={{ '&:hover': { borderBottom: 'none' } }}
+                              textSx={{ fontSize: '1.25rem', fontWeight: 'bold' }}
+                              fallback="Click to set"
+                            />
+                          )}
+                        </Box>
+                      </Box>
 
-          <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
-            The Following Photography Assignment Is Assigned To Your Agency.
-          </Typography>
-        </Box>
-        <TableContainer sx={{ p: 2, pt: 0, backgroundColor: '#fff', boxShadow: 'none' }}>
-          <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#fff' }}>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>Sr.<br />No.</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>Rate</TableCell>
-                <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {selectedItems.map((item, idx) => {
-              const amount = calculateItemAmount(item, companyDetails);
-              
-              let companyCustomRate = null;
-              if (companyDetails?.work_rates) {
-                  if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
-                      companyCustomRate = companyDetails.work_rates[item.workMain];
-                  } else {
-                      companyCustomRate = companyDetails.work_rates[item.workMain]?.[item.workSub];
-                  }
-              }
-              
-              const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
-                            ? Number(companyCustomRate) 
-                            : 0;
-
-              const quantity = item.quantity || 1;
-
-              let dimensionsText = '';
-              if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
-                  const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
-                  const unit = isLamination ? 'इंच' : 'फूट';
-                  const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
-                  
-                  if (item.dimensions && item.dimensions.length > 0) {
-                      let totalArea = 0;
-                      const dimsStr = item.dimensions.map(d => {
-                          const l = Number(d.length) || 0; 
-                          const b = Number(d.breadth) || 0;
-                          const q = Number(d.qty) || 1;
-                          totalArea += (l * b * q);
-                          return `${l}x${b} (${q} नग)`;
-                      }).join(', ');
-                      dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
-                  } else if (item.length && item.breadth) {
-                      dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
-                  }
-              }
-                
-              return (
-                <TableRow key={item.id || idx} sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000' }}>{idx + 1}</TableCell>
-                  <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
-                    <Typography variant="body2" component="div" sx={{ color: '#000' }}>{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
-                    <>
-                        <Typography variant="body2" component="div" sx={{ color: '#000' }}>
-                            {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`)}
-                            {dimensionsText}
+                      <Typography variant="body2" sx={{ mb: 1 }} fontSize="0.9rem">
+                        The Following Photography Assignment Is Assigned To Your Agency.
+                      </Typography>
+                    </Box>
+                  </>
+                ) : (
+                  /* Continuation Header for Page 2+ */
+                  <Box sx={{ borderBottom: '2px solid #000', p: 1.5, pb: 1, backgroundColor: '#fff', mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <img src="/ONGC logo.png" alt="ONGC Logo" style={{ height: 42 }} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#000', lineHeight: 1.2 }}>
+                            निगमित संचार विभाग - ओएनजीसी मुंबई
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#444', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                            {isVidhanMandal 
+                              ? `कामाचा आदेश (अनुक्रम पत्र - पान ${pageIdx + 1} / ${totalPages})` 
+                              : `Work Order (Continuation Sheet - Page ${pageIdx + 1} of ${totalPages})`}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000', fontSize: '0.9rem' }}>
+                          Work Order{isPO && poNumber ? ` PO No. ${poNumber}` : ''}
                         </Typography>
-                        <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
-                        <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
-                        <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
-                    </>
-                  </TableCell>
-                  <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000' }}>{quantity}</TableCell>
-                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{rate.toLocaleString('en-IN')}</TableCell>
-                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{amount.toLocaleString('en-IN')}</TableCell>
-                </TableRow>
-              );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Box sx={{ p: 2, pt: 0 }}>
-          <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
-            <Table size="small" sx={{ borderCollapse: 'collapse', backgroundColor: '#fff' }}>
-              <TableBody>
-                  <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                      <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total Cost</TableCell>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: '25%', backgroundColor: '#fff', color: '#000' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                  </TableRow>
-                  <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>CGST 9%</TableCell>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                  </TableRow>
-                  <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>SGST 9%</TableCell>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                  </TableRow>
-                  <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                      <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total</TableCell>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                  </TableRow>
-                  <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                      <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
-                      <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
-                  </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-        <Box sx={{ p: 2, pt: 0 }}>
-          <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
-            <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
-              <TableBody>
-                <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{isVidhanMandal ? 'कामाचे नांव' : 'Event'}</TableCell>
-                  <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
-                    {selectedItems.every(item => 
-                        item.eventName === selectedItems[0].eventName && 
-                        item.eventVenue === selectedItems[0].eventVenue && 
-                        item.customVenue === selectedItems[0].customVenue
-                    ) 
-                      ? (isVidhanMandal ? `कामाचे नांव ${selectedItems[0].eventName} कामाचे स्थळ ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` : `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}`) 
-                      : (isVidhanMandal ? 'विविध ठिकाणी विविध कार्यक्रमांसाठी.' : 'For Various events at various places.')}
-                  </TableCell>
-                </TableRow>
-                <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</TableCell>
-                  <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
-                    {uniqueDates.join(', ')}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-        <Box sx={{ p: 2, pt: 0, mt: 4, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '60%', paddingTop : '10%' }}>
-          <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.1rem', lineHeight: 1.7, color: '#000' }}>
-            केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
-          </Typography>
-        </Box>
-      </Paper>
+                        <Typography variant="caption" sx={{ color: '#000', display: 'block', fontSize: '0.8rem' }}>
+                          सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || ''} | DT: {invoiceDate}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Table of items */}
+                <TableContainer sx={{ p: 2, pt: 0, pb: 0, backgroundColor: '#fff', boxShadow: 'none' }}>
+                  <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: '#fff' }}>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 60 }}>Sr.<br />No.</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 70 }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 110 }}>Rate</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 130 }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {pageItems.map((item) => {
+                        const globalIdx = selectedItems.indexOf(item);
+                        const amount = calculateItemAmount(item, companyDetails);
+                        
+                        let companyCustomRate = null;
+                        if (companyDetails?.work_rates) {
+                            if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
+                                companyCustomRate = companyDetails.work_rates[item.workMain];
+                            } else {
+                                companyCustomRate = companyDetails.work_rates[item.workMain]?.[item.workSub];
+                            }
+                        }
+                        
+                        const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                                      ? Number(companyCustomRate) 
+                                      : 0;
+
+                        const quantity = item.quantity || 1;
+
+                        let dimensionsText = '';
+                        if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
+                            const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
+                            const unit = isLamination ? 'इंच' : 'फूट';
+                            const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
+                            
+                            if (item.dimensions && item.dimensions.length > 0) {
+                                let totalArea = 0;
+                                const dimsStr = item.dimensions.map(d => {
+                                    const l = Number(d.length) || 0; 
+                                    const b = Number(d.breadth) || 0;
+                                    const q = Number(d.qty) || 1;
+                                    totalArea += (l * b * q);
+                                    return `${l}x${b} (${q} नग)`;
+                                }).join(', ');
+                                dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
+                            } else if (item.length && item.breadth) {
+                                dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
+                            }
+                        }
+                          
+                        return (
+                          <TableRow key={item.id || globalIdx} sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 60 }}>{globalIdx + 1}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
+                              <Typography variant="body2" component="div" sx={{ color: '#000', fontWeight: 'bold' }}>{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
+                              <>
+                                  <Typography variant="body2" component="div" sx={{ color: '#000' }}>
+                                      {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`)}
+                                      {dimensionsText}
+                                  </Typography>
+                                  <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                                  <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
+                                  <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
+                              </>
+                            </TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 70 }}>{quantity}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 110 }}>{rate.toLocaleString('en-IN')}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 130 }}>{amount.toLocaleString('en-IN')}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {!isLastPage && (
+                        <TableRow sx={{ backgroundColor: '#fff' }}>
+                          <TableCell colSpan={5} sx={{ border: '1px solid #000', textAlign: 'right', py: 1, backgroundColor: '#fcfcfc', color: '#000', fontStyle: 'italic', fontWeight: 'bold' }}>
+                            {isVidhanMandal ? `(पुढे चालू - पान ${pageIdx + 2})` : `(Continued on Page ${pageIdx + 2}...)`}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* BOTTOM SECTION ONLY ON LAST PAGE */}
+                {isLastPage && (
+                  <>
+                    <Box sx={{ p: 2, pt: 1, pb: 0 }}>
+                      <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
+                        <Table size="small" sx={{ borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+                          <TableBody>
+                              <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total Cost</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: '25%', backgroundColor: '#fff', color: '#000' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                              <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>CGST 9%</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                              <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>SGST 9%</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                              <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                              <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                    <Box sx={{ p: 2, pt: 1, pb: 0 }}>
+                      <TableContainer sx={{ backgroundColor: '#fff', boxShadow: 'none' }}>
+                        <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
+                          <TableBody>
+                            <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                              <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{isVidhanMandal ? 'कामाचे नांव' : 'Event'}</TableCell>
+                              <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
+                                {selectedItems.every(item => 
+                                    item.eventName === selectedItems[0].eventName && 
+                                    item.eventVenue === selectedItems[0].eventVenue && 
+                                    item.customVenue === selectedItems[0].customVenue
+                                ) 
+                                  ? (isVidhanMandal ? `कामाचे नांव ${selectedItems[0].eventName} कामाचे स्थळ ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}` : `For ${selectedItems[0].eventName} at ${selectedItems[0].eventVenue === 'Others' ? selectedItems[0].customVenue : selectedItems[0].eventVenue}`) 
+                                  : (isVidhanMandal ? 'विविध ठिकाणी विविध कार्यक्रमांसाठी.' : 'For Various events at various places.')}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                              <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</TableCell>
+                              <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
+                                {uniqueDates.join(', ')}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                    <Box sx={{ p: 2, pt: 1, mt: 3, mb: 2, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
+                        केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+              </Box>
+
+              {/* FOOTER AT BOTTOM OF EVERY PAGE */}
+              <Box sx={{ p: 1.5, borderTop: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff' }}>
+                <Typography variant="caption" sx={{ color: '#555', fontSize: '0.8rem' }}>
+                  Work Order{isPO && poNumber ? ` PO No. ${poNumber}` : ''} | सं. प.अ.क्षे.का./नि.सं./ {invoiceNumber || ''}
+                </Typography>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#000', fontSize: '0.85rem' }}>
+                  {isVidhanMandal ? `पान ${pageIdx + 1} / ${totalPages}` : `Page ${pageIdx + 1} of ${totalPages}`}
+                </Typography>
+              </Box>
+            </Paper>
+          );
+        })}
+      </Box>
       </ThemeProvider>
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
