@@ -22,7 +22,25 @@
   min-width: 900px !important;
   max-width: 900px !important;
   margin: 0 auto !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.invoice-page {
+  width: 900px !important;
+  min-width: 900px !important;
+  max-width: 900px !important;
+  margin: 0 auto 32px auto !important;
   border: 2px solid #000000 !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+.invoice-page:last-child {
+  margin-bottom: 0 !important;
 }
 
 /* Ensure all text within invoice is pure black */
@@ -128,7 +146,21 @@
     padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .invoice-page {
+    margin: 0 0 20px 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     border: 2px solid #000000 !important;
     box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+  .invoice-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 }

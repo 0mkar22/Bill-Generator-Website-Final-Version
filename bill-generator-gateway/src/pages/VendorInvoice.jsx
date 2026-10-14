@@ -82,6 +82,44 @@ const EditableField = ({
   );
 };
 
+const getVendorInvoicePages = (items) => {
+  const total = items.length;
+  // If 3 or fewer items, they fit cleanly on a single page with all headers, totals, and signatures
+  if (total <= 3) {
+    return [items];
+  }
+
+  // If 4 to 11 items, split into 2 balanced pages:
+  if (total <= 11) {
+    const page1Count = Math.min(5, Math.ceil(total / 2));
+    return [
+      items.slice(0, page1Count),
+      items.slice(page1Count)
+    ];
+  }
+
+  // For 12 or more items:
+  // Page 1 gets 5 items
+  const pages = [items.slice(0, 5)];
+  let remaining = items.slice(5);
+
+  while (remaining.length > 0) {
+    if (remaining.length <= 6) {
+      pages.push(remaining);
+      remaining = [];
+    } else if (remaining.length <= 13) {
+      const nextCount = Math.min(7, Math.ceil(remaining.length / 2));
+      pages.push(remaining.slice(0, nextCount));
+      remaining = remaining.slice(nextCount);
+    } else {
+      pages.push(remaining.slice(0, 7));
+      remaining = remaining.slice(7);
+    }
+  }
+
+  return pages;
+};
+
 function VendorInvoice() {
 
   const navigate = useNavigate();
@@ -135,17 +173,25 @@ function VendorInvoice() {
     if (passedGstNo !== undefined) setGstNo(passedGstNo);
   }, [passedRecipient, passedDealingOfficer, passedEmailId, passedVendorCode, passedPoNumber, passedPoDate, passedServiceDescription, passedGstNo]);
 
-  const handleDownloadBill = () => {
-    const originalElement = document.getElementById('generated-bill');
-    if (!originalElement) return;
+  const handleDownloadBill = async () => {
+    const pageElements = document.querySelectorAll('.invoice-page');
+    if (!pageElements || pageElements.length === 0) return;
     
     setIsGenerating(true);
     const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
     const filename = `IcompSystemInvoice_${safeInvoiceNumber}.pdf`;
 
-    import('html2canvas').then(({ default: html2canvas }) => {
-      import('jspdf').then(({ jsPDF }) => {
-        html2canvas(originalElement, {
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { jsPDF } = await import('jspdf');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           logging: false,
@@ -153,39 +199,38 @@ function VendorInvoice() {
           width: 900,
           scrollY: -window.scrollY,
           backgroundColor: '#ffffff'
-        }).then((canvas) => {
-          const imgData = canvas.toDataURL('image/jpeg', 1.0);
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfPageHeight = pdf.internal.pageSize.getHeight();
-          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-          let heightLeft = pdfHeight;
-          let position = 0;
-
-          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-          heightLeft -= pdfPageHeight;
-
-          while (heightLeft > 0) {
-            position -= pdfPageHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-            heightLeft -= pdfPageHeight;
-          }
-
-          pdf.save(filename);
-          setIsGenerating(false);
-        }).catch(err => {
-          console.error(err);
-          setIsGenerating(false);
         });
-      });
-    });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const renderedHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, Math.min(renderedHeight, pdfHeight));
+      }
+
+      pdf.save(filename);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      setSnackbar({ open: true, message: 'Failed to generate PDF. Please try again.', severity: 'error' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDownloadWord = () => {
-    const billElement = document.getElementById('generated-bill');
-    if (!billElement) return;
+    const pageElements = document.querySelectorAll('.invoice-page');
+    if (!pageElements || pageElements.length === 0) return;
+
+    let combinedHtml = '';
+    pageElements.forEach((pageEl, idx) => {
+      combinedHtml += `<div class="word-page">${pageEl.innerHTML}</div>`;
+      if (idx < pageElements.length - 1) {
+        combinedHtml += '<br clear="all" style="page-break-before: always; mso-break-type: section-break;" />';
+      }
+    });
 
     const html = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -199,10 +244,11 @@ function VendorInvoice() {
           .word-flex-fallback { display: block; width: 100%; clear: both; }
           .word-float-left { float: left; width: 50%; }
           .word-float-right { float: right; width: 50%; text-align: right; }
+          .word-page { width: 100%; page-break-after: always; }
         </style>
       </head>
       <body>
-        ${billElement.innerHTML}
+        ${combinedHtml}
       </body>
       </html>
     `;
@@ -324,7 +370,8 @@ function VendorInvoice() {
                  companyNameStr.includes('OIL & NATURAL GAS') || 
                  companyNameStr.includes('OIL AND NATURAL GAS');
 
-
+  const invoicePages = getVendorInvoicePages(selectedItems);
+  const totalPages = invoicePages.length;
 
   return (
     <Container>
@@ -362,490 +409,581 @@ function VendorInvoice() {
 
       
         <ThemeProvider theme={invoiceTheme}>
-        {isVidhanMandal ? (
-            
-<Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif', borderRadius: 0, boxShadow: 'none' }}>
-    <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', py: 0.5, color: '#000' }}>TAX INVOICE</Typography>
-    
-    <Box sx={{ display: 'flex', width: '100%', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
-        <Box sx={{ width: '55%', borderRight: '1px solid #000', p: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>प्रति,</Typography>
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 1, fontSize: '1.2rem', lineHeight: 1.4 }}>
-                {companyDetails?.address || parentOrder?.companyDetails?.address || ''}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 'auto', fontWeight: 'bold', borderTop: '1px solid #000', mx: -1, mb: -1, p: 1 }}>
-                GST No. <EditableField value={gstNo} onChange={setGstNo} isEditing={editingGstNo} setEditing={setEditingGstNo} isReadOnly={isReadOnly} />
-            </Typography>
-        </Box>
-        <Box sx={{ width: '45%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', p: 1, height: '75px', borderBottom: '1px solid #000' }}>
-                <img src="/logo.PNG" alt="Logo" style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left' }} />
-            </Box>
-            <Typography variant="body2" sx={{ px: 1, mt: 0.5 }}>21, Nilkanth Aprtment, Samata Nagar,</Typography>
-            <Typography variant="body2" sx={{ px: 1 }}>Pokharan Road No. 1, Thane (W) 400 606</Typography>
-            <Typography variant="body2" sx={{ mb: 1, px: 1 }}>E-mail : bhogtevijay@gmail.com</Typography>
-            
-            <Box sx={{ display: 'flex', borderTop: '1px solid #000', mt: 'auto' }}>
-                <Box sx={{ flex: 1, borderRight: '1px solid #000', p: 1, display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
-                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
-                    <EditableField value={invoiceNumber} onChange={setInvoiceNumber} isEditing={editingInvoiceNumber} setEditing={setEditingInvoiceNumber} isReadOnly={isReadOnly} sx={{ ml: 0.5 }} textSx={{ whiteSpace: 'nowrap' }} />
-                </Box>
-                <Box sx={{ flex: 1, p: 1, display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
-                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
-                    <EditableField value={invoiceDate} onChange={setInvoiceDate} isEditing={editingInvoiceDate} setEditing={setEditingInvoiceDate} isReadOnly={isReadOnly} sx={{ ml: 0.5 }} textSx={{ whiteSpace: 'nowrap' }} />
-                </Box>
-            </Box>
-        </Box>
-    </Box>
-
-    <Table size="small" sx={{ '& .MuiTableCell-root': { border: '1px solid #000', p: '2px 8px', fontSize: '0.85rem' } }}>
-        <TableBody>
-            <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>कक्ष क्रमांक</TableCell>
-                <TableCell>{convertEnglishToMarathiNumbers(selectedItems[0]?.parent?.roomNumber) || 'ई-२'}</TableCell>
-            </TableRow>
-            <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>कामाचा दिनांक :</TableCell>
-                <TableCell>{
-                    convertEnglishToMarathiNumbers((() => {
-                        const dates = selectedItems.map(i => i.parent?.eventDate).filter(Boolean).sort();
-                        if (dates.length === 0) return 'N/A';
-                        if (dates.length === 1) return new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-');
-                        return `${new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-')} ते ${new Date(dates[dates.length - 1]).toLocaleDateString('en-GB').replace(/\//g, '-')}`;
-                    })())
-                }</TableCell>
-            </TableRow>
-            <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>कामाचे नांव :</TableCell>
-                <TableCell>{selectedItems[0]?.eventName || ''}</TableCell>
-            </TableRow>
-            <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>कामाचे स्थळ :</TableCell>
-                <TableCell>{selectedItems[0]?.eventVenue === 'Others' ? selectedItems[0]?.customVenue : selectedItems[0]?.eventVenue}</TableCell>
-            </TableRow>
-        </TableBody>
-    </Table>
-
-    <Table size="small" sx={{ mt: 0, '& .MuiTableCell-root': { border: '1px solid #000', p: '6px 8px', fontSize: '0.85rem' } }}>
-        <TableHead>
-            <TableRow>
-                <TableCell align="center" sx={{ fontWeight: 'bold', width: '5%' }}>Sr.<br/>No</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', width: '55%' }}>Description Of Items</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', width: '10%' }}>Quantity</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', width: '15%' }}>With GST Rate<br/>Rs.</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', width: '15%' }}>Total Amount<br/>Rs.</TableCell>
-            </TableRow>
-        </TableHead>
-        <TableBody>
-            {selectedItems.map((item, idx) => {
-                const rate = calculateItemAmount({ ...item, quantity: 1 }, companyDetails);
-                const amount = calculateItemAmount(item, companyDetails);
-                const dateStr = item.parent?.eventDate ? new Date(item.parent?.eventDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '';
-                const workMainMap = { 'Photography': 'फोटोग्राफी', 'Videography': 'व्हिडीओग्राफी' };
-                const workStr = workMainMap[item.workMain] || (item.workMain ? item.workMain.replaceAll('_', ' ') : '');
-                const durationMap = { '8_Hours': '८ तासापर्यन्त', '4_Hours': '४ तासापर्यन्त', '12_Hours': '१२ तासापर्यन्त' };
-                const subStr = durationMap[item.workSub] || (item.workSub ? item.workSub.replaceAll('_', ' ') : '');
-                
-                let desc = '';
-                if (item.workMain === '32_GB_Pendrive') {
-                    desc = '३२ जीबी पेनड्राईव्ह';
-                } else if (item.workMain === '64_GB_Pendrive') {
-                    desc = '६४ जीबी पेनड्राईव्ह';
-                } else {
-                    desc = `दि. ${dateStr} ${workStr} ${subStr}`;
-                }
-
+          <Box id="generated-bill" ref={invoiceRef} sx={{ width: '900px', margin: '0 auto' }}>
+            {isVidhanMandal ? (
+              invoicePages.map((pageItems, pageIdx) => {
+                const isFirstPage = pageIdx === 0;
+                const isLastPage = pageIdx === totalPages - 1;
                 return (
-                    <TableRow key={item.id || idx}>
-                        <TableCell align="center">{convertEnglishToMarathiNumbers(idx + 1)}</TableCell>
-                        <TableCell>{convertEnglishToMarathiNumbers(desc)}</TableCell>
-                        <TableCell align="center">{convertEnglishToMarathiNumbers(item.quantity || 1)}</TableCell>
-                        <TableCell align="right">{convertEnglishToMarathiNumbers(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
-                        <TableCell align="right">{convertEnglishToMarathiNumbers(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
-                    </TableRow>
+                  <Paper 
+                    key={pageIdx} 
+                    className="invoice-page invoice-container" 
+                    sx={{ 
+                      p: 0, 
+                      mb: 4, 
+                      border: '2px solid #000', 
+                      background: '#fff', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      width: '900px', 
+                      minWidth: '900px', 
+                      margin: '0 auto 32px auto', 
+                      fontFamily: 'Arial, sans-serif', 
+                      borderRadius: 0, 
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      minHeight: '1273px',
+                      justifyContent: 'space-between',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <Box>
+                      {isFirstPage && (
+                        <>
+                          <Typography variant="h6" align="center" sx={{ fontWeight: 'bold', py: 0.5, color: '#000' }}>TAX INVOICE</Typography>
+                          
+                          <Box sx={{ display: 'flex', width: '100%', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
+                              <Box sx={{ width: '55%', borderRight: '1px solid #000', p: 1, display: 'flex', flexDirection: 'column' }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>प्रति,</Typography>
+                                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 1, fontSize: '1.2rem', lineHeight: 1.4 }}>
+                                      {companyDetails?.address || parentOrder?.companyDetails?.address || ''}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ mt: 'auto', fontWeight: 'bold', borderTop: '1px solid #000', mx: -1, mb: -1, p: 1 }}>
+                                      GST No. <EditableField value={gstNo} onChange={setGstNo} isEditing={editingGstNo} setEditing={setEditingGstNo} isReadOnly={isReadOnly} />
+                                  </Typography>
+                              </Box>
+                              <Box sx={{ width: '45%', display: 'flex', flexDirection: 'column' }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', p: 1, height: '75px', borderBottom: '1px solid #000' }}>
+                                      <img src="/logo.PNG" alt="Logo" style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left' }} />
+                                  </Box>
+                                  <Typography variant="body2" sx={{ px: 1, mt: 0.5 }}>21, Nilkanth Aprtment, Samata Nagar,</Typography>
+                                  <Typography variant="body2" sx={{ px: 1 }}>Pokharan Road No. 1, Thane (W) 400 606</Typography>
+                                  <Typography variant="body2" sx={{ mb: 1, px: 1 }}>E-mail : bhogtevijay@gmail.com</Typography>
+                                  
+                                  <Box sx={{ display: 'flex', borderTop: '1px solid #000', mt: 'auto' }}>
+                                      <Box sx={{ flex: 1, borderRight: '1px solid #000', p: 1, display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
+                                          <Typography variant="body2" sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
+                                          <EditableField value={invoiceNumber} onChange={setInvoiceNumber} isEditing={editingInvoiceNumber} setEditing={setEditingInvoiceNumber} isReadOnly={isReadOnly} sx={{ ml: 0.5 }} textSx={{ whiteSpace: 'nowrap' }} />
+                                      </Box>
+                                      <Box sx={{ flex: 1, p: 1, display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
+                                          <Typography variant="body2" sx={{ whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
+                                          <EditableField value={invoiceDate} onChange={setInvoiceDate} isEditing={editingInvoiceDate} setEditing={setEditingInvoiceDate} isReadOnly={isReadOnly} sx={{ ml: 0.5 }} textSx={{ whiteSpace: 'nowrap' }} />
+                                      </Box>
+                                  </Box>
+                              </Box>
+                          </Box>
+
+                          <Table size="small" sx={{ '& .MuiTableCell-root': { border: '1px solid #000', p: '2px 8px', fontSize: '0.85rem' } }}>
+                              <TableBody>
+                                  <TableRow>
+                                      <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>कक्ष क्रमांक</TableCell>
+                                      <TableCell>{convertEnglishToMarathiNumbers(selectedItems[0]?.parent?.roomNumber) || 'ई-२'}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                      <TableCell sx={{ fontWeight: 'bold' }}>कामाचा दिनांक :</TableCell>
+                                      <TableCell>{
+                                          convertEnglishToMarathiNumbers((() => {
+                                              const dates = selectedItems.map(i => i.parent?.eventDate).filter(Boolean).sort();
+                                              if (dates.length === 0) return 'N/A';
+                                              if (dates.length === 1) return new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-');
+                                              return `${new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-')} ते ${new Date(dates[dates.length - 1]).toLocaleDateString('en-GB').replace(/\//g, '-')}`;
+                                          })())
+                                      }</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                      <TableCell sx={{ fontWeight: 'bold' }}>कामाचे नांव :</TableCell>
+                                      <TableCell>{selectedItems[0]?.eventName || ''}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                      <TableCell sx={{ fontWeight: 'bold' }}>कामाचे स्थळ :</TableCell>
+                                      <TableCell>{selectedItems[0]?.eventVenue === 'Others' ? selectedItems[0]?.customVenue : selectedItems[0]?.eventVenue}</TableCell>
+                                  </TableRow>
+                              </TableBody>
+                          </Table>
+                        </>
+                      )}
+
+                      <Table size="small" sx={{ mt: 0, '& .MuiTableCell-root': { border: '1px solid #000', p: '6px 8px', fontSize: '0.85rem' } }}>
+                          <TableHead>
+                              <TableRow>
+                                  <TableCell align="center" sx={{ fontWeight: 'bold', width: '5%' }}>Sr.<br/>No</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 'bold', width: '55%' }}>Description Of Items</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 'bold', width: '10%' }}>Quantity</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 'bold', width: '15%' }}>With GST Rate<br/>Rs.</TableCell>
+                                  <TableCell align="center" sx={{ fontWeight: 'bold', width: '15%' }}>Total Amount<br/>Rs.</TableCell>
+                              </TableRow>
+                          </TableHead>
+                          <TableBody>
+                              {pageItems.map((item) => {
+                                  const globalIdx = selectedItems.indexOf(item);
+                                  const rate = calculateItemAmount({ ...item, quantity: 1 }, companyDetails);
+                                  const amount = calculateItemAmount(item, companyDetails);
+                                  const dateStr = item.parent?.eventDate ? new Date(item.parent?.eventDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '';
+                                  const workMainMap = { 'Photography': 'फोटोग्राफी', 'Videography': 'व्हिडीओग्राफी' };
+                                  const workStr = workMainMap[item.workMain] || (item.workMain ? item.workMain.replaceAll('_', ' ') : '');
+                                  const durationMap = { '8_Hours': '८ तासापर्यन्त', '4_Hours': '४ तासापर्यन्त', '12_Hours': '१२ तासापर्यन्त' };
+                                  const subStr = durationMap[item.workSub] || (item.workSub ? item.workSub.replaceAll('_', ' ') : '');
+                                  
+                                  let desc = '';
+                                  if (item.workMain === '32_GB_Pendrive') {
+                                      desc = '३२ जीबी पेनड्राईव्ह';
+                                  } else if (item.workMain === '64_GB_Pendrive') {
+                                      desc = '६४ जीबी पेनड्राईव्ह';
+                                  } else {
+                                      desc = `दि. ${dateStr} ${workStr} ${subStr}`;
+                                  }
+
+                                  return (
+                                      <TableRow key={item.id || globalIdx}>
+                                          <TableCell align="center">{convertEnglishToMarathiNumbers(globalIdx + 1)}</TableCell>
+                                          <TableCell>{convertEnglishToMarathiNumbers(desc)}</TableCell>
+                                          <TableCell align="center">{convertEnglishToMarathiNumbers(item.quantity || 1)}</TableCell>
+                                          <TableCell align="right">{convertEnglishToMarathiNumbers(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
+                                          <TableCell align="right">{convertEnglishToMarathiNumbers(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
+                                      </TableRow>
+                                  );
+                              })}
+                              {!isLastPage && (
+                                  <TableRow>
+                                      <TableCell colSpan={5} sx={{ textAlign: 'right', fontWeight: 'bold', fontStyle: 'italic', p: '8px 12px', background: '#fafafa' }}>
+                                          (पुढे चालू - पान {convertEnglishToMarathiNumbers(pageIdx + 2)})
+                                      </TableCell>
+                                  </TableRow>
+                              )}
+                              {isLastPage && (
+                                  <TableRow>
+                                      <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>अक्षरी रुपये : {numberToMarathiWords(amountBeforeTax)} फक्त</TableCell>
+                                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>एकूण जीएसटीसह रक्कम रु.</TableCell>
+                                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>{convertEnglishToMarathiNumbers(amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
+                                  </TableRow>
+                              )}
+                          </TableBody>
+                      </Table>
+                    </Box>
+
+                    {isLastPage && (
+                        <Box sx={{ display: 'flex', width: '100%', mt: 'auto', borderTop: 'none' }}>
+                            <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column' }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>GST No. 27ABJPB2133M5ZO</Typography>
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Pan No. ABJPB2133M</Typography>
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Bank Details</Typography>
+                                <Box sx={{ p: '2px 4px', display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank Name : State Bank Of India</Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank A/C No. : 34238092999</Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank IFSC Code : SBIN0013035</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
+                                <img src="/stamp.png" alt="Stamp" style={{ width: '80px', height: '80px', objectFit: 'contain', marginRight: '16px' }} />
+                                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                    <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Vijay R.</Typography>
+                                    <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Bhogte</Typography>
+                                    <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>{new Date().toISOString().slice(0,10).replace(/-/g, '.')}</Typography>
+                                    <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>09:26:14</Typography>
+                                    <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>+05'30'</Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ width: '30%', display: 'flex', flexDirection: 'column' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', borderBottom: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>For Icomp Systems</Typography>
+                                <Box sx={{ flexGrow: 1, minHeight: 40 }}></Box>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', borderTop: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>Authorised Signatory</Typography>
+                            </Box>
+                        </Box>
+                    )}
+                  </Paper>
                 );
-            })}
-            <TableRow>
-                <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>अक्षरी रुपये : {numberToMarathiWords(amountBeforeTax)} फक्त</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>एकूण जीएसटीसह रक्कम रु.</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>{convertEnglishToMarathiNumbers(amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</TableCell>
-            </TableRow>
-        </TableBody>
-    </Table>
-
-    <Box sx={{ display: 'flex', width: '100%', mt: 'auto', borderTop: 'none' }}>
-        <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>GST No. 27ABJPB2133M5ZO</Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Pan No. ABJPB2133M</Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', p: '2px 4px', borderBottom: '1px solid #000' }}>Bank Details</Typography>
-            <Box sx={{ p: '2px 4px', display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank Name : State Bank Of India</Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank A/C No. : 34238092999</Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Bank IFSC Code : SBIN0013035</Typography>
-            </Box>
-        </Box>
-        <Box sx={{ width: '35%', borderRight: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
-            <img src="/stamp.png" alt="Stamp" style={{ width: '80px', height: '80px', objectFit: 'contain', marginRight: '16px' }} />
-            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Vijay R.</Typography>
-                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>Bhogte</Typography>
-                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>{new Date().toISOString().slice(0,10).replace(/-/g, '.')}</Typography>
-                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>09:26:14</Typography>
-                <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.1 }}>+05'30'</Typography>
-            </Box>
-        </Box>
-        <Box sx={{ width: '30%', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="body1" sx={{ fontWeight: 'bold', borderBottom: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>For Icomp Systems</Typography>
-            <Box sx={{ flexGrow: 1 }}></Box>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', borderTop: '1px solid #000', width: '100%', textAlign: 'center', p: '4px' }}>Authorised Signatory</Typography>
-        </Box>
-    </Box>
-</Paper>
-
-        ) : (
-            <Paper ref={invoiceRef} id="generated-bill" className="invoice-container" sx={{ p: 0, mt: 3, mb: 3, border: '2px solid #000', background: '#fff', display: 'flex', flexDirection: 'column', width: '900px', minWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif', borderRadius: 0, boxShadow: 'none' }}>
-        
-        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
-          <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Box sx={{ p: 1, pl: 2, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem', color: '#000' }}>To,</Typography>
-
-              {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    whiteSpace: 'pre-wrap', 
-                    pl: 0.5, 
-                    pr: 0.5, 
-                    pb: 0.5, 
-                    fontSize: '1.1rem', 
-                    color: '#000',
-                    lineHeight: 1.4 
-                  }}
-                >
-                  {companyDetails?.address || parentOrder?.companyDetails?.address}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-          <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1, justifyContent: 'center', height: '100%' }}>
-              <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
-                <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
-              </Box>
-              
-              <Box sx={{ textAlign: 'right', mt: 1, width: '100%' }}>
-                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#000' }}>
-                  21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#000' }}>
-                  Thane (W) 400 606 &nbsp;&nbsp; E-mail : bhogtevijay@gmail.com
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-          <Box sx={{ width: '50%', ...borderRightStyle, p: 1, pl: 2, fontSize: '1.2rem' }}>
-            {isONGC && (
-            <>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Dealing Officer:</span>
-              <EditableField
-              value={dealingOfficer}
-              onChange={setDealingOfficer}
-              isEditing={editingDealingOfficer}
-              setEditing={setEditingDealingOfficer}
-              isReadOnly={isReadOnly}
-              sx={{ ml: 1, fontSize: '1.2rem' }}
-              textSx={{ fontSize: '1.2rem' }}
-            />
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Email ID:</span>
-              <EditableField
-              value={emailId}
-              onChange={setEmailId}
-              isEditing={editingEmailId}
-              setEditing={setEditingEmailId}
-              isReadOnly={isReadOnly}
-              sx={{ ml: 1, fontSize: '1.2rem' }}
-              textSx={{ fontSize: '1.2rem' }}
-            />
-            </Typography>
-            </>
-            )}
-              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>GST No.:</span>
-                <EditableField
-                value={gstNo}
-                onChange={setGstNo}
-                isEditing={editingGstNo}
-                setEditing={setEditingGstNo}
-                isReadOnly={isReadOnly}
-                sx={{ ml: 1, fontSize: '1.25rem' }}
-                textSx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}
-              />
-              </Typography>
-            {isONGC && (
-            <>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>PO No.:</span>
-              <EditableField
-              value={poNumber}
-              onChange={setPoNumber}
-              isEditing={editingPoNumber}
-              setEditing={setEditingPoNumber}
-              isReadOnly={isReadOnly}
-              sx={{ ml: 1, fontSize: '1.2rem' }}
-              textSx={{ fontSize: '1.2rem' }}
-            />
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>PO Date:</span>
-              <EditableField
-              value={poDate}
-              onChange={setPoDate}
-              isEditing={editingPoDate}
-              setEditing={setEditingPoDate}
-              isReadOnly={isReadOnly}
-              sx={{ ml: 1, fontSize: '1.2rem' }}
-              textSx={{ fontSize: '1.2rem' }}
-            />
-            </Typography>
-            </>
-            )}
-          </Box>
-          
-          <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
-                <EditableField
-                  value={invoiceNumber}
-                  onChange={setInvoiceNumber}
-                  isEditing={editingInvoiceNumber}
-                  setEditing={setEditingInvoiceNumber}
-                  isReadOnly={isReadOnly}
-                  sx={{ ml: 0.5, fontSize: '1.2rem', fontWeight: 'bold', minWidth: '40px' }}
-                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                  fallback="Click to set"
-                />
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', flexWrap: 'nowrap' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
-                <EditableField
-                  value={invoiceDate}
-                  onChange={setInvoiceDate}
-                  isEditing={editingInvoiceDate}
-                  setEditing={setEditingInvoiceDate}
-                  isReadOnly={isReadOnly}
-                  sx={{ ml: 0.5, fontSize: '1.1rem', fontWeight: 'bold' }}
-                  textSx={{ fontSize: '1.1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                />
-              </Box>
-            </Box>
-            <Box sx={{ p: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              {isONGC && (
-              <>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, ml: 1, whiteSpace: 'nowrap' }}>Vendor Code:</Typography>
-                <EditableField
-                  value={vendorCode}
-                  onChange={setVendorCode}
-                  isEditing={editingVendorCode}
-                  setEditing={setEditingVendorCode}
-                  isReadOnly={isReadOnly}
-                  sx={{ ml: 0.5, fontSize: '1.2rem', fontWeight: 'bold' }}
-                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, ml: 1, whiteSpace: 'nowrap' }}>Place Of Supply:</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 0.5, whiteSpace: 'nowrap' }}>Mumbai</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
-                <EditableField
-                  value={serviceDescription}
-                  onChange={setServiceDescription}
-                  isEditing={editingServiceDescription}
-                  setEditing={setEditingServiceDescription}
-                  isReadOnly={isReadOnly}
-                  sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
-                  textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'normal', wordBreak: 'break-word' }}
-                />
-              </Box>
-              </>
-            )}
-            </Box>
-          </Box>
-        </Box>
-
-        <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: 'none', backgroundColor: '#fff' }}>
-          <TableHead>
-            <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff' }}>
-              <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
-              <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
-              <TableCell sx={boldHeaderCellStyle}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
-              <TableCell sx={boldHeaderCellStyle}>HSN Code</TableCell>
-              <TableCell sx={boldRightAlignedCellStyle}>Rate Rs.</TableCell>
-              <TableCell sx={boldRightAlignedCellStyle}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {selectedItems.map((item, idx) => {
-              const amount = calculateItemAmount(item, companyDetails);
-              
-              let companyCustomRate = null;
-              if (companyDetails?.work_rates) {
-                  if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
-                      companyCustomRate = companyDetails.work_rates[item.workMain];
-                  } else {
-                      companyCustomRate = companyDetails.work_rates[item.workMain]?.[item.workSub];
-                  }
-              }
-              
-              const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
-                            ? Number(companyCustomRate) 
-                            : 0;
-
-              const quantity = item.quantity || 1;
-
-              let dimensionsText = '';
-              if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
-                  const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
-                  const unit = isLamination ? 'इंच' : 'फूट';
-                  const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
-                  
-                  if (item.dimensions && item.dimensions.length > 0) {
-                      let totalArea = 0;
-                      const dimsStr = item.dimensions.map(d => {
-                          const l = Number(d.length) || 0; 
-                          const b = Number(d.breadth) || 0;
-                          const q = Number(d.qty) || 1;
-                          totalArea += (l * b * q);
-                          return `${l}x${b} (${q} नग)`;
-                      }).join(', ');
-                      dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
-                  } else if (item.length && item.breadth) {
-                      dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
-                  }
-              }
-              
-              return (
-                <TableRow key={item.id || idx} sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{idx + 1}</TableCell>
-                  <TableCell sx={tableCellStyle}>
-                    <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#000' }}>
-                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
-                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
-                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
-                      <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
-                      
-                      {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : 'Location and Duration:'}</span>} 
-                      {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
-                      {dimensionsText}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{quantity}</TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>99838</TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                </TableRow>
-              );
-            })}
-            
-            <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>Amount Before Tax:</Typography>
-              </TableCell>
-              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
-                  {amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </TableCell>
-            </TableRow>
-
-            {isIGST ? (
-              <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>IGST 18%:</Typography>
-                </TableCell>
-                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                  <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
-                    {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Typography>
-                </TableCell>
-              </TableRow>
+              })
             ) : (
-              <>
-                <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>CGST 9%:</Typography>
-                  </TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
-                      {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-                <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                  <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>SGST 9%:</Typography>
-                  </TableCell>
-                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
-                      {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              </>
+              invoicePages.map((pageItems, pageIdx) => {
+                const isFirstPage = pageIdx === 0;
+                const isLastPage = pageIdx === totalPages - 1;
+                return (
+                  <Paper 
+                    key={pageIdx} 
+                    className="invoice-page invoice-container" 
+                    sx={{ 
+                      p: 0, 
+                      mb: 4, 
+                      border: '2px solid #000', 
+                      background: '#fff', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      width: '900px', 
+                      minWidth: '900px', 
+                      margin: '0 auto 32px auto', 
+                      fontFamily: 'Arial, sans-serif', 
+                      borderRadius: 0, 
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      minHeight: '1273px',
+                      justifyContent: 'space-between',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <Box>
+                      {isFirstPage && (
+                        <>
+                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, alignItems: 'stretch' }}>
+                            <Box sx={{ width: '50%', ...borderRightStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <Box sx={{ p: 1, pl: 2, fontSize: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', height: '100%' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.4rem', color: '#000' }}>To,</Typography>
+
+                                {(companyDetails?.address || parentOrder?.companyDetails?.address) && (
+                                  <Typography 
+                                    variant="body2" 
+                                    sx={{ 
+                                      whiteSpace: 'pre-wrap', 
+                                      pl: 0.5, 
+                                      pr: 0.5, 
+                                      pb: 0.5, 
+                                      fontSize: '1.1rem', 
+                                      color: '#000',
+                                      lineHeight: 1.4 
+                                    }}
+                                  >
+                                    {companyDetails?.address || parentOrder?.companyDetails?.address}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                            <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 1, justifyContent: 'center', height: '100%' }}>
+                                <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+                                  <img src="/logo.PNG" alt="Company Logo" style={{ height: '100%', width: 'auto', maxHeight: 120 }} />
+                                </Box>
+                                
+                                <Box sx={{ textAlign: 'right', mt: 1, width: '100%' }}>
+                                  <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#000' }}>
+                                    21, Nilkanth Aprtment, Samata Nagar, Pokharan Road No. 1,
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '0.9rem', color: '#000' }}>
+                                    Thane (W) 400 606 &nbsp;&nbsp; E-mail : bhogtevijay@gmail.com
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
+                          </Box>
+
+                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+                            <Box sx={{ width: '50%', ...borderRightStyle, p: 1, pl: 2, fontSize: '1.2rem' }}>
+                              {isONGC && (
+                              <>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Dealing Officer:</span>
+                                <EditableField
+                                value={dealingOfficer}
+                                onChange={setDealingOfficer}
+                                isEditing={editingDealingOfficer}
+                                setEditing={setEditingDealingOfficer}
+                                isReadOnly={isReadOnly}
+                                sx={{ ml: 1, fontSize: '1.2rem' }}
+                                textSx={{ fontSize: '1.2rem' }}
+                              />
+                              </Typography>
+                              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Email ID:</span>
+                                <EditableField
+                                value={emailId}
+                                onChange={setEmailId}
+                                isEditing={editingEmailId}
+                                setEditing={setEditingEmailId}
+                                isReadOnly={isReadOnly}
+                                sx={{ ml: 1, fontSize: '1.2rem' }}
+                                textSx={{ fontSize: '1.2rem' }}
+                              />
+                              </Typography>
+                              </>
+                              )}
+                                <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>GST No.:</span>
+                                  <EditableField
+                                  value={gstNo}
+                                  onChange={setGstNo}
+                                  isEditing={editingGstNo}
+                                  setEditing={setEditingGstNo}
+                                  isReadOnly={isReadOnly}
+                                  sx={{ ml: 1, fontSize: '1.25rem' }}
+                                  textSx={{ fontSize: '1.25rem', verticalAlign: 'middle' }}
+                                />
+                                </Typography>
+                              {isONGC && (
+                              <>
+                              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>PO No.:</span>
+                                <EditableField
+                                value={poNumber}
+                                onChange={setPoNumber}
+                                isEditing={editingPoNumber}
+                                setEditing={setEditingPoNumber}
+                                isReadOnly={isReadOnly}
+                                sx={{ ml: 1, fontSize: '1.2rem' }}
+                                textSx={{ fontSize: '1.2rem' }}
+                              />
+                              </Typography>
+                              <Typography variant="body2" sx={{ mt: 0.5 }}><span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>PO Date:</span>
+                                <EditableField
+                                value={poDate}
+                                onChange={setPoDate}
+                                isEditing={editingPoDate}
+                                setEditing={setEditingPoDate}
+                                isReadOnly={isReadOnly}
+                                sx={{ ml: 1, fontSize: '1.2rem' }}
+                                textSx={{ fontSize: '1.2rem' }}
+                              />
+                              </Typography>
+                              </>
+                              )}
+                            </Box>
+                            
+                            <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
+                              <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
+                                  <EditableField
+                                    value={invoiceNumber}
+                                    onChange={setInvoiceNumber}
+                                    isEditing={editingInvoiceNumber}
+                                    setEditing={setEditingInvoiceNumber}
+                                    isReadOnly={isReadOnly}
+                                    sx={{ ml: 0.5, fontSize: '1.2rem', fontWeight: 'bold', minWidth: '40px' }}
+                                    textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                                    fallback="Click to set"
+                                  />
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', flexWrap: 'nowrap' }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
+                                  <EditableField
+                                    value={invoiceDate}
+                                    onChange={setInvoiceDate}
+                                    isEditing={editingInvoiceDate}
+                                    setEditing={setEditingInvoiceDate}
+                                    isReadOnly={isReadOnly}
+                                    sx={{ ml: 0.5, fontSize: '1.1rem', fontWeight: 'bold' }}
+                                    textSx={{ fontSize: '1.1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                                  />
+                                </Box>
+                              </Box>
+                              <Box sx={{ p: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                {isONGC && (
+                                <>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, ml: 1, whiteSpace: 'nowrap' }}>Vendor Code:</Typography>
+                                  <EditableField
+                                    value={vendorCode}
+                                    onChange={setVendorCode}
+                                    isEditing={editingVendorCode}
+                                    setEditing={setEditingVendorCode}
+                                    isReadOnly={isReadOnly}
+                                    sx={{ ml: 0.5, fontSize: '1.2rem', fontWeight: 'bold' }}
+                                    textSx={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+                                  />
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, ml: 1, whiteSpace: 'nowrap' }}>Place Of Supply:</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', marginLeft: 0.5, whiteSpace: 'nowrap' }}>Mumbai</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1, whiteSpace: 'nowrap' }}>Service Description :</Typography>
+                                  <EditableField
+                                    value={serviceDescription}
+                                    onChange={setServiceDescription}
+                                    isEditing={editingServiceDescription}
+                                    setEditing={setEditingServiceDescription}
+                                    isReadOnly={isReadOnly}
+                                    sx={{ ml: 1, fontSize: '1.2rem', fontWeight: 'bold', flex: 1 }}
+                                    textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'normal', wordBreak: 'break-word' }}
+                                  />
+                                </Box>
+                                </>
+                              )}
+                              </Box>
+                            </Box>
+                          </Box>
+                        </>
+                      )}
+
+                      <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: isFirstPage ? 'none' : '1px solid #000', backgroundColor: '#fff' }}>
+                        <TableHead>
+                          <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff' }}>
+                            <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
+                            <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
+                            <TableCell sx={boldHeaderCellStyle}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
+                            <TableCell sx={boldHeaderCellStyle}>HSN Code</TableCell>
+                            <TableCell sx={boldRightAlignedCellStyle}>Rate Rs.</TableCell>
+                            <TableCell sx={boldRightAlignedCellStyle}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {pageItems.map((item) => {
+                            const globalIdx = selectedItems.indexOf(item);
+                            const amount = calculateItemAmount(item, companyDetails);
+                            
+                            let companyCustomRate = null;
+                            if (companyDetails?.work_rates) {
+                                if (item.workMain === '32_GB_Pendrive' || item.workMain === 'Others') {
+                                    companyCustomRate = companyDetails.work_rates[item.workMain];
+                                } else {
+                                    companyCustomRate = companyDetails.work_rates[item.workMain]?.[item.workSub];
+                                }
+                            }
+                            
+                            const rate = (companyCustomRate !== undefined && companyCustomRate !== '' && companyCustomRate !== null) 
+                                          ? Number(companyCustomRate) 
+                                          : 0;
+
+                            const quantity = item.quantity || 1;
+
+                            let dimensionsText = '';
+                            if (item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच' || bannerSubs.includes(item.workSub)) {
+                                const isLamination = item.workSub === 'फोटो सहित लेमिनेशन (लाकडी) प्रती इंच';
+                                const unit = isLamination ? 'इंच' : 'फूट';
+                                const sqUnit = isLamination ? 'sq.in' : 'sq.ft';
+                                
+                                if (item.dimensions && item.dimensions.length > 0) {
+                                    let totalArea = 0;
+                                    const dimsStr = item.dimensions.map(d => {
+                                        const l = Number(d.length) || 0; 
+                                        const b = Number(d.breadth) || 0;
+                                        const q = Number(d.qty) || 1;
+                                        totalArea += (l * b * q);
+                                        return `${l}x${b} (${q} नग)`;
+                                    }).join(', ');
+                                    dimensionsText = ` (आकार: ${dimsStr} ${unit} = ${totalArea} ${sqUnit})`;
+                                } else if (item.length && item.breadth) {
+                                    dimensionsText = ` (आकार: ${item.length} x ${item.breadth} ${unit} = ${item.length * item.breadth * quantity} ${sqUnit})`;
+                                }
+                            }
+                            
+                            return (
+                              <TableRow key={item.id || globalIdx} sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{globalIdx + 1}</TableCell>
+                                <TableCell sx={tableCellStyle}>
+                                  <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#000' }}>
+                                    <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                                    <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
+                                    <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
+                                    <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
+                                    
+                                    {item.workMain !== '32_GB_Pendrive' && <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : 'Location and Duration:'}</span>} 
+                                    {item.workMain !== '32_GB_Pendrive' && item.workSub && item.workSub.replaceAll('_', ' ')}
+                                    {dimensionsText}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{quantity}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>99838</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+
+                          {!isLastPage && (
+                            <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                              <TableCell colSpan={6} sx={{ ...tableCellStyle, textAlign: 'right', py: 1, backgroundColor: '#fafafa', fontStyle: 'italic', fontWeight: 'bold' }}>
+                                (Continued on Page {pageIdx + 2}...)
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          
+                          {isLastPage && (
+                            <>
+                              <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>Amount Before Tax:</Typography>
+                                </TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
+                                    {amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+
+                              {isIGST ? (
+                                <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                  <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>IGST 18%:</Typography>
+                                  </TableCell>
+                                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                    <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
+                                      {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                <>
+                                  <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                    <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>CGST 9%:</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
+                                        {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </Typography>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow sx={{ borderBottom: 'none', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                    <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>SGST 9%:</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
+                                        {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </Typography>
+                                    </TableCell>
+                                  </TableRow>
+                                </>
+                              )}
+
+                              <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>Total Amount Rs.:</Typography>
+                                </TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
+                                    {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            </>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </Box>
+
+                    {isLastPage && (
+                      <Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+                          <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
+                          </Box>
+                          <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Round up Rs.:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+                          <Box sx={{ width: '32%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
+                            <Typography variant="body2">Bank Name: State Bank Of India</Typography>
+                            <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
+                            <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
+                          </Box>
+                          <Box sx={{ flex: 1, textAlign: 'center', ...borderRightStyle, p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
+                          </Box>
+                          <Box sx={{ flex: '0 0 280px', textAlign: 'center', p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>For {parentOrder.vendor || 'Vendor'}</Typography>
+                            <Box sx={{ flex: 1, minHeight: 40, maxHeight: 52, width: '100%', maxWidth: 160, mx: 'auto', my: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 120, height: 'auto', objectFit: 'contain' }} />
+                            </Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    )}
+                  </Paper>
+                );
+              })
             )}
-
-            <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-              <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>Total Amount Rs.:</Typography>
-              </TableCell>
-              <TableCell sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
-                  {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-
-        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-          <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
           </Box>
-          <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Round up Rs.:</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-          </Box>
-        </Box>
-        
-        <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
-          <Box sx={{ width: '32%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Pan No. ABJPB2133M</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>Bank Details:</Typography>
-              <Typography variant="body2">Bank Name: State Bank Of India</Typography>
-              <Typography variant="body2">Bank A/C No.: 34238902999</Typography>
-              <Typography variant="body2">Bank IFSC Code: SBIN0013035</Typography>
-            </Box>
-            <Box sx={{ flex: 1, textAlign: 'center', ...borderRightStyle, p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Digital Signature</Typography>
-            </Box>
-            <Box sx={{ flex: '0 0 280px', textAlign: 'center', p: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>For {parentOrder.vendor || 'Vendor'}</Typography>
-              <Box sx={{ flex: 1, minHeight: 40, maxHeight: 52, width: '100%', maxWidth: 160, mx: 'auto', my: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/signature.png" alt="Authorised Signatory Signature" style={{ width: '100%', maxWidth: 120, height: 'auto', objectFit: 'contain' }} />
-              </Box>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Authorised Signatory</Typography>
-            </Box>
-          </Box>
-
-      </Paper>
-        )}
-      </ThemeProvider>
+        </ThemeProvider>
 
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(s => ({ ...s, open: false }))}>
