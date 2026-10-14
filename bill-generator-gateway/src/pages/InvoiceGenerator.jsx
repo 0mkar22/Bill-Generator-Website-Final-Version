@@ -192,8 +192,9 @@ const InvoiceGenerator = () => {
   };
 
   const handleEditWorkItem = (parentOrder) => {
-    navigate('/work-order', { 
+    navigate('/work-orders', { 
       state: { 
+        editData: parentOrder,
         isEditing: true, 
         recordId: parentOrder.id || parentOrder._id, 
         savedData: parentOrder,

@@ -58,7 +58,7 @@ export const updateWorkOrder = async (id, workOrderData) => {
     console.warn('Backend /workOrders update unavailable, using direct Supabase fallback:', err.message);
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
-    const { user_id, ...updateFields } = workOrderData;
+    const { id: _ignoredId, _id: _ignored_id, user_id, ...updateFields } = workOrderData;
     let query = supabase.from('workOrders').update(updateFields).eq('id', id);
     if (userId) query = query.eq('user_id', userId);
     const { data: updated, error } = await query.select().single();

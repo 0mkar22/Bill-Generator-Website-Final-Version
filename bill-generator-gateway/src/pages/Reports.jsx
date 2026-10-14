@@ -381,7 +381,7 @@ const Reports = () => {
     };
 
     const handleEditWorkItem = (item) => {
-        navigate('/', { state: { editData: item.fullOrder } });
+        navigate('/work-orders', { state: { editData: item.fullOrder } });
     };
 
     const renderTable = () => {
@@ -458,7 +458,7 @@ const Reports = () => {
         <Container maxWidth="xl">
             <Paper sx={{ p: 3, mt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                    <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')}>Back</Button>
+                    <Button startIcon={<ArrowBackIcon />} onClick={() => { if (window.history.length > 1) { navigate(-1); } else { navigate('/work-orders'); } }}>Back</Button>
                     <Typography variant="h4" sx={{ flexGrow: 1, textAlign: 'center' }}>Work Orders Report</Typography>
                 </Box>
                 <Grid container spacing={2} sx={{ mb: 3 }}>

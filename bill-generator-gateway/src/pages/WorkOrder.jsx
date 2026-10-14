@@ -67,7 +67,7 @@ const getRatesTemplateForCompany = (companyName = '') => {
 const WorkOrder = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const editData = location.state?.editData;
+  const editData = location.state?.editData || location.state?.savedData;
   const [latestEntry, setLatestEntry] = useState(null);
   const [existingEntryNumbers, setExistingEntryNumbers] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -323,12 +323,16 @@ const WorkOrder = () => {
 
       let formattedDate = '';
       if (editData.eventDate) {
-        try {
-          const dateObj = new Date(editData.eventDate);
-          if (!isNaN(dateObj)) {
-            formattedDate = dateObj.toISOString().split('T')[0];
-          }
-        } catch (e) {}
+        if (typeof editData.eventDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(editData.eventDate)) {
+          formattedDate = editData.eventDate;
+        } else {
+          try {
+            const dateObj = new Date(editData.eventDate);
+            if (!isNaN(dateObj)) {
+              formattedDate = dateObj.toISOString().split('T')[0];
+            }
+          } catch (e) {}
+        }
       }
 
       setFormData({
