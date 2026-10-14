@@ -771,7 +771,6 @@ renderValue={(selected) => selected}
                               <TextField
                                 {...params}
                                 label="Contact Person"
-                                required
                                 fullWidth
                                 multiline
                                 minRows={1}
@@ -790,8 +789,7 @@ renderValue={(selected) => selected}
                         <Grid item xs={12} sm={6}>
                           <TextField 
                             name="contactNumber" 
-                            label="Contact Number" 
-                            required 
+                            label="Contact Number"  
                             fullWidth 
                             type="text"
                             inputProps={{ inputMode: 'numeric' }}
@@ -804,7 +802,7 @@ renderValue={(selected) => selected}
                     
                     {isONGCSelected && (
                         <Grid item xs={12} sm={6}>
-                          <FormControl fullWidth required>
+                          <FormControl fullWidth>
                             <InputLabel>PO/NPO</InputLabel>
                             <Select name="poNpo" value={formData.workItems[0].poNpo} label="PO/NPO" onChange={(e) => handleWorkItemChange(0, e)}>
                               <MenuItem value="PO">PO</MenuItem>
