@@ -974,11 +974,11 @@ function VendorInvoice() {
                         <Box>
                           <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
                             <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>In Words: {numberToWords(rounded)}</Typography>
+                              <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>In Words: {numberToWords(rounded)}</Typography>
                             </Box>
                             <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, ml: 1 }}>Round up Rs.:</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
+                              <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', mr: 1, ml: 1, color: '#000' }}>Round up Rs.:</Typography>
+                              <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
                             </Box>
                           </Box>
                           
