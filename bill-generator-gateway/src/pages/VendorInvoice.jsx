@@ -831,7 +831,7 @@ function VendorInvoice() {
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>HSN Code</TableCell>
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>Rate Rs.</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '104px' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '110px', px: '6px' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -893,7 +893,7 @@ function VendorInvoice() {
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{quantity}</TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>99838</TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem', px: '6px' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             );
                           })}
@@ -912,7 +912,7 @@ function VendorInvoice() {
                                 <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>Amount Before Tax:</Typography>
                                 </TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5, px: '6px' }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                     {amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
@@ -924,7 +924,7 @@ function VendorInvoice() {
                                   <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                     <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>IGST 18%:</Typography>
                                   </TableCell>
-                                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
+                                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5, px: '6px' }}>
                                     <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                       {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
@@ -936,7 +936,7 @@ function VendorInvoice() {
                                     <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>CGST 9%:</Typography>
                                     </TableCell>
-                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
+                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5, px: '6px' }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                         {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </Typography>
@@ -946,7 +946,7 @@ function VendorInvoice() {
                                     <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>SGST 9%:</Typography>
                                     </TableCell>
-                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
+                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5, px: '6px' }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                         {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </Typography>
@@ -959,7 +959,7 @@ function VendorInvoice() {
                                 <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>Total Amount Rs.:</Typography>
                                 </TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1 }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1, px: '6px' }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
                                     {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
@@ -968,7 +968,7 @@ function VendorInvoice() {
 
                               <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
                                 <TableCell colSpan={5} sx={{ ...tableCellStyle, p: 0, py: 0, position: 'relative', backgroundColor: 'transparent' }}>
-                                  <Box sx={{ p: '6px 8px', pl: 2, pr: '185px', minWidth: 0, overflow: 'hidden' }}>
+                                  <Box sx={{ p: '6px 8px', pl: 2, pr: '180px', minWidth: 0, overflow: 'hidden' }}>
                                     <Typography variant="body2" sx={{ 
                                       fontSize: (() => {
                                         const text = `In Words: ${numberToWords(rounded)}`;
@@ -984,13 +984,13 @@ function VendorInvoice() {
                                       In Words: {numberToWords(rounded)}
                                     </Typography>
                                   </Box>
-                                  <Box sx={{ position: 'absolute', right: 0, top: '-1px', bottom: '-1px', width: '176px', borderLeft: '1px solid #000', boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
+                                  <Box sx={{ position: 'absolute', right: 0, top: '-1px', bottom: '-1px', width: '170px', borderLeft: '1px solid #000', boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
                                     <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>
                                       Round up Rs.:
                                     </Typography>
                                   </Box>
                                 </TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1 }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1, px: '6px' }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
                                     {rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
