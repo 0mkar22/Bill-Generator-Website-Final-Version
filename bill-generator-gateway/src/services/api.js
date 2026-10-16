@@ -569,6 +569,27 @@ export const fetchDashboardSummaryDirect = async () => {
     }
   });
 
+  // Extract all item IDs and work order IDs that are included in Vendor Invoices
+  const vendorWorkItemIds = new Set();
+  const vendorWorkOrderIds = new Set();
+  uniqueInvoices.forEach(inv => {
+    let invItems = [];
+    try {
+      invItems = Array.isArray(inv.workItems)
+        ? inv.workItems
+        : (typeof inv.workItems === 'string' ? JSON.parse(inv.workItems || '[]') : []);
+    } catch (e) {
+      invItems = [];
+    }
+    invItems.forEach(id => {
+      vendorWorkItemIds.add(id);
+      const item = allItemsMap.get(id);
+      if (item?.parent?.id) {
+        vendorWorkOrderIds.add(item.parent.id);
+      }
+    });
+  });
+
   const totalCrewWages = rawPayouts.reduce(
     (sum, p) => sum + (Number(p.amount_paid) || 0),
     0
@@ -579,9 +600,11 @@ export const fetchDashboardSummaryDirect = async () => {
   let totalStayExpense = 0;
 
   rawWorkOrders.forEach(order => {
-    totalTravelExpense += Number(order.travel_expense ?? order.workItems?.[0]?.travelExpense) || 0;
-    totalFoodExpense += Number(order.food_expense ?? order.workItems?.[0]?.foodExpense) || 0;
-    totalStayExpense += Number(order.stay_expense ?? order.workItems?.[0]?.stayExpense) || 0;
+    if (vendorWorkOrderIds.has(order.id)) {
+      totalTravelExpense += Number(order.travel_expense ?? order.workItems?.[0]?.travelExpense) || 0;
+      totalFoodExpense += Number(order.food_expense ?? order.workItems?.[0]?.foodExpense) || 0;
+      totalStayExpense += Number(order.stay_expense ?? order.workItems?.[0]?.stayExpense) || 0;
+    }
   });
 
   const totalEventExpenses = totalTravelExpense + totalFoodExpense + totalStayExpense;
@@ -596,11 +619,11 @@ export const fetchDashboardSummaryDirect = async () => {
     ? Number(((netProfit / totalAmountReceived) * 100).toFixed(1))
     : 0;
 
-  const totalWorkOrders = rawWorkOrders.length;
-  const threeDaysAgo = new Date();
-  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  // Operations & Workforce Calculations (strictly tracking Vendor Invoices & their crew)
+  const totalWorkOrders = uniqueInvoices.length;
+  const completedWorkOrders = paidInvoicesCount;
+  const activeWorkOrders = unpaidInvoicesCount;
 
-  let activeWorkOrders = 0;
   let totalPersonnelDeployed = 0;
   const allAssignedPersonnelKeys = new Set();
   const settledPersonnelKeys = new Set();
@@ -611,27 +634,24 @@ export const fetchDashboardSummaryDirect = async () => {
     }
   });
 
-  rawWorkOrders.forEach(order => {
-    const orderDate = order.eventDate ? new Date(order.eventDate) : null;
-    if (orderDate && orderDate >= threeDaysAgo) {
-      activeWorkOrders += 1;
-    }
+  vendorWorkItemIds.forEach(id => {
+    const item = allItemsMap.get(id);
+    if (!item) return;
+    const order = item.parent;
+    const orderId = order?.id || item.orderId || 'unknown';
 
-    (order.workItems || []).forEach(item => {
-      let pList = item.personnel || [];
-      if (Array.isArray(pList)) {
-        pList.forEach(p => {
-          if (p && p.name) {
-            totalPersonnelDeployed += 1;
-            allAssignedPersonnelKeys.add(`${order.id}__${p.name.trim().toLowerCase()}`);
-          }
-        });
-      }
-    });
+    let pList = item.personnel || [];
+    if (Array.isArray(pList)) {
+      pList.forEach(p => {
+        if (p && p.name) {
+          totalPersonnelDeployed += 1;
+          allAssignedPersonnelKeys.add(`${orderId}__${p.name.trim().toLowerCase()}`);
+        }
+      });
+    }
   });
 
-  const completedWorkOrders = Math.max(0, totalWorkOrders - activeWorkOrders);
-
+  // Calculate pending payouts (personnel assigned in vendor invoices that have no payout record)
   let pendingPayoutsCount = 0;
   for (const key of allAssignedPersonnelKeys) {
     if (!settledPersonnelKeys.has(key)) {
@@ -693,12 +713,12 @@ export const fetchDashboardSummaryDirect = async () => {
   let threeCameraSetupCount = 0;
   let singleCameraOrOtherCount = 0;
 
-  rawWorkOrders.forEach(order => {
-    (order.workItems || []).forEach(item => {
-      if (item.workMain === 'Two_Camera_Setup') twoCameraSetupCount++;
-      else if (item.workMain === 'Three_Camera_Setup') threeCameraSetupCount++;
-      else singleCameraOrOtherCount++;
-    });
+  vendorWorkItemIds.forEach(id => {
+    const item = allItemsMap.get(id);
+    if (!item) return;
+    if (item.workMain === 'Two_Camera_Setup') twoCameraSetupCount++;
+    else if (item.workMain === 'Three_Camera_Setup') threeCameraSetupCount++;
+    else singleCameraOrOtherCount++;
   });
 
   return {

@@ -866,13 +866,13 @@ const DashboardOverview = () => {
                   <EventNoteIcon sx={{ color: '#818cf8', fontSize: 18 }} />
                 </Box>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#f4f4f5', fontSize: '0.95rem' }}>
-                  Event Fulfillment
+                  Vendor Invoice Fulfillment
                 </Typography>
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="caption" sx={{ color: '#a1a1aa' }}>
-                  Completed vs Active Orders
+                  Paid vs Pending Invoices
                 </Typography>
                 <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', color: '#f4f4f5' }}>
                   {operations.completedWorkOrders} / {operations.totalWorkOrders}
@@ -901,7 +901,7 @@ const DashboardOverview = () => {
                     border: '1px solid rgba(255, 255, 255, 0.06)'
                   }}>
                     <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.7rem' }}>
-                      Active / Upcoming
+                      Pending / Unpaid
                     </Typography>
                     <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '1.25rem', fontWeight: 700, color: '#f4f4f5' }}>
                       {operations.activeWorkOrders}
@@ -916,7 +916,7 @@ const DashboardOverview = () => {
                     border: '1px solid rgba(255, 255, 255, 0.06)'
                   }}>
                     <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.7rem' }}>
-                      Archived / Past
+                      Settled / Paid
                     </Typography>
                     <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '1.25rem', fontWeight: 700, color: '#34d399' }}>
                       {operations.completedWorkOrders}
@@ -977,7 +977,7 @@ const DashboardOverview = () => {
                       Total Crew Deployed
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#71717a' }}>
-                      Across all logged event items
+                      Across vendor invoice items
                     </Typography>
                   </Box>
                   <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '1.1rem', fontWeight: 700, color: '#f4f4f5' }}>
@@ -999,7 +999,7 @@ const DashboardOverview = () => {
                       Unsettled Crew Assignments
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#71717a' }}>
-                      Crew awaiting payout recording
+                      Vendor invoice crew awaiting payout
                     </Typography>
                   </Box>
                   <Typography sx={{
