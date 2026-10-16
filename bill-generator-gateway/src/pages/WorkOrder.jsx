@@ -350,6 +350,10 @@ const WorkOrder = () => {
     const companyName = company?.company_name?.toUpperCase() || '';
     const isVidhan = company?.uses_marathi_labels === true || companyName.includes('महाराष्ट्र विधान मंडळ सचिवालय');
 
+    if (company?.work_rates && company.work_rates[workMain] && typeof company.work_rates[workMain] === 'object') {
+      return Object.keys(company.work_rates[workMain]);
+    }
+
     if (isVidhan && vidhanMandalWorks[workMain]) {
         return vidhanMandalWorks[workMain];
     }
@@ -399,6 +403,9 @@ const WorkOrder = () => {
     setEditingCompanyId(null);
     setNewCompany({ 
       company_name: '', address: '', gst_number: '', 
+      is_govt_client: false,
+      requires_po_number: false,
+      uses_marathi_labels: false,
       work_rates: getRatesTemplateForCompany() 
     });
     setIsCompanyModalOpen(true);
@@ -409,21 +416,25 @@ const WorkOrder = () => {
     e.stopPropagation(); 
     setEditingCompanyId(company.id);
     
-    const existingRates = company.work_rates || {};
-    const mergedRates = getRatesTemplateForCompany(company.company_name);
-    
-    for (const key in mergedRates) {
-      if (typeof mergedRates[key] === 'object') {
-        mergedRates[key] = { ...mergedRates[key], ...(existingRates[key] || {}) };
-      } else {
-        mergedRates[key] = existingRates[key] !== undefined ? existingRates[key] : '';
-      }
+    let existingRates = company.work_rates || {};
+    if (typeof existingRates === 'string') {
+      try { existingRates = JSON.parse(existingRates); } catch (err) { existingRates = {}; }
+    }
+
+    let mergedRates = {};
+    if (existingRates && Object.keys(existingRates).length > 0) {
+      mergedRates = JSON.parse(JSON.stringify(existingRates));
+    } else {
+      mergedRates = getRatesTemplateForCompany(company.company_name);
     }
 
     setNewCompany({
       company_name: company.company_name || '',
       address: company.address || '',
       gst_number: company.gst_number || '',
+      is_govt_client: company.is_govt_client || false,
+      requires_po_number: company.requires_po_number || false,
+      uses_marathi_labels: company.uses_marathi_labels || false,
       work_rates: mergedRates
     });
     setIsCompanyModalOpen(true);
@@ -444,56 +455,34 @@ const WorkOrder = () => {
     });
   };
 
-  const handleSaveCompany = async (e) => {
+  const handleSaveCompany = async (e, customRatesOverride = null) => {
     if (e) e.preventDefault();
     setSavingCompany(true);
     try {
-      const companyNameStr = newCompany.company_name?.toUpperCase() || '';
-      const isONGC = newCompany.requires_po_number === true || companyNameStr.includes('ONGC') || 
-                     companyNameStr.includes('OIL & NATURAL GAS') || 
-                     companyNameStr.includes('OIL AND NATURAL GAS');
-      const isModalVidhan = newCompany.uses_marathi_labels === true || companyNameStr.includes('महाराष्ट्र विधान मंडळ सचिवालय');
-
-      const allowedLocations = isONGC 
-          ? ['Mumbai', 'Panvel', 'Uran', 'Nhava', 'Outstation'] 
-          : ['Mumbai', 'Outstation'];
-
-      const cleanedRates = JSON.parse(JSON.stringify(newCompany.work_rates));
-
-      if (!isModalVidhan) {
-          Object.keys(cleanedRates).forEach(category => {
-            if (typeof cleanedRates[category] === 'object' && cleanedRates[category] !== null && category !== 'Storage' && category !== 'Photo_Print') {
-              Object.keys(cleanedRates[category]).forEach(subKey => {
-                const isAllowed = allowedLocations.some(loc => subKey.includes(loc));
-                if (!isAllowed) {
-                  delete cleanedRates[category][subKey];
-                }
-              });
-            }
-          });
-      }
+      const ratesToUse = customRatesOverride || newCompany.work_rates || {};
+      const cleanedRates = JSON.parse(JSON.stringify(ratesToUse));
 
       const payloadToSave = { ...newCompany, work_rates: cleanedRates };
 
       if (editingCompanyId) {
         const response = await updateCompany(editingCompanyId, payloadToSave);
-        const data = response.data.data;
+        const data = response.data?.data || response.data;
         
-        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? data : c));
+        setCompanies(prev => prev.map(c => c.id === editingCompanyId ? (data || { ...c, ...payloadToSave }) : c));
         setSnackbar({ open: true, message: 'Company updated successfully!', severity: 'success' });
       } else {
         const response = await createCompany(payloadToSave);
-        const data = response.data.data;
-        
-        setCompanies(prev => [...prev, data]);
-        setFormData(prev => ({ ...prev, company_id: data.id }));
-        setSnackbar({ open: true, message: 'Company added successfully!', severity: 'success' });
+        const data = response.data?.data || response.data;
+        if (data) {
+          setCompanies(prev => [...prev, data]);
+          if (data.id) setFormData(prev => ({ ...prev, company_id: data.id }));
+        }
+        setSnackbar({ open: true, message: 'Company created successfully!', severity: 'success' });
       }
-      
       setIsCompanyModalOpen(false);
     } catch (error) {
-      console.error('Failed to save company:', error);
-      setSnackbar({ open: true, message: 'Failed to save company data.', severity: 'error' });
+      console.error("Failed to save company:", error);
+      setSnackbar({ open: true, message: 'Failed to save company', severity: 'error' });
     } finally {
       setSavingCompany(false);
     }
@@ -876,8 +865,6 @@ renderValue={(selected) => selected}
         newCompany={newCompany}
         setNewCompany={setNewCompany}
         handleSaveCompany={handleSaveCompany}
-        getFilteredSubWorks={getFilteredSubWorks}
-        handleRateChange={handleRateChange}
         savingCompany={savingCompany}
       />
 

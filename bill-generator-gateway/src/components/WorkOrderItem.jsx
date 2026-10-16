@@ -36,8 +36,37 @@ const WorkOrderItem = ({
           if (item.workMain === 'Others') {
               currentRate = Number(item.customRate) || 0;
           } else if (selectedCompany?.work_rates && selectedCompany.work_rates[item.workMain]) {
-              currentRate = Number(selectedCompany.work_rates[item.workMain][item.workSub]) || 0;
+              const catRates = selectedCompany.work_rates[item.workMain];
+              if (typeof catRates === 'object' && catRates !== null) {
+                  currentRate = Number(catRates[item.workSub]) || 0;
+              } else {
+                  currentRate = Number(catRates) || 0;
+              }
           }
+
+          const availableWorkOptions = React.useMemo(() => {
+              if (isVidhanMandalSelected) {
+                  return Object.keys(vidhanMandalWorks).map(work => ({
+                      value: work,
+                      label: work
+                  }));
+              }
+              if (selectedCompany?.work_rates && Object.keys(selectedCompany.work_rates).length > 0) {
+                  return Object.keys(selectedCompany.work_rates).map(workKey => ({
+                      value: workKey,
+                      label: workKey.replaceAll('_', ' ')
+                  }));
+              }
+              return [
+                  { value: "Still_Photography", label: "Still Photography" },
+                  { value: "Videography", label: "Videography" },
+                  { value: "Two_Camera_Setup", label: "Two Video Cameras Live Setup" },
+                  { value: "Three_Camera_Setup", label: "Three Video Cameras Live Setup" },
+                  { value: "Live_Telecast", label: "Live Telecast Setup" },
+                  { value: "Storage", label: "Storage" },
+                  { value: "Photo_Print", label: "Photo Print" }
+              ];
+          }, [isVidhanMandalSelected, selectedCompany?.work_rates]);
 
           
 
@@ -74,20 +103,11 @@ const WorkOrderItem = ({
                     <FormControl fullWidth required>
                         <InputLabel>{isVidhanMandalSelected ? 'कामाचे स्वरूप' : 'Work Name'}</InputLabel>
                         <Select name="workMain" value={item.workMain} label={isVidhanMandalSelected ? 'कामाचे स्वरूप' : 'Work Name'} onChange={(e) => handleWorkItemChange(index, e)}>
-                            {isVidhanMandalSelected ? (
-                                Object.keys(vidhanMandalWorks).map(work => (
-                                    <MenuItem key={work} value={work}>{work}</MenuItem>
-                                ))
-                            ) : (
-                                [
-                                  <MenuItem key="still" value="Still_Photography">Still Photography</MenuItem>,
-                                  <MenuItem key="video" value="Videography">Videography</MenuItem>,
-                                  <MenuItem key="2cam" value="Two_Camera_Setup">Two Video Cameras Live Setup</MenuItem>,
-                                  <MenuItem key="3cam" value="Three_Camera_Setup">Three Video Cameras Live Setup</MenuItem>,
-                                  <MenuItem key="live" value="Live_Telecast">Live Telecast Setup</MenuItem>,
-                                  <MenuItem key="storage" value="Storage">Storage</MenuItem>,
-                                  <MenuItem key="photo_print" value="Photo_Print">Photo Print</MenuItem>
-                                ]
+                            {availableWorkOptions.map(opt => (
+                                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                            ))}
+                            {item.workMain && item.workMain !== 'Others' && !availableWorkOptions.some(opt => opt.value === item.workMain) && (
+                                <MenuItem key={item.workMain} value={item.workMain}>{item.workMain.replaceAll('_', ' ')}</MenuItem>
                             )}
                             <MenuItem value="Others">Others</MenuItem>
                         </Select>
@@ -123,6 +143,9 @@ const WorkOrderItem = ({
                                 {getFilteredSubWorks(item.workMain, selectedCompany).map(sub => (
                                     <MenuItem key={sub} value={sub}>{sub.replaceAll('_', ' ')}</MenuItem>
                                 ))}
+                                {item.workSub && !getFilteredSubWorks(item.workMain, selectedCompany).includes(item.workSub) && (
+                                    <MenuItem key={item.workSub} value={item.workSub}>{item.workSub.replaceAll('_', ' ')}</MenuItem>
+                                )}
                             </Select>
                         </FormControl>
                     </Grid>
