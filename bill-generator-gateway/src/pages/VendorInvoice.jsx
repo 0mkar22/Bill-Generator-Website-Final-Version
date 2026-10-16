@@ -972,18 +972,29 @@ function VendorInvoice() {
 
                       {isLastPage && (
                         <Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle, backgroundColor: '#fff', alignItems: 'stretch' }}>
-                            <Box sx={{ flex: 1, p: '6px 8px', pl: 2, ...borderRightStyle, display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" sx={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', boxSizing: 'border-box', ...borderBottomStyle, backgroundColor: '#fff', alignItems: 'stretch' }}>
+                            <Box sx={{ flex: 1, minWidth: 0, p: '6px 8px', pl: 2, ...borderRightStyle, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                              <Typography variant="body2" sx={{ 
+                                fontSize: (() => {
+                                  const text = `In Words: ${numberToWords(rounded)}`;
+                                  if (text.length > 80) return '0.74rem';
+                                  if (text.length > 68) return '0.82rem';
+                                  if (text.length > 54) return '0.92rem';
+                                  return '1.05rem';
+                                })(), 
+                                fontWeight: 'bold', 
+                                color: '#000', 
+                                whiteSpace: 'nowrap' 
+                              }}>
                                 In Words: {numberToWords(rounded)}
                               </Typography>
                             </Box>
-                            <Box sx={{ flex: '0 0 176px', width: '176px', boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, ...borderRightStyle, display: 'flex', alignItems: 'center' }}>
+                            <Box sx={{ flex: '0 0 176px', width: '176px', flexShrink: 0, boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, ...borderRightStyle, display: 'flex', alignItems: 'center' }}>
                               <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>
                                 Round up Rs.:
                               </Typography>
                             </Box>
-                            <Box sx={{ flex: '0 0 104px', width: '104px', boxSizing: 'border-box', p: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box sx={{ flex: '0 0 104px', width: '104px', flexShrink: 0, boxSizing: 'border-box', p: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
                                 {rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </Typography>
