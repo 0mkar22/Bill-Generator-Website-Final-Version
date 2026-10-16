@@ -967,14 +967,12 @@ function VendorInvoice() {
                               </TableRow>
 
                               <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                                <TableCell colSpan={5} sx={{ ...tableCellStyle, p: 0, py: 0 }}>
-                                  <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', alignItems: 'stretch' }}>
-                                    <Box sx={{ flex: 1, p: '6px 8px', pl: 2, ...borderRightStyle, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-                                      <Typography variant="body2" sx={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>In Words: {numberToWords(rounded)}</Typography>
-                                    </Box>
-                                    <Box sx={{ flex: '0 0 175px', width: '175px', boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
-                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>Round up Rs.:</Typography>
-                                    </Box>
+                                <TableCell colSpan={5} sx={{ ...tableCellStyle, p: 0, py: 0, position: 'relative' }}>
+                                  <Box sx={{ p: '6px 8px', pl: 2, pr: '185px', display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="body2" sx={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>In Words: {numberToWords(rounded)}</Typography>
+                                  </Box>
+                                  <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '175px', borderLeft: '1px solid #000', boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
+                                    <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>Round up Rs.:</Typography>
                                   </Box>
                                 </TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1, width: '104px' }}>
