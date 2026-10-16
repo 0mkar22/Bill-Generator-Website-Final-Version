@@ -758,7 +758,7 @@ function VendorInvoice() {
                             
                             <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
                               <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', width: '40%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '57.4%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
                                   <EditableField
                                     value={invoiceNumber}
@@ -771,7 +771,7 @@ function VendorInvoice() {
                                     fallback="Click to set"
                                   />
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', width: '60%', p: '6px 8px', flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '42.6%', p: '6px 8px', flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
                                   <EditableField
                                     value={invoiceDate}
@@ -823,15 +823,15 @@ function VendorInvoice() {
                         </>
                       )}
 
-                      <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', border: '1px solid #000', borderTop: isFirstPage ? 'none' : '1px solid #000', backgroundColor: '#fff' }}>
+                      <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: isFirstPage ? 'none' : '1px solid #000', backgroundColor: '#fff' }}>
                         <TableHead>
                           <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff' }}>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '6%' }}>Sr. No</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, width: '44%' }}>Description Of Items</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '8%' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '12%' }}>HSN Code</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '15%' }}>Rate Rs.</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '15%' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>Sr. No</TableCell>
+                            <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>HSN Code</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>Rate Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
