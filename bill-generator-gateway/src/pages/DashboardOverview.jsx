@@ -613,7 +613,7 @@ const DashboardOverview = () => {
               ₹{kpis.outstandingReceivables.toLocaleString('en-IN')}
             </Typography>
             <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.75rem', display: 'block' }}>
-              From {kpis.unpaidInvoicesCount} pending invoices
+              From {kpis.unpaidInvoicesCount} pending {kpis.unpaidInvoicesCount === 1 ? 'vendor invoice' : 'vendor invoices'}
             </Typography>
           </Paper>
         </Grid>

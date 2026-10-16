@@ -58,15 +58,20 @@ exports.getDashboardSummary = async (req, res) => {
       return Math.round(amountBeforeTax * 1.18);
     };
 
-    // 3. De-duplicate invoices by invoiceNumber to prevent duplicate count
+    // 3. Filter to Vendor invoices only and de-duplicate by invoiceNumber
+    // Receivables and revenue strictly count Vendor Invoices (excluding internal Work Orders)
     const uniqueInvoicesMap = new Map();
     rawInvoices.forEach(inv => {
-      const key = inv.invoiceNumber || inv.id;
-      if (!uniqueInvoicesMap.has(key)) {
-        uniqueInvoicesMap.set(key, inv);
+      const isVendor = (inv.invoiceType || 'Vendor').toLowerCase() === 'vendor';
+      if (isVendor) {
+        const key = inv.invoiceNumber || inv.id;
+        if (!uniqueInvoicesMap.has(key)) {
+          uniqueInvoicesMap.set(key, inv);
+        }
       }
     });
     const uniqueInvoices = Array.from(uniqueInvoicesMap.values());
+
 
     // 4. Financial Calculations
     let totalRevenue = 0;
