@@ -244,7 +244,6 @@ const WorkOrderInvoice = () => {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-
       for (let i = 0; i < pageElements.length; i++) {
         const pageEl = pageElements[i];
         const canvas = await html2canvas(pageEl, {
@@ -254,7 +253,19 @@ const WorkOrderInvoice = () => {
           windowWidth: 1000,
           width: 900,
           scrollY: -window.scrollY,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            style.innerHTML = `
+              img {
+                display: inline-block !important;
+              }
+              table, tr, td, th, .MuiTableCell-root {
+                vertical-align: middle !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          }
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -572,11 +583,11 @@ const WorkOrderInvoice = () => {
                   <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff', tableLayout: 'fixed', width: '100%' }}>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: '#fff' }}>
-                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 60 }}>Sr.<br />No.</TableCell>
-                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
-                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 70 }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
-                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 110 }}>Rate</TableCell>
-                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 140 }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 60, verticalAlign: 'middle' }}>Sr.<br />No.</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', verticalAlign: 'middle' }}>{isVidhanMandal ? 'कामाचे स्वरूप' : 'Work'}</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 70, verticalAlign: 'middle' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 110, verticalAlign: 'middle' }}>Rate</TableCell>
+                        <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#fff', color: '#000', textTransform: 'uppercase', width: 140, verticalAlign: 'middle' }}>{isVidhanMandal ? 'रकम' : 'Amount'}<br />(Rs.)</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -622,8 +633,8 @@ const WorkOrderInvoice = () => {
                           
                         return (
                           <TableRow key={item.id || globalIdx} sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 60 }}>{globalIdx + 1}</TableCell>
-                            <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 60, verticalAlign: 'middle' }}>{globalIdx + 1}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>
                               <Typography variant="body2" component="div" sx={{ color: '#000', fontWeight: 'bold' }}>{item.workMain ? item.workMain.replaceAll('_',' ') : 'N/A'}</Typography>
                               <>
                                   <Typography variant="body2" component="div" sx={{ color: '#000' }}>
@@ -635,9 +646,9 @@ const WorkOrderInvoice = () => {
                                   <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
                               </>
                             </TableCell>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 70 }}>{quantity}</TableCell>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 110 }}>{rate.toLocaleString('en-IN')}</TableCell>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 140 }}>{amount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 70, verticalAlign: 'middle' }}>{quantity}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 110, verticalAlign: 'middle' }}>{rate.toLocaleString('en-IN')}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 140, verticalAlign: 'middle' }}>{amount.toLocaleString('en-IN')}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -660,24 +671,24 @@ const WorkOrderInvoice = () => {
                         <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff', tableLayout: 'fixed', width: '100%' }}>
                           <TableBody>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total Cost</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>Total Cost</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>CGST 9%</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>CGST 9%</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>SGST 9%</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>SGST 9%</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140, backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{(totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>Total</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140, backgroundColor: '#fff', color: '#000' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>Total</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140, backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                               <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
-                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140, backgroundColor: '#fff', color: '#000' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', textAlign: 'right', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{`Round Up Rs. (${numberToWords(roundedTotal)})`}</TableCell>
+                                  <TableCell sx={{ border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', width: 140, backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                           </TableBody>
                         </Table>
@@ -688,8 +699,8 @@ const WorkOrderInvoice = () => {
                         <Table size="small" sx={{ border: '1px solid #000', borderCollapse: 'collapse', backgroundColor: '#fff' }}>
                           <TableBody>
                             <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                              <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{isVidhanMandal ? 'कामाचे नांव' : 'Event'}</TableCell>
-                              <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
+                              <TableCell sx={{ border: '1px solid #000', width: 100, fontWeight: 'bold', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{isVidhanMandal ? 'कामाचे नांव' : 'Event'}</TableCell>
+                              <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>
                                 {selectedItems.every(item => 
                                     item.eventName === selectedItems[0].eventName && 
                                     item.eventVenue === selectedItems[0].eventVenue && 
@@ -700,8 +711,8 @@ const WorkOrderInvoice = () => {
                               </TableCell>
                             </TableRow>
                             <TableRow sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
-                              <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', backgroundColor: '#fff', color: '#000' }}>{isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</TableCell>
-                              <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000' }}>
+                              <TableCell sx={{ border: '1px solid #000', fontWeight: 'bold', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>{isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</TableCell>
+                              <TableCell sx={{ border: '1px solid #000', backgroundColor: '#fff', color: '#000', verticalAlign: 'middle' }}>
                                 {uniqueDates.join(', ')}
                               </TableCell>
                             </TableRow>

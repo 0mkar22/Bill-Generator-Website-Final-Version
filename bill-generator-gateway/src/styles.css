@@ -1,6 +1,18 @@
 @tailwind base;
+
+@layer base {
+  img {
+    display: inline-block !important;
+  }
+}
+
 @tailwind components;
 @tailwind utilities;
+
+/* Fix html2canvas font metrics baseline calculation bug caused by Tailwind display:block on img */
+img {
+  display: inline-block !important;
+}
 
 :root {
   color-scheme: dark;

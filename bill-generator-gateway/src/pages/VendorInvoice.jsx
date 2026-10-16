@@ -13,7 +13,7 @@ import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglis
 import { bannerSubs } from '../constants/data';
 import { InvoiceSkeleton } from '../components/skeletons';
 
-const tableCellStyle = { border: '1px solid #000', p: '4px 8px', color: '#000', backgroundColor: '#fff' };
+const tableCellStyle = { border: '1px solid #000', p: '4px 8px', color: '#000', backgroundColor: '#fff', verticalAlign: 'middle' };
 const boldHeaderCellStyle = { ...tableCellStyle, fontWeight: 'bold', textTransform: 'uppercase' };
 const boldRightAlignedCellStyle = { ...boldHeaderCellStyle, textAlign: 'right' };
 const flexEndColumnStyle = { display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' };
@@ -215,7 +215,19 @@ function VendorInvoice() {
           windowWidth: 1000, 
           width: 900,
           scrollY: -window.scrollY,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            style.innerHTML = `
+              img {
+                display: inline-block !important;
+              }
+              table, tr, td, th, .MuiTableCell-root {
+                vertical-align: middle !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          }
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.98);
