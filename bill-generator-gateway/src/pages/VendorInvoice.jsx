@@ -984,7 +984,7 @@ function VendorInvoice() {
                                       In Words: {numberToWords(rounded)}
                                     </Typography>
                                   </Box>
-                                  <Box sx={{ position: 'absolute', right: 0, top: '-1px', bottom: '-1px', width: '170px', borderLeft: '1px solid #000', boxSizing: 'border-box', p: '6px 8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
+                                  <Box sx={{ position: 'absolute', right: 0, top: '-1px', bottom: '-1px', width: '170px', borderLeft: '1px solid #000', boxSizing: 'border-box', p: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                                     <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>
                                       Round up Rs.:
                                     </Typography>
