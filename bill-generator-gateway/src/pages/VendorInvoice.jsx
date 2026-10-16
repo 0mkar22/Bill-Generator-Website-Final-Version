@@ -831,7 +831,7 @@ function VendorInvoice() {
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>HSN Code</TableCell>
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>Rate Rs.</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '104px' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -972,12 +972,12 @@ function VendorInvoice() {
                                     <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle, display: 'flex', alignItems: 'center' }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>In Words: {numberToWords(rounded)}</Typography>
                                     </Box>
-                                    <Box sx={{ p: '8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
+                                    <Box sx={{ flex: '0 0 176px', width: '176px', boxSizing: 'border-box', p: '8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>Round up Rs.:</Typography>
                                     </Box>
                                   </Box>
                                 </TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1 }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1, width: '104px' }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
                                     {rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
