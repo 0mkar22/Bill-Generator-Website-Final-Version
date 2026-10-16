@@ -647,8 +647,8 @@ const WorkOrderInvoice = () => {
                               </>
                             </TableCell>
                             <TableCell sx={{ border: '1px solid #000', textAlign: 'center', backgroundColor: '#fff', color: '#000', width: 70, verticalAlign: 'middle' }}>{quantity}</TableCell>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 110, verticalAlign: 'middle' }}>{rate.toLocaleString('en-IN')}</TableCell>
-                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 140, verticalAlign: 'middle' }}>{amount.toLocaleString('en-IN')}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 110, verticalAlign: 'middle' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell sx={{ border: '1px solid #000', textAlign: 'right', backgroundColor: '#fff', color: '#000', width: 140, verticalAlign: 'middle' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -836,8 +836,8 @@ const WorkOrderInvoice = () => {
                       <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
                     </TableCell>
                     <TableCell sx={{ border: '1px solid #000', textAlign: 'center', width: 70 }}>{quantity}</TableCell>
-                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 110 }}>{rate.toLocaleString('en-IN')}</TableCell>
-                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140 }}>{amount.toLocaleString('en-IN')}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 110 }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell sx={{ border: '1px solid #000', textAlign: 'right', width: 140 }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   </TableRow>
                 );
               })}
