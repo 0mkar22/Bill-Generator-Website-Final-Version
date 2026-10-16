@@ -18,6 +18,7 @@ import { TableSkeleton } from '../components/skeletons';
 const InvoiceGenerator = () => {
   const [workItems, setWorkItems] = useState([]);
   const [selected, setSelected] = useState({});
+  const [selectedOrder, setSelectedOrder] = useState([]);
   const [allInvoices, setAllInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState([]);
@@ -146,11 +147,48 @@ const InvoiceGenerator = () => {
   const savedInvoices = useMemo(() => allInvoices.filter(inv => inv.status !== 'paid'), [allInvoices]);
 
   const handleSelect = (itemId) => {
-    setSelected(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+    setSelected(prev => {
+      const nextVal = !prev[itemId];
+      if (nextVal) {
+        setSelectedOrder(old => (old.includes(itemId) ? old : [...old, itemId]));
+      } else {
+        setSelectedOrder(old => old.filter(id => id !== itemId));
+      }
+      return { ...prev, [itemId]: nextVal };
+    });
   };
 
   const getSelectedItems = () => {
-      return workItems.filter(item => selected[item.id]);
+    const items = workItems.filter(item => selected[item.id]);
+
+    return items.sort((a, b) => {
+      // 1. Sort primarily by eventDate ascending (oldest to newest)
+      const dateA = a.parent?.eventDate || a.eventDate ? new Date(a.parent?.eventDate || a.eventDate).getTime() : 0;
+      const dateB = b.parent?.eventDate || b.eventDate ? new Date(b.parent?.eventDate || b.eventDate).getTime() : 0;
+
+      if (dateA !== dateB) {
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA - dateB;
+      }
+
+      // 2. If dates are equal (or missing), sort by the order they were selected
+      const orderA = selectedOrder.indexOf(a.id);
+      const orderB = selectedOrder.indexOf(b.id);
+      if (orderA !== -1 && orderB !== -1) {
+        return orderA - orderB;
+      }
+      if (orderA !== -1) return -1;
+      if (orderB !== -1) return 1;
+
+      // 3. Fallback: natural entryNumber and itemIndex order
+      const entryA = String(a.parent?.entryNumber || '');
+      const entryB = String(b.parent?.entryNumber || '');
+      const entryComp = entryA.localeCompare(entryB, undefined, { numeric: true });
+      if (entryComp !== 0) return entryComp;
+
+      return (a.itemIndex ?? 0) - (b.itemIndex ?? 0);
+    });
   };
 
   const handleGenerate = async (type) => {
@@ -165,16 +203,31 @@ const InvoiceGenerator = () => {
 
   const handleViewSavedInvoice = (savedInvoice, type, isEditing = false) => {
     const invItems = Array.isArray(savedInvoice.workItems) ? savedInvoice.workItems : [];
-    const itemsForInvoice = workItems.filter(item => {
-      if (invItems.includes(item.id)) return true;
-      const fallbackId = `entry-${item.parent?.entryNumber}-item-${item.itemIndex ?? 0}`;
-      return invItems.includes(fallbackId);
+    const itemsForInvoice = invItems.map(id => {
+      return workItems.find(item => {
+        if (item.id === id) return true;
+        const fallbackId = `entry-${item.parent?.entryNumber}-item-${item.itemIndex ?? 0}`;
+        return fallbackId === id;
+      });
+    }).filter(Boolean);
+
+    // Ensure items are ordered by eventDate ascending, then by saved sequence
+    itemsForInvoice.sort((a, b) => {
+      const dateA = a.parent?.eventDate || a.eventDate ? new Date(a.parent?.eventDate || a.eventDate).getTime() : 0;
+      const dateB = b.parent?.eventDate || b.eventDate ? new Date(b.parent?.eventDate || b.eventDate).getTime() : 0;
+      if (dateA !== dateB) {
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA - dateB;
+      }
+      return invItems.indexOf(a.id) - invItems.indexOf(b.id);
     });
 
     if (itemsForInvoice.length === 0) {
         setSnackbar({ open: true, message: 'Corrupted Invoice Data. This invoice was saved with a broken reference. Please generate a new invoice.', severity: 'error' });
         return;
     }
+
 
     const route = type === 'WorkOrder' ? '/workorder-invoice' : '/vendor-invoice';
     const currentInvoiceId = savedInvoice.id || savedInvoice._id; 
@@ -374,18 +427,29 @@ const InvoiceGenerator = () => {
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
       const newSelected = { ...selected };
+      const toAdd = [];
       selectablePageItems.forEach(item => {
         newSelected[item.id] = true;
+        toAdd.push(item.id);
       });
       setSelected(newSelected);
+      setSelectedOrder(old => {
+        const existing = new Set(old);
+        const uniqueToAdd = toAdd.filter(id => !existing.has(id));
+        return [...old, ...uniqueToAdd];
+      });
     } else {
       const newSelected = { ...selected };
+      const toRemove = new Set();
       selectablePageItems.forEach(item => {
         delete newSelected[item.id];
+        toRemove.add(item.id);
       });
       setSelected(newSelected);
+      setSelectedOrder(old => old.filter(id => !toRemove.has(id)));
     }
   };
+
 
   return (
     <Container>

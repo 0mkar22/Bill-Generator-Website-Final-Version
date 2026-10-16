@@ -126,7 +126,21 @@ function VendorInvoice() {
   const location = useLocation();
   const invoiceRef = useRef();
 
-  const { items: selectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
+  const { items: rawSelectedItems, invoiceType, savedInvoice, isEditing, invoiceId, invoiceNumber: passedInvoiceNumber, invoiceDate: passedInvoiceDate, recipient: passedRecipient, dealingOfficer: passedDealingOfficer, emailId: passedEmailId, vendorCode: passedVendorCode, poNumber: passedPoNumber, poDate: passedPoDate, serviceDescription: passedServiceDescription, gstNo: passedGstNo } = location.state || { items: [] };
+
+  const selectedItems = useMemo(() => {
+    const list = Array.isArray(rawSelectedItems) ? [...rawSelectedItems] : [];
+    return list.sort((a, b) => {
+      const dateA = a.parent?.eventDate || a.eventDate ? new Date(a.parent?.eventDate || a.eventDate).getTime() : 0;
+      const dateB = b.parent?.eventDate || b.eventDate ? new Date(b.parent?.eventDate || b.eventDate).getTime() : 0;
+      if (dateA !== dateB) {
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA - dateB;
+      }
+      return 0; // preserve incoming order (how they were selected)
+    });
+  }, [rawSelectedItems]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState((savedInvoice && !isEditing) || false);
