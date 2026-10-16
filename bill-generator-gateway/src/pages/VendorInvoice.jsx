@@ -965,6 +965,24 @@ function VendorInvoice() {
                                   </Typography>
                                 </TableCell>
                               </TableRow>
+
+                              <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff', '&:hover': { backgroundColor: '#fff' } }}>
+                                <TableCell colSpan={5} sx={{ ...tableCellStyle, p: 0, py: 0 }}>
+                                  <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', alignItems: 'stretch' }}>
+                                    <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle, display: 'flex', alignItems: 'center' }}>
+                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>In Words: {numberToWords(rounded)}</Typography>
+                                    </Box>
+                                    <Box sx={{ p: '8px', pl: 2, pr: 2, display: 'flex', alignItems: 'center' }}>
+                                      <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', whiteSpace: 'nowrap' }}>Round up Rs.:</Typography>
+                                    </Box>
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1 }}>
+                                  <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
+                                    {rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
                             </>
                           )}
                         </TableBody>
@@ -972,16 +990,6 @@ function VendorInvoice() {
 
                       {isLastPage && (
                         <Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-                            <Box sx={{ flex: 1, p: '8px', pl: 2, ...borderRightStyle }}>
-                              <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>In Words: {numberToWords(rounded)}</Typography>
-                            </Box>
-                            <Box sx={{ flex: '0 0 280px', p: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', mr: 1, ml: 1, color: '#000' }}>Round up Rs.:</Typography>
-                              <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>{rounded.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
-                            </Box>
-                          </Box>
-                          
                           <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
                             <Box sx={{ width: '32%', p: '8px', pl: 2, ...borderRightStyle, fontSize: '1rem' }}>
                               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>GST No. 27ABJPB2133M5ZO</Typography>
