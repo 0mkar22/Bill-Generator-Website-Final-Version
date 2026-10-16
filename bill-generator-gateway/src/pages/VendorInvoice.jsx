@@ -758,7 +758,7 @@ function VendorInvoice() {
                             
                             <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
                               <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '40%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
                                   <EditableField
                                     value={invoiceNumber}
@@ -771,7 +771,7 @@ function VendorInvoice() {
                                     fallback="Click to set"
                                   />
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', width: '50%', p: '6px 8px', flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '60%', p: '6px 8px', flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
                                   <EditableField
                                     value={invoiceDate}
@@ -823,15 +823,15 @@ function VendorInvoice() {
                         </>
                       )}
 
-                      <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', borderTop: isFirstPage ? 'none' : '1px solid #000', backgroundColor: '#fff' }}>
+                      <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', border: '1px solid #000', borderTop: isFirstPage ? 'none' : '1px solid #000', backgroundColor: '#fff' }}>
                         <TableHead>
                           <TableRow sx={{ borderBottom: '1px solid #000', backgroundColor: '#fff' }}>
-                            <TableCell sx={boldHeaderCellStyle}>Sr. No</TableCell>
-                            <TableCell sx={boldHeaderCellStyle}>Description Of Items</TableCell>
-                            <TableCell sx={boldHeaderCellStyle}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
-                            <TableCell sx={boldHeaderCellStyle}>HSN Code</TableCell>
-                            <TableCell sx={boldRightAlignedCellStyle}>Rate Rs.</TableCell>
-                            <TableCell sx={boldRightAlignedCellStyle}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '6%' }}>Sr. No</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, width: '44%' }}>Description Of Items</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '8%' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '12%' }}>HSN Code</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '15%' }}>Rate Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '15%' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -892,8 +892,8 @@ function VendorInvoice() {
                                 </TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{quantity}</TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>99838</TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             );
                           })}
@@ -912,7 +912,7 @@ function VendorInvoice() {
                                 <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>Amount Before Tax:</Typography>
                                 </TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                     {amountBeforeTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
@@ -924,7 +924,7 @@ function VendorInvoice() {
                                   <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                     <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>IGST 18%:</Typography>
                                   </TableCell>
-                                  <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                  <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
                                     <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                       {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
@@ -936,7 +936,7 @@ function VendorInvoice() {
                                     <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>CGST 9%:</Typography>
                                     </TableCell>
-                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                         {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </Typography>
@@ -946,7 +946,7 @@ function VendorInvoice() {
                                     <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>SGST 9%:</Typography>
                                     </TableCell>
-                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'right', borderBottom: 'none', py: 0.5 }}>
+                                    <TableCell sx={{ ...tableCellStyle, textAlign: 'center', borderBottom: 'none', py: 0.5 }}>
                                       <Typography variant="body2" sx={{ fontSize: '1.1rem', color: '#000' }}>
                                         {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </Typography>
@@ -959,7 +959,7 @@ function VendorInvoice() {
                                 <TableCell colSpan={5} sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>Total Amount Rs.:</Typography>
                                 </TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', py: 1 }}>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', py: 1 }}>
                                   <Typography variant="body2" sx={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000' }}>
                                     {total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
