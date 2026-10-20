@@ -330,6 +330,27 @@ const InvoiceGenerator = () => {
   const showWorkOrderBtn = selectedItemsList.length === 0 || isONGCSelected;
 
   const activeEntryNumber = selectedItemsList.length > 0 ? selectedItemsList[0].parent?.entryNumber : null;
+  const activeCompanyId = selectedItemsList.length > 0 ? selectedItemsList[0].parent?.company_id : null;
+  const activeCompanyName = selectedItemsList.length > 0
+    ? (companies.find(c => c.id === activeCompanyId)?.company_name || '')
+    : '';
+  const selectedEntryNumbers = useMemo(
+    () => new Set(selectedItemsList.map(i => String(i.parent?.entryNumber))),
+    [selectedItemsList]
+  );
+
+  const isSameCompanyAsSelected = (item) => {
+    if (selectedItemsList.length === 0) return false;
+    if (isONGCSelected) {
+      return isONGCCompany(
+        item.parent?.company_id,
+        companies.find(c => c.id === item.parent?.company_id)?.company_name
+      );
+    }
+    if (activeCompanyId && item.parent?.company_id === activeCompanyId) return true;
+    const itemCompName = (companies.find(c => c.id === item.parent?.company_id)?.company_name || '').trim().toLowerCase();
+    return Boolean(activeCompanyName && itemCompName && itemCompName === activeCompanyName.trim().toLowerCase());
+  };
 
   const filteredWorkItems = workItems.filter(item => {
     if (!searchTerm) return true;
@@ -402,23 +423,21 @@ const InvoiceGenerator = () => {
 
   const selectablePageItems = useMemo(() => {
     if (selectedItemsList.length > 0) {
-      if (isONGCSelected) {
-        return paginatedWorkItems.filter(item => isONGCCompany(
-          item.parent?.company_id,
-          companies.find(c => c.id === item.parent?.company_id)?.company_name
-        ));
-      }
-      return paginatedWorkItems.filter(item => item.parent?.entryNumber === activeEntryNumber);
+      return paginatedWorkItems.filter(item => isSameCompanyAsSelected(item));
     }
-    const allPageAreONGC = paginatedWorkItems.length > 0 && paginatedWorkItems.every(item => isONGCCompany(
-      item.parent?.company_id,
-      companies.find(c => c.id === item.parent?.company_id)?.company_name
-    ));
-    if (allPageAreONGC) {
-      return paginatedWorkItems;
+    if (paginatedWorkItems.length > 0) {
+      const firstCompId = paginatedWorkItems[0].parent?.company_id;
+      const allSameCompany = firstCompId && paginatedWorkItems.every(item => item.parent?.company_id === firstCompId);
+      const allPageAreONGC = paginatedWorkItems.every(item => isONGCCompany(
+        item.parent?.company_id,
+        companies.find(c => c.id === item.parent?.company_id)?.company_name
+      ));
+      if (allSameCompany || allPageAreONGC) {
+        return paginatedWorkItems;
+      }
     }
     return [];
-  }, [paginatedWorkItems, selectedItemsList, isONGCSelected, activeEntryNumber, companies]);
+  }, [paginatedWorkItems, selectedItemsList, isONGCSelected, activeCompanyId, activeCompanyName, companies]);
 
   const numSelectedOnPage = useMemo(() => {
     return selectablePageItems.filter(item => selected[item.id]).length;
@@ -471,12 +490,34 @@ const InvoiceGenerator = () => {
           Generate Invoice
         </Typography>
           <Typography variant="body1" align="center" sx={{ mb: 3 }}>
-            {isONGCSelected 
-              ? 'Selecting work items for ONGC — multiple work items from different Entry Numbers can be combined.' 
-              : 'Select work items from the same event (or across different Entry Numbers for ONGC) to generate a consolidated invoice.'}
+            {selectedItemsList.length > 0
+              ? `Selecting work items for ${activeCompanyName || 'this company'} — multiple work items from the same or different Entry Numbers of this company can be combined.`
+              : 'Select work items from the same company (across one or multiple Entry Numbers) to generate a consolidated invoice.'}
           </Typography>
           
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+            {selectedItemsList.length > 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                  <Box sx={{ width: 14, height: 14, borderRadius: '3px', bgcolor: 'rgba(99, 102, 241, 0.32)', borderLeft: '3px solid #818cf8' }} />
+                  <Typography variant="caption" sx={{ color: '#e4e4e7', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem' }}>
+                    Selected
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                  <Box sx={{ width: 14, height: 14, borderRadius: '3px', bgcolor: 'rgba(99, 102, 241, 0.16)', borderLeft: '3px solid #6366f1' }} />
+                  <Typography variant="caption" sx={{ color: '#c7d2fe', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem' }}>
+                    Same Entry No. (Selectable)
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                  <Box sx={{ width: 14, height: 14, borderRadius: '3px', bgcolor: 'rgba(56, 189, 248, 0.12)', borderLeft: '3px solid #38bdf8' }} />
+                  <Typography variant="caption" sx={{ color: '#7dd3fc', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem' }}>
+                    Other Entry No. — Same Company (Selectable)
+                  </Typography>
+                </Box>
+              </Box>
+            ) : <Box />}
             <TextField
               size="small"
               placeholder="Search by event, PO, or entry number..."
@@ -623,24 +664,31 @@ const InvoiceGenerator = () => {
                 const hasWorkOrderInvoice = invoiceStatusMap[item.id]?.WorkOrder || false;
                 
                 const isSelected = !!selected[item.id];
-                const itemIsONGC = isONGCCompany(
-                  item.parent?.company_id,
-                  companies.find(c => c.id === item.parent?.company_id)?.company_name
-                );
-
                 let isDisabled = false;
-                let isHighlighted = false;
+                let rowBgColor = 'inherit';
+                let rowHoverBgColor = 'rgba(39, 39, 42, 0.40)';
+                let rowBorderLeft = '3px solid transparent';
 
                 if (selectedItemsList.length > 0) {
-                  if (isONGCSelected) {
-                    // For ONGC work items, allow selecting multiple work items from different Entry Numbers!
-                    isDisabled = !itemIsONGC;
-                    isHighlighted = itemIsONGC && !isSelected;
-                  } else {
-                    // For non-ONGC companies, restrict selection to the same Entry Number
-                    const isSameEntryNumber = item.parent?.entryNumber === activeEntryNumber;
-                    isDisabled = !isSameEntryNumber;
-                    isHighlighted = isSameEntryNumber && !isSelected;
+                  const isSameCompany = isSameCompanyAsSelected(item);
+                  const isSameEntryNumber = isSameCompany && selectedEntryNumbers.has(String(item.parent?.entryNumber));
+                  isDisabled = !isSameCompany;
+
+                  if (isSelected) {
+                    // Shade 1 (Strongest): Currently selected work item
+                    rowBgColor = 'rgba(99, 102, 241, 0.26)';
+                    rowHoverBgColor = 'rgba(99, 102, 241, 0.34)';
+                    rowBorderLeft = '3px solid #818cf8';
+                  } else if (isSameEntryNumber) {
+                    // Shade 2 (Medium): Unselected item from the same Entry Number & same Company
+                    rowBgColor = 'rgba(99, 102, 241, 0.14)';
+                    rowHoverBgColor = 'rgba(99, 102, 241, 0.22)';
+                    rowBorderLeft = '3px solid #6366f1';
+                  } else if (isSameCompany) {
+                    // Shade 3 (Light Cyan-Indigo): Unselected item from a different Entry Number but same Company
+                    rowBgColor = 'rgba(56, 189, 248, 0.09)';
+                    rowHoverBgColor = 'rgba(56, 189, 248, 0.17)';
+                    rowBorderLeft = '3px solid #38bdf8';
                   }
                 }
 
@@ -649,9 +697,11 @@ const InvoiceGenerator = () => {
                     key={item.id} 
                     hover 
                     sx={{ 
-                      bgcolor: isSelected ? 'rgba(99, 102, 241, 0.14)' : (isHighlighted ? 'rgba(99, 102, 241, 0.06)' : 'inherit'),
-                      opacity: isDisabled ? 0.45 : 1,
-                      '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' }
+                      bgcolor: rowBgColor,
+                      borderLeft: rowBorderLeft,
+                      opacity: isDisabled ? 0.38 : 1,
+                      transition: 'background-color 0.15s ease, opacity 0.15s ease',
+                      '&:hover': { bgcolor: rowHoverBgColor }
                     }}
                   >
                     <TableCell padding="checkbox">
