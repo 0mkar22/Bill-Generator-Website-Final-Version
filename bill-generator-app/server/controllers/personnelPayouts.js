@@ -61,6 +61,7 @@ exports.createPayout = async (req, res) => {
       return {
         ...item,
         status,
+        payment_date: status === 'pending' ? null : (item.payment_date || null),
         notes: encodeNotesWithStatus(item.notes, status),
         amount_paid: Number(item.amount_paid),
         user_id: req.user.id
@@ -143,6 +144,12 @@ exports.updatePayout = async (req, res) => {
     if (updateFields.status !== undefined) {
       updateFields.status = updateFields.status === 'pending' ? 'pending' : 'paid';
       updateFields.notes = encodeNotesWithStatus(updateFields.notes, updateFields.status);
+      if (updateFields.status === 'pending') {
+        updateFields.payment_date = null;
+      }
+    }
+    if (updateFields.payment_date === '') {
+      updateFields.payment_date = null;
     }
 
     let { data: payout, error } = await supabase

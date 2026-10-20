@@ -419,6 +419,7 @@ export const createPayout = async (data) => {
       return {
         ...p,
         status,
+        payment_date: status === 'pending' ? null : (p.payment_date || null),
         notes: encodeNotesWithStatus(p.notes, status),
         user_id: userId
       };
@@ -470,6 +471,12 @@ export const updatePayout = async (id, data) => {
     if (updateFields.status !== undefined) {
       updateFields.status = updateFields.status === 'pending' ? 'pending' : 'paid';
       updateFields.notes = encodeNotesWithStatus(updateFields.notes, updateFields.status);
+      if (updateFields.status === 'pending') {
+        updateFields.payment_date = null;
+      }
+    }
+    if (updateFields.payment_date === '') {
+      updateFields.payment_date = null;
     }
 
     let query = supabase.from('personnel_payouts').update(updateFields).eq('id', id);

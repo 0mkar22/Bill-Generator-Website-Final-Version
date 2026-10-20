@@ -145,7 +145,7 @@ const AmountPaid = () => {
                               duration: Array.from(pData.workSubs).join(', '),
                               amountPaid: existingPayout ? String(existingPayout.amount_paid || '') : (Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : ''),
                               status: existingStatus === 'pending' ? 'pending' : 'paid',
-                              paymentDate: existingPayout?.payment_date || new Date().toISOString().split('T')[0]
+                              paymentDate: existingStatus === 'pending' ? '' : (existingPayout?.payment_date || new Date().toISOString().split('T')[0])
                           });
                       }
                   }
@@ -161,7 +161,10 @@ const AmountPaid = () => {
                       });
                   }
               });
-              
+
+              pendingPayoutOptions.sort((a, b) =>
+                  String(a.entryNumber || '').localeCompare(String(b.entryNumber || ''), undefined, { numeric: true })
+              );
               setWorkOrders(pendingPayoutOptions);
           }
       } catch (err) {
@@ -317,6 +320,11 @@ const AmountPaid = () => {
   const handleBatchStatusChange = (index, value) => {
       const updated = [...batchPersonnel];
       updated[index].status = value;
+      if (value === 'pending') {
+          updated[index].paymentDate = '';
+      } else if (!updated[index].paymentDate) {
+          updated[index].paymentDate = new Date().toISOString().split('T')[0];
+      }
       setBatchPersonnel(updated);
   };
 
@@ -346,13 +354,14 @@ const AmountPaid = () => {
           notes: getCleanPayoutNotes(payout.notes)
       });
       
+      const currentStatus = getPayoutStatus(payout);
       setBatchPersonnel([{
           personnelName: payout.personnel_name,
           workName: payout.work_name || '',
           duration: payout.duration || '',
           amountPaid: payout.amount_paid.toString(),
-          status: getPayoutStatus(payout),
-          paymentDate: payout.payment_date || new Date().toISOString().split('T')[0]
+          status: currentStatus,
+          paymentDate: currentStatus === 'pending' ? '' : (payout.payment_date || new Date().toISOString().split('T')[0])
       }]);
       
       setIsModalOpen(true);
@@ -368,7 +377,7 @@ const AmountPaid = () => {
               work_name: payout.work_name,
               duration: payout.duration,
               amount_paid: Number(payout.amount_paid),
-              payment_date: payout.payment_date || new Date().toISOString().split('T')[0],
+              payment_date: nextStatus === 'pending' ? null : (payout.payment_date || new Date().toISOString().split('T')[0]),
               status: nextStatus,
               notes: getCleanPayoutNotes(payout.notes)
           });
@@ -399,14 +408,15 @@ const AmountPaid = () => {
       setSaving(true);
       try {
           if (editPayoutId) {
+              const singleStatus = batchPersonnel[0].status || 'paid';
               const singlePayload = {
                   event_id: globalForm.eventId,
                   personnel_name: batchPersonnel[0].personnelName,
                   work_name: batchPersonnel[0].workName,
                   duration: batchPersonnel[0].duration,
                   amount_paid: Math.max(0, Number(batchPersonnel[0].amountPaid) || 0),
-                  status: batchPersonnel[0].status || 'paid',
-                  payment_date: batchPersonnel[0].paymentDate,
+                  status: singleStatus,
+                  payment_date: singleStatus === 'pending' ? null : (batchPersonnel[0].paymentDate || null),
                   notes: globalForm.notes
               };
               await updatePayout(editPayoutId, singlePayload);
@@ -436,33 +446,37 @@ const AmountPaid = () => {
                   const toUpdate = eligiblePersonnel.filter(p => Boolean(p.existingPayoutId));
 
                   if (toCreate.length > 0) {
-                      const payloadArray = toCreate.map(person => ({
-                          event_id: globalForm.eventId,
-                          personnel_name: person.personnelName,
-                          work_name: person.workName,
-                          duration: person.duration,
-                          amount_paid: Math.max(0, Number(person.amountPaid) || 0),
-                          status: person.status || 'paid',
-                          payment_date: person.paymentDate,
-                          notes: globalForm.notes
-                      }));
+                      const payloadArray = toCreate.map(person => {
+                          const pStatus = person.status || 'paid';
+                          return {
+                              event_id: globalForm.eventId,
+                              personnel_name: person.personnelName,
+                              work_name: person.workName,
+                              duration: person.duration,
+                              amount_paid: Math.max(0, Number(person.amountPaid) || 0),
+                              status: pStatus,
+                              payment_date: pStatus === 'pending' ? null : (person.paymentDate || null),
+                              notes: globalForm.notes
+                          };
+                      });
                       await createPayout(payloadArray);
                   }
 
                   if (toUpdate.length > 0) {
                       await Promise.all(
-                          toUpdate.map(person =>
-                              updatePayout(person.existingPayoutId, {
+                          toUpdate.map(person => {
+                              const pStatus = person.status || 'paid';
+                              return updatePayout(person.existingPayoutId, {
                                   event_id: globalForm.eventId,
                                   personnel_name: person.personnelName,
                                   work_name: person.workName,
                                   duration: person.duration,
                                   amount_paid: Math.max(0, Number(person.amountPaid) || 0),
-                                  status: person.status || 'paid',
-                                  payment_date: person.paymentDate,
+                                  status: pStatus,
+                                  payment_date: pStatus === 'pending' ? null : (person.paymentDate || null),
                                   notes: globalForm.notes
-                              })
-                          )
+                              });
+                          })
                       );
                   }
 
@@ -544,7 +558,7 @@ const AmountPaid = () => {
                  batchPersonnel[0].amountPaid !== '' && 
                  !isNaN(Number(batchPersonnel[0].amountPaid)) && 
                  Number(batchPersonnel[0].amountPaid) > 0 && 
-                 Boolean(batchPersonnel[0].paymentDate);
+                 ((batchPersonnel[0].status || 'paid') === 'pending' || Boolean(batchPersonnel[0].paymentDate));
       }
 
       const personnelWithAmount = batchPersonnel.filter(
@@ -557,7 +571,7 @@ const AmountPaid = () => {
       );
 
       const hasValidPersonnel = personnelWithAmount.length > 0 && 
-                                personnelWithAmount.every(p => Boolean(p.paymentDate));
+                                personnelWithAmount.every(p => (p.status || 'paid') === 'pending' || Boolean(p.paymentDate));
 
       const hasEventExpenses = globalForm.travelExpense !== '' || 
                                globalForm.foodExpense !== '' || 
@@ -899,10 +913,15 @@ const AmountPaid = () => {
                                             <TextField
                                                 label="Payment Date"
                                                 type="date"
-                                                sx={{ flex: 1, minWidth: '130px' }}
+                                                disabled={(person.status || 'paid') === 'pending'}
+                                                sx={{
+                                                    flex: 1,
+                                                    minWidth: '130px',
+                                                    pointerEvents: (person.status || 'paid') === 'pending' ? 'none' : 'auto'
+                                                }}
                                                 size="small"
                                                 InputLabelProps={{ shrink: true }}
-                                                value={person.paymentDate}
+                                                value={(person.status || 'paid') === 'pending' ? '' : person.paymentDate}
                                                 onChange={(e) => handleBatchDateChange(idx, e.target.value)}
                                                 InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                             />
@@ -1081,7 +1100,9 @@ const AmountPaid = () => {
                                                           />
                                                       </Tooltip>
                                                   </TableCell>
-                                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{p.payment_date}</TableCell>
+                                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: getPayoutStatus(p) === 'pending' ? '#71717a' : 'inherit' }}>
+                                                      {getPayoutStatus(p) === 'pending' ? '—' : (p.payment_date || '—')}
+                                                  </TableCell>
                                                   <TableCell align="right">
                                                       <IconButton size="small" onClick={() => handleEditPayout(p)} sx={{ color: '#818cf8' }}>
                                                           <EditIcon fontSize="small" />
@@ -1590,7 +1611,7 @@ const AmountPaid = () => {
                                                                                     {p.duration || 'Standard'}
                                                                                 </TableCell>
                                                                                 <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', color: '#a1a1aa' }}>
-                                                                                    {p.payment_date || (p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB') : 'N/A')}
+                                                                                    {isPending ? '—' : (p.payment_date || (p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB') : 'N/A'))}
                                                                                 </TableCell>
                                                                                 <TableCell>
                                                                                     <Chip
@@ -1866,11 +1887,16 @@ const AmountPaid = () => {
                                       <TextField
                                           label="Payment Date"
                                           type="date"
-                                          sx={{ flex: 1, minWidth: '130px' }}
-                                          required={Boolean(editPayoutId)}
+                                          disabled={(person.status || 'paid') === 'pending'}
+                                          sx={{
+                                              flex: 1,
+                                              minWidth: '130px',
+                                              pointerEvents: (person.status || 'paid') === 'pending' ? 'none' : 'auto'
+                                          }}
+                                          required={Boolean(editPayoutId) && (person.status || 'paid') !== 'pending'}
                                           size="small"
                                           InputLabelProps={{ shrink: true }}
-                                          value={person.paymentDate}
+                                          value={(person.status || 'paid') === 'pending' ? '' : person.paymentDate}
                                           onChange={(e) => handleBatchDateChange(idx, e.target.value)}
                                           InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                       />
