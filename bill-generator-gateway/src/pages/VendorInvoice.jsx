@@ -758,7 +758,7 @@ function VendorInvoice() {
                             
                             <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
                               <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...(isONGC ? borderBottomStyle : { flex: 1 }) }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', width: '57.4%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
                                   <EditableField
                                     value={invoiceNumber}
@@ -771,7 +771,7 @@ function VendorInvoice() {
                                     fallback="Click to set"
                                   />
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', width: '42.6%', p: '6px 8px', flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', width: '209px', minWidth: '209px', maxWidth: '209px', p: '6px 8px', flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Date:</Typography>
                                   <EditableField
                                     value={invoiceDate}
@@ -828,8 +828,8 @@ function VendorInvoice() {
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>Description Of Items</TableCell>
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>{isVidhanMandal ? 'नग' : 'Qty.'}</TableCell>
                             <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>HSN Code</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center' }}>Rate Rs.</TableCell>
-                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '110px', px: '6px' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '99px', minWidth: '99px', maxWidth: '99px' }}>Rate Rs.</TableCell>
+                            <TableCell sx={{ ...boldHeaderCellStyle, textAlign: 'center', width: '110px', minWidth: '110px', maxWidth: '110px', px: '6px' }}>{isVidhanMandal ? 'रकम' : 'Amount'} Rs.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -884,7 +884,7 @@ function VendorInvoice() {
                                     <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />
                                     
                                     {item.workMain !== '32_GB_Pendrive' && (
-                                      <span style={{ whiteSpace: 'nowrap' }}>
+                                      <span style={{ whiteSpace: 'nowrap', fontSize: (`${item.workSub || ''}${dimensionsText}`).length > 26 ? '1.12rem' : '1.2rem' }}>
                                         <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे प्रकार:' : (item.workMain === 'Photo_Print' || item.workMain === 'Storage' ? 'Size:' : 'Location and Duration:')}</span>
                                         {item.workSub && ` ${item.workSub.replaceAll('_', ' ')}`}
                                         {dimensionsText}
@@ -894,8 +894,8 @@ function VendorInvoice() {
                                 </TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{quantity}</TableCell>
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>99838</TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem', px: '8px' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem', width: '99px', minWidth: '99px', maxWidth: '99px' }}>{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell sx={{ ...tableCellStyle, textAlign: 'right', fontSize: '1.15rem', width: '110px', minWidth: '110px', maxWidth: '110px', px: '8px' }}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             );
                           })}
