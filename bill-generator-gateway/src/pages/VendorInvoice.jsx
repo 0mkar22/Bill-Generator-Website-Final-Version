@@ -757,7 +757,7 @@ function VendorInvoice() {
                             </Box>
                             
                             <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column', fontSize: '1.2rem' }}>
-                              <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...borderBottomStyle }}>
+                              <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', ...(isONGC ? borderBottomStyle : { flex: 1 }) }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', width: '57.4%', p: '6px 8px', ...borderRightStyle, flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', mr: 0.5 }}>Invoice No.:</Typography>
                                   <EditableField
@@ -784,9 +784,8 @@ function VendorInvoice() {
                                   />
                                 </Box>
                               </Box>
+                              {isONGC && (
                               <Box sx={{ p: '6px 8px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                {isONGC && (
-                                <>
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'nowrap' }}>
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 0.5, whiteSpace: 'nowrap' }}>Vendor Code:</Typography>
                                   <EditableField
@@ -815,9 +814,8 @@ function VendorInvoice() {
                                     textSx={{ fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'normal', wordBreak: 'break-word' }}
                                   />
                                 </Box>
-                                </>
-                              )}
                               </Box>
+                              )}
                             </Box>
                           </Box>
                         </>
