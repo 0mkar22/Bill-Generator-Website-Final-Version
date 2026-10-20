@@ -105,6 +105,7 @@ const DashboardOverview = () => {
     totalDisbursed: 0,
     expenseBreakdown: {
       crew: 0,
+      pendingCrew: 0,
       travel: 0,
       food: 0,
       stay: 0,
@@ -124,6 +125,8 @@ const DashboardOverview = () => {
     completedWorkOrders: 0,
     totalPersonnelDeployed: 0,
     pendingPayoutsCount: 0,
+    pendingPayoutsAmount: 0,
+    pendingPayoutsList: [],
     totalPayoutsCompleted: 0
   };
 
@@ -514,12 +517,64 @@ const DashboardOverview = () => {
                     </Typography>
                   </Box>
                 ))}
+
+                {(kpis.expenseBreakdown?.pendingCrew ?? 0) > 0 && (
+                  <Box
+                    onClick={() => navigate('/amount-paid')}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      px: 1.25,
+                      py: 0.6,
+                      mt: 0.25,
+                      borderRadius: '6px',
+                      bgcolor: 'rgba(251, 191, 36, 0.10)',
+                      border: '1px solid rgba(251, 191, 36, 0.30)',
+                      cursor: 'pointer',
+                      '&:hover': { bgcolor: 'rgba(251, 191, 36, 0.16)' }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#fbbf24' }} />
+                      <Typography sx={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 600 }}>
+                        Pending Crew Payouts
+                      </Typography>
+                    </Box>
+                    <Typography sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: '#fbbf24'
+                    }}>
+                      ₹{Number(kpis.expenseBreakdown.pendingCrew).toLocaleString('en-IN')}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Collapse>
 
             <Typography variant="caption" sx={{ color: '#71717a', fontSize: '0.75rem', display: 'block' }}>
               {operations.totalPayoutsCompleted} payouts disbursed to crew
             </Typography>
+            {(kpis.expenseBreakdown?.pendingCrew ?? 0) > 0 && (
+              <Typography
+                variant="caption"
+                onClick={() => navigate('/amount-paid')}
+                sx={{
+                  color: '#fbbf24',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  display: 'block',
+                  mt: 0.3,
+                  cursor: 'pointer',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                ● ₹{Number(kpis.expenseBreakdown.pendingCrew).toLocaleString('en-IN')} pending payment{operations.pendingPayoutsList?.length === 1 ? '' : 's'}
+              </Typography>
+            )}
           </Paper>
         </Grid>
 
@@ -827,16 +882,16 @@ const DashboardOverview = () => {
                           fontFamily: '"JetBrains Mono", monospace',
                           fontSize: '0.9rem',
                           fontWeight: 700,
-                          color: isPayment ? '#34d399' : '#fb7185'
+                          color: isPayment ? '#34d399' : (item.status === 'pending' ? '#fbbf24' : '#fb7185')
                         }}>
                           {isPayment ? `+₹${item.amount.toLocaleString('en-IN')}` : `-₹${item.amount.toLocaleString('en-IN')}`}
                         </Typography>
                         <Typography sx={{
                           fontSize: '0.7rem',
-                          color: '#71717a',
+                          color: item.status === 'pending' ? '#fbbf24' : '#71717a',
                           fontFamily: '"JetBrains Mono", monospace'
                         }}>
-                          {dateFormatted}
+                          {item.status === 'pending' ? `PENDING • ${dateFormatted}` : dateFormatted}
                         </Typography>
                       </Box>
                     </Box>
@@ -1011,6 +1066,76 @@ const DashboardOverview = () => {
                     {operations.pendingPayoutsCount}
                   </Typography>
                 </Box>
+
+                {/* Pending Personnel Payments List (Logged as Pending) */}
+                {Array.isArray(operations.pendingPayoutsList) && operations.pendingPayoutsList.length > 0 && (
+                  <Box sx={{
+                    p: 1.5,
+                    borderRadius: '10px',
+                    bgcolor: 'rgba(251, 191, 36, 0.07)',
+                    border: '1px solid rgba(251, 191, 36, 0.28)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        ● Pending Personnel Payments ({operations.pendingPayoutsList.length})
+                      </Typography>
+                      <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.88rem', fontWeight: 800, color: '#fbbf24' }}>
+                        ₹{Number(operations.pendingPayoutsAmount || 0).toLocaleString('en-IN')}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, maxHeight: 210, overflowY: 'auto' }}>
+                      {operations.pendingPayoutsList.map((pend) => (
+                        <Box
+                          key={pend.id}
+                          onClick={() => navigate('/amount-paid')}
+                          sx={{
+                            p: 1,
+                            borderRadius: '7px',
+                            bgcolor: 'rgba(9, 9, 11, 0.55)',
+                            border: '1px solid rgba(251, 191, 36, 0.18)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 1,
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: 'rgba(251, 191, 36, 0.12)', borderColor: 'rgba(251, 191, 36, 0.35)' }
+                          }}
+                        >
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#f4f4f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {pend.personnelName}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#a1a1aa', fontSize: '0.68rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              Entry #{pend.entryNumber} • {pend.workName}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+                            <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', fontWeight: 700, color: '#fbbf24' }}>
+                              ₹{Number(pend.amount || 0).toLocaleString('en-IN')}
+                            </Typography>
+                            <Chip
+                              label="Pending"
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.62rem',
+                                fontWeight: 700,
+                                fontFamily: '"JetBrains Mono", monospace',
+                                bgcolor: 'rgba(251, 191, 36, 0.18)',
+                                color: '#fbbf24',
+                                border: '1px solid rgba(251, 191, 36, 0.35)'
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
               </Box>
             </Paper>
 

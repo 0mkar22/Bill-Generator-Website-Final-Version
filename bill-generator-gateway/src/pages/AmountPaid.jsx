@@ -4,7 +4,7 @@ import {
   Container, Paper, Typography, Box, Button, Grid, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Autocomplete, Snackbar, Alert, CircularProgress, IconButton,
-  Collapse, Tooltip, Chip
+  Collapse, Tooltip, Chip, MenuItem
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddCardIcon from '@mui/icons-material/AddCard';
@@ -13,7 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import API, { getInvoices, getPayouts, createPayout, getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived, updateWorkOrderExpenses } from '../services/api';
+import API, { getInvoices, getPayouts, createPayout, getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived, updateWorkOrderExpenses, getPayoutStatus, getCleanPayoutNotes } from '../services/api';
 import { calculateItemAmount } from '../utils/helpers';
 import { AmountPaidSkeleton } from '../components/skeletons';
 
@@ -134,15 +134,18 @@ const AmountPaid = () => {
                   
                   const extractedPersonnel = [];
                   for (const [pName, pData] of personnelMap.entries()) {
-                      // Check if THIS specific person was already paid for THIS event
-                      const alreadyPaid = savedPayouts.some(p => p.event_id === order.id && p.personnel_name === pName);
-                      if (!alreadyPaid) {
+                      // Check if THIS specific person was already paid or has a pending record for THIS event
+                      const existingPayout = savedPayouts.find(p => p.event_id === order.id && p.personnel_name === pName);
+                      const existingStatus = existingPayout ? getPayoutStatus(existingPayout) : null;
+                      if (!existingPayout || existingStatus === 'pending') {
                           extractedPersonnel.push({
+                              existingPayoutId: existingPayout ? existingPayout.id : null,
                               personnelName: pName,
                               workName: pData.roles.size > 0 ? Array.from(pData.roles).join(', ') : Array.from(pData.workNames).join(', '),
                               duration: Array.from(pData.workSubs).join(', '),
-                              amountPaid: Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : '',
-                              paymentDate: new Date().toISOString().split('T')[0]
+                              amountPaid: existingPayout ? String(existingPayout.amount_paid || '') : (Math.round(pData.totalRate) ? Math.round(pData.totalRate).toString() : ''),
+                              status: existingStatus === 'pending' ? 'pending' : 'paid',
+                              paymentDate: existingPayout?.payment_date || new Date().toISOString().split('T')[0]
                           });
                       }
                   }
@@ -311,6 +314,12 @@ const AmountPaid = () => {
       setBatchPersonnel(updated);
   };
 
+  const handleBatchStatusChange = (index, value) => {
+      const updated = [...batchPersonnel];
+      updated[index].status = value;
+      setBatchPersonnel(updated);
+  };
+
   const handleBatchDateChange = (index, value) => {
       const updated = [...batchPersonnel];
       updated[index].paymentDate = value;
@@ -334,7 +343,7 @@ const AmountPaid = () => {
           travelExpense: existingTravel ? String(existingTravel) : '',
           foodExpense: existingFood ? String(existingFood) : '',
           stayExpense: existingStay ? String(existingStay) : '',
-          notes: payout.notes || ''
+          notes: getCleanPayoutNotes(payout.notes)
       });
       
       setBatchPersonnel([{
@@ -342,10 +351,36 @@ const AmountPaid = () => {
           workName: payout.work_name || '',
           duration: payout.duration || '',
           amountPaid: payout.amount_paid.toString(),
+          status: getPayoutStatus(payout),
           paymentDate: payout.payment_date || new Date().toISOString().split('T')[0]
       }]);
       
       setIsModalOpen(true);
+  };
+
+  const handleTogglePayoutStatus = async (payout) => {
+      const currentStatus = getPayoutStatus(payout);
+      const nextStatus = currentStatus === 'pending' ? 'paid' : 'pending';
+      try {
+          await updatePayout(payout.id, {
+              event_id: payout.event_id,
+              personnel_name: payout.personnel_name,
+              work_name: payout.work_name,
+              duration: payout.duration,
+              amount_paid: Number(payout.amount_paid),
+              payment_date: payout.payment_date || new Date().toISOString().split('T')[0],
+              status: nextStatus,
+              notes: getCleanPayoutNotes(payout.notes)
+          });
+          setSnackbar({
+              open: true,
+              message: `Marked ${payout.personnel_name}'s payout as ${nextStatus === 'paid' ? 'Paid' : 'Pending'}!`,
+              severity: 'success'
+          });
+          fetchData();
+      } catch (err) {
+          setSnackbar({ open: true, message: 'Failed to update payout status.', severity: 'error' });
+      }
   };
   
   const handleDeletePayout = async (id) => {
@@ -370,6 +405,7 @@ const AmountPaid = () => {
                   work_name: batchPersonnel[0].workName,
                   duration: batchPersonnel[0].duration,
                   amount_paid: Math.max(0, Number(batchPersonnel[0].amountPaid) || 0),
+                  status: batchPersonnel[0].status || 'paid',
                   payment_date: batchPersonnel[0].paymentDate,
                   notes: globalForm.notes
               };
@@ -396,16 +432,39 @@ const AmountPaid = () => {
               );
 
               if (eligiblePersonnel.length > 0) {
-                  const payloadArray = eligiblePersonnel.map(person => ({
-                      event_id: globalForm.eventId,
-                      personnel_name: person.personnelName,
-                      work_name: person.workName,
-                      duration: person.duration,
-                      amount_paid: Math.max(0, Number(person.amountPaid) || 0),
-                      payment_date: person.paymentDate,
-                      notes: globalForm.notes
-                  }));
-                  await createPayout(payloadArray);
+                  const toCreate = eligiblePersonnel.filter(p => !p.existingPayoutId);
+                  const toUpdate = eligiblePersonnel.filter(p => Boolean(p.existingPayoutId));
+
+                  if (toCreate.length > 0) {
+                      const payloadArray = toCreate.map(person => ({
+                          event_id: globalForm.eventId,
+                          personnel_name: person.personnelName,
+                          work_name: person.workName,
+                          duration: person.duration,
+                          amount_paid: Math.max(0, Number(person.amountPaid) || 0),
+                          status: person.status || 'paid',
+                          payment_date: person.paymentDate,
+                          notes: globalForm.notes
+                      }));
+                      await createPayout(payloadArray);
+                  }
+
+                  if (toUpdate.length > 0) {
+                      await Promise.all(
+                          toUpdate.map(person =>
+                              updatePayout(person.existingPayoutId, {
+                                  event_id: globalForm.eventId,
+                                  personnel_name: person.personnelName,
+                                  work_name: person.workName,
+                                  duration: person.duration,
+                                  amount_paid: Math.max(0, Number(person.amountPaid) || 0),
+                                  status: person.status || 'paid',
+                                  payment_date: person.paymentDate,
+                                  notes: globalForm.notes
+                              })
+                          )
+                      );
+                  }
 
                   // Only persist work order expenses after payouts succeed
                   if (globalForm.eventId && (globalForm.travelExpense !== '' || globalForm.foodExpense !== '' || globalForm.stayExpense !== '')) {
@@ -533,9 +592,12 @@ const AmountPaid = () => {
               const tdsAmount = matchingInvoices.reduce((sum, inv) => sum + getInvoiceFinancials(inv).tdsAmount, 0);
               const amountReceived = matchingInvoices.reduce((sum, inv) => sum + getInvoiceFinancials(inv).amountReceived, 0);
 
-              // Personnel payouts for this event
+              // Personnel payouts for this event (only paid payouts count toward disbursed crew wages)
               const eventPayouts = payouts.filter(p => p.event_id === order.id);
-              const crewWages = eventPayouts.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
+              const paidEventPayouts = eventPayouts.filter(p => getPayoutStatus(p) === 'paid');
+              const pendingEventPayouts = eventPayouts.filter(p => getPayoutStatus(p) === 'pending');
+              const crewWages = paidEventPayouts.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
+              const pendingCrewWages = pendingEventPayouts.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
 
               // Event-level expenses
               const travelExpense = Number(order.travel_expense ?? order.workItems?.[0]?.travelExpense) || 0;
@@ -811,6 +873,30 @@ const AmountPaid = () => {
                                                 InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                             />
                                             <TextField
+                                                select
+                                                label="Status"
+                                                sx={{
+                                                    flex: 0.85,
+                                                    minWidth: '125px',
+                                                    '& .MuiSelect-select': {
+                                                        color: (person.status || 'paid') === 'paid' ? '#34d399' : '#fbbf24',
+                                                        fontWeight: 600,
+                                                        fontFamily: '"JetBrains Mono", monospace',
+                                                        fontSize: '0.85rem'
+                                                    }
+                                                }}
+                                                size="small"
+                                                value={person.status || 'paid'}
+                                                onChange={(e) => handleBatchStatusChange(idx, e.target.value)}
+                                            >
+                                                <MenuItem value="paid" sx={{ color: '#34d399', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>
+                                                    ● Paid
+                                                </MenuItem>
+                                                <MenuItem value="pending" sx={{ color: '#fbbf24', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>
+                                                    ● Pending
+                                                </MenuItem>
+                                            </TextField>
+                                            <TextField
                                                 label="Payment Date"
                                                 type="date"
                                                 sx={{ flex: 1, minWidth: '130px' }}
@@ -885,13 +971,14 @@ const AmountPaid = () => {
                               <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Personnel Name</TableCell>
                               <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Work Name</TableCell>
                               <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Amount Paid (Rs)</TableCell>
+                              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Status</TableCell>
                               <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Payment Date</TableCell>
                               <TableCell align="right" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}>Actions</TableCell>
                           </TableRow>
                       </TableHead>
                       <TableBody>
                           {payouts.length === 0 ? (
-                              <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: '#a1a1aa' }}>No payouts logged yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3, color: '#a1a1aa' }}>No payouts logged yet.</TableCell></TableRow>
                           ) : (
                               (() => {
                                   const payoutsByEvent = [];
@@ -972,7 +1059,28 @@ const AmountPaid = () => {
                                                   )}
                                                   <TableCell sx={{ fontWeight: 500 }}>{p.personnel_name}</TableCell>
                                                   <TableCell>{displayWorkName}</TableCell>
-                                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: '#34d399', fontWeight: 600 }}>₹{Number(p.amount_paid).toLocaleString('en-IN')}</TableCell>
+                                                  <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', color: getPayoutStatus(p) === 'pending' ? '#fbbf24' : '#34d399', fontWeight: 600 }}>₹{Number(p.amount_paid).toLocaleString('en-IN')}</TableCell>
+                                                  <TableCell>
+                                                      <Tooltip title={`Click to mark as ${getPayoutStatus(p) === 'pending' ? 'Paid' : 'Pending'}`} arrow>
+                                                          <Chip
+                                                              label={getPayoutStatus(p) === 'pending' ? 'Pending' : 'Paid'}
+                                                              size="small"
+                                                              onClick={() => handleTogglePayoutStatus(p)}
+                                                              sx={{
+                                                                  fontFamily: '"JetBrains Mono", monospace',
+                                                                  fontSize: '0.72rem',
+                                                                  fontWeight: 700,
+                                                                  cursor: 'pointer',
+                                                                  bgcolor: getPayoutStatus(p) === 'pending' ? 'rgba(251, 191, 36, 0.14)' : 'rgba(52, 211, 153, 0.14)',
+                                                                  color: getPayoutStatus(p) === 'pending' ? '#fbbf24' : '#34d399',
+                                                                  border: `1px solid ${getPayoutStatus(p) === 'pending' ? 'rgba(251, 191, 36, 0.35)' : 'rgba(52, 211, 153, 0.35)'}`,
+                                                                  '&:hover': {
+                                                                      bgcolor: getPayoutStatus(p) === 'pending' ? 'rgba(251, 191, 36, 0.24)' : 'rgba(52, 211, 153, 0.24)'
+                                                                  }
+                                                              }}
+                                                          />
+                                                      </Tooltip>
+                                                  </TableCell>
                                                   <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{p.payment_date}</TableCell>
                                                   <TableCell align="right">
                                                       <IconButton size="small" onClick={() => handleEditPayout(p)} sx={{ color: '#818cf8' }}>
@@ -1463,11 +1571,14 @@ const AmountPaid = () => {
                                                                             <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', color: '#a1a1aa' }}>Role / Work</TableCell>
                                                                             <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', color: '#a1a1aa' }}>Duration / Location</TableCell>
                                                                             <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', color: '#a1a1aa' }}>Payment Date</TableCell>
+                                                                            <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', color: '#a1a1aa' }}>Status</TableCell>
                                                                             <TableCell align="right" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', color: '#a1a1aa' }}>Amount Paid</TableCell>
                                                                         </TableRow>
                                                                     </TableHead>
                                                                     <TableBody>
-                                                                        {ev.eventPayouts.map((p) => (
+                                                                        {ev.eventPayouts.map((p) => {
+                                                                            const isPending = getPayoutStatus(p) === 'pending';
+                                                                            return (
                                                                             <TableRow key={p.id} sx={{ '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' } }}>
                                                                                 <TableCell sx={{ fontSize: '0.75rem', color: '#e4e4e7', fontWeight: 500 }}>
                                                                                     {p.personnel_name}
@@ -1481,11 +1592,27 @@ const AmountPaid = () => {
                                                                                 <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', color: '#a1a1aa' }}>
                                                                                     {p.payment_date || (p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB') : 'N/A')}
                                                                                 </TableCell>
-                                                                                <TableCell align="right" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', fontWeight: 700, color: '#fb7185' }}>
+                                                                                <TableCell>
+                                                                                    <Chip
+                                                                                        label={isPending ? 'Pending' : 'Paid'}
+                                                                                        size="small"
+                                                                                        sx={{
+                                                                                            height: 20,
+                                                                                            fontFamily: '"JetBrains Mono", monospace',
+                                                                                            fontSize: '0.68rem',
+                                                                                            fontWeight: 700,
+                                                                                            bgcolor: isPending ? 'rgba(251, 191, 36, 0.14)' : 'rgba(52, 211, 153, 0.14)',
+                                                                                            color: isPending ? '#fbbf24' : '#34d399',
+                                                                                            border: `1px solid ${isPending ? 'rgba(251, 191, 36, 0.35)' : 'rgba(52, 211, 153, 0.35)'}`
+                                                                                        }}
+                                                                                    />
+                                                                                </TableCell>
+                                                                                <TableCell align="right" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', fontWeight: 700, color: isPending ? '#fbbf24' : '#fb7185' }}>
                                                                                     ₹{Number(p.amount_paid || 0).toLocaleString('en-IN')}
                                                                                 </TableCell>
                                                                             </TableRow>
-                                                                        ))}
+                                                                            );
+                                                                        })}
                                                                     </TableBody>
                                                                 </Table>
                                                             )}
@@ -1712,6 +1839,30 @@ const AmountPaid = () => {
                                           onChange={(e) => handleBatchAmountChange(idx, e.target.value)}
                                           InputProps={{ sx: { fontFamily: '"JetBrains Mono", monospace' } }}
                                       />
+                                      <TextField
+                                          select
+                                          label="Status"
+                                          sx={{
+                                              flex: 0.85,
+                                              minWidth: '125px',
+                                              '& .MuiSelect-select': {
+                                                  color: (person.status || 'paid') === 'paid' ? '#34d399' : '#fbbf24',
+                                                  fontWeight: 600,
+                                                  fontFamily: '"JetBrains Mono", monospace',
+                                                  fontSize: '0.85rem'
+                                              }
+                                          }}
+                                          size="small"
+                                          value={person.status || 'paid'}
+                                          onChange={(e) => handleBatchStatusChange(idx, e.target.value)}
+                                      >
+                                          <MenuItem value="paid" sx={{ color: '#34d399', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>
+                                              ● Paid
+                                          </MenuItem>
+                                          <MenuItem value="pending" sx={{ color: '#fbbf24', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>
+                                              ● Pending
+                                          </MenuItem>
+                                      </TextField>
                                       <TextField
                                           label="Payment Date"
                                           type="date"

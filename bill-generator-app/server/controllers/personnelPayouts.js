@@ -1,5 +1,19 @@
 const supabase = require('../config/db');
 
+const encodeNotesWithStatus = (notes, status) => {
+  const clean = String(notes || '').replace(/^\[PENDING\]\s*/i, '');
+  return status === 'pending' ? (clean ? `[PENDING] ${clean}` : '[PENDING]') : clean;
+};
+
+const normalizePayoutRecord = (p) => {
+  if (!p) return p;
+  const rawNotes = String(p.notes || '');
+  const isPendingFromNotes = /^\[PENDING\]/i.test(rawNotes);
+  const status = (p.status === 'pending' || isPendingFromNotes) ? 'pending' : 'paid';
+  const cleanNotes = rawNotes.replace(/^\[PENDING\]\s*/i, '');
+  return { ...p, status, notes: cleanNotes };
+};
+
 exports.getPayouts = async (req, res) => {
   try {
     const { data: payouts, error } = await supabase
@@ -10,7 +24,7 @@ exports.getPayouts = async (req, res) => {
 
     if (error) throw error;
 
-    res.status(200).json({ success: true, data: payouts });
+    res.status(200).json({ success: true, data: (payouts || []).map(normalizePayoutRecord) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: 'Server Error' });
@@ -42,23 +56,38 @@ exports.createPayout = async (req, res) => {
       }
     }
 
-    const payload = rawPayload.map(item => ({
-      ...item,
-      amount_paid: Number(item.amount_paid),
-      user_id: req.user.id
-    }));
+    const payload = rawPayload.map(item => {
+      const status = item.status === 'pending' ? 'pending' : 'paid';
+      return {
+        ...item,
+        status,
+        notes: encodeNotesWithStatus(item.notes, status),
+        amount_paid: Number(item.amount_paid),
+        user_id: req.user.id
+      };
+    });
 
-    const { data: payout, error } = await supabase
+    let { data: payout, error } = await supabase
       .from('personnel_payouts')
       .insert(payload)
       .select('*, workOrders(entryNumber, eventDate)');
+
+    if (error && (error.code === 'PGRST204' || (error.message && (error.message.includes('status') || error.message.includes('column'))))) {
+      const fallbackPayload = payload.map(({ status, ...rest }) => rest);
+      const fallbackRes = await supabase
+        .from('personnel_payouts')
+        .insert(fallbackPayload)
+        .select('*, workOrders(entryNumber, eventDate)');
+      payout = fallbackRes.data;
+      error = fallbackRes.error;
+    }
 
     if (error) {
         console.error("Supabase Insert Error:", error);
         throw error;
     }
 
-    res.status(201).json({ success: true, data: payout });
+    res.status(201).json({ success: true, data: (payout || []).map(normalizePayoutRecord) });
   } catch (err) {
     console.error("createPayout Error:", err);
     res.status(400).json({ success: false, error: err.message || err.details || err.hint || JSON.stringify(err) });
@@ -111,12 +140,29 @@ exports.updatePayout = async (req, res) => {
       updateFields.amount_paid = Number(updateFields.amount_paid);
     }
 
-    const { data: payout, error } = await supabase
+    if (updateFields.status !== undefined) {
+      updateFields.status = updateFields.status === 'pending' ? 'pending' : 'paid';
+      updateFields.notes = encodeNotesWithStatus(updateFields.notes, updateFields.status);
+    }
+
+    let { data: payout, error } = await supabase
       .from('personnel_payouts')
       .update(updateFields)
       .eq('id', id)
       .eq('user_id', req.user.id)
       .select('*, workOrders(entryNumber, eventDate)');
+
+    if (error && (error.code === 'PGRST204' || (error.message && (error.message.includes('status') || error.message.includes('column'))))) {
+      const { status, ...fallbackFields } = updateFields;
+      const fallbackRes = await supabase
+        .from('personnel_payouts')
+        .update(fallbackFields)
+        .eq('id', id)
+        .eq('user_id', req.user.id)
+        .select('*, workOrders(entryNumber, eventDate)');
+      payout = fallbackRes.data;
+      error = fallbackRes.error;
+    }
 
     if (error) {
         console.error("Supabase Update Error:", error);
@@ -127,7 +173,7 @@ exports.updatePayout = async (req, res) => {
         return res.status(404).json({ success: false, error: 'Payout not found or unauthorized' });
     }
 
-    res.status(200).json({ success: true, data: payout[0] });
+    res.status(200).json({ success: true, data: normalizePayoutRecord(payout[0]) });
   } catch (err) {
     console.error("updatePayout Error:", err);
     res.status(400).json({ success: false, error: err.message || err.details || JSON.stringify(err) });

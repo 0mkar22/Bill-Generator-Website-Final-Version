@@ -141,10 +141,44 @@ exports.getDashboardSummary = async (req, res) => {
       });
     });
 
-    const totalCrewWages = rawPayouts.reduce(
+    const getPayoutStatus = (p) => {
+      if (!p) return 'paid';
+      if (p.status === 'pending' || /^\[PENDING\]/i.test(String(p.notes || ''))) {
+        return 'pending';
+      }
+      return 'paid';
+    };
+
+    const ordersMap = new Map();
+    rawWorkOrders.forEach(o => ordersMap.set(o.id, o));
+
+    const paidPayouts = rawPayouts.filter(p => getPayoutStatus(p) === 'paid');
+    const pendingPayouts = rawPayouts.filter(p => getPayoutStatus(p) === 'pending');
+
+    const totalCrewWages = paidPayouts.reduce(
       (sum, p) => sum + (Number(p.amount_paid) || 0),
       0
     );
+
+    const pendingCrewAmount = pendingPayouts.reduce(
+      (sum, p) => sum + (Number(p.amount_paid) || 0),
+      0
+    );
+
+    const pendingPayoutsList = pendingPayouts.map(p => {
+      const order = ordersMap.get(p.event_id);
+      return {
+        id: p.id,
+        eventId: p.event_id,
+        entryNumber: p.workOrders?.entryNumber || order?.entryNumber || 'N/A',
+        eventName: order?.workItems?.[0]?.eventName || 'Event',
+        personnelName: p.personnel_name,
+        workName: p.work_name || 'Personnel',
+        duration: p.duration || '',
+        amount: Number(p.amount_paid) || 0,
+        paymentDate: p.payment_date || p.created_at
+      };
+    });
 
     let totalTravelExpense = 0;
     let totalFoodExpense = 0;
@@ -179,7 +213,7 @@ exports.getDashboardSummary = async (req, res) => {
     const allAssignedPersonnelKeys = new Set();
     const settledPersonnelKeys = new Set();
 
-    rawPayouts.forEach(p => {
+    paidPayouts.forEach(p => {
       if (p.event_id && p.personnel_name) {
         settledPersonnelKeys.add(`${p.event_id}__${p.personnel_name.trim().toLowerCase()}`);
       }
@@ -202,13 +236,19 @@ exports.getDashboardSummary = async (req, res) => {
       }
     });
 
-    // Calculate pending payouts (personnel assigned in vendor invoices that have no payout record)
-    let pendingPayoutsCount = 0;
+    // Calculate pending payouts (personnel assigned in vendor invoices that have no paid payout record, plus any explicit pending payouts)
+    const unsettledKeys = new Set();
     for (const key of allAssignedPersonnelKeys) {
       if (!settledPersonnelKeys.has(key)) {
-        pendingPayoutsCount += 1;
+        unsettledKeys.add(key);
       }
     }
+    pendingPayouts.forEach(p => {
+      if (p.event_id && p.personnel_name) {
+        unsettledKeys.add(`${p.event_id}__${p.personnel_name.trim().toLowerCase()}`);
+      }
+    });
+    const pendingPayoutsCount = unsettledKeys.size;
 
     // 6. Recent Financial Activity Feed (Interleaved Top Inflows & Outflows)
     const paymentActivities = uniqueInvoices
@@ -236,14 +276,15 @@ exports.getDashboardSummary = async (req, res) => {
     const payoutActivities = rawPayouts.slice(0, 12).map(p => {
       const woEntry = p.workOrders?.entryNumber ? `WO #${p.workOrders.entryNumber}` : 'Payout';
       const roleStr = [p.work_name, p.duration].filter(Boolean).join(' • ');
+      const isPending = getPayoutStatus(p) === 'pending';
       return {
         id: `payout-${p.id}`,
         type: 'payout_disbursed',
-        title: 'Crew Payout Disbursed',
+        title: isPending ? 'Crew Payout Pending' : 'Crew Payout Disbursed',
         description: `${p.personnel_name}${roleStr ? ` • ${roleStr}` : ''} (${woEntry})`,
         amount: Number(p.amount_paid) || 0,
         date: p.created_at || p.payment_date,
-        status: 'disbursed',
+        status: isPending ? 'pending' : 'disbursed',
         referenceId: p.workOrders?.entryNumber ? `WO-${p.workOrders.entryNumber}` : (p.id ? p.id.slice(0, 8) : 'PAY')
       };
     });
@@ -288,6 +329,7 @@ exports.getDashboardSummary = async (req, res) => {
           totalDisbursed: totalCombinedExpenses,
           expenseBreakdown: {
             crew: totalCrewWages,
+            pendingCrew: pendingCrewAmount,
             travel: totalTravelExpense,
             food: totalFoodExpense,
             stay: totalStayExpense,
@@ -306,7 +348,9 @@ exports.getDashboardSummary = async (req, res) => {
           completedWorkOrders,
           totalPersonnelDeployed,
           pendingPayoutsCount,
-          totalPayoutsCompleted: rawPayouts.length,
+          pendingPayoutsAmount: pendingCrewAmount,
+          pendingPayoutsList,
+          totalPayoutsCompleted: paidPayouts.length,
           eventBreakdown: {
             twoCameraSetup: twoCameraSetupCount,
             threeCameraSetup: threeCameraSetupCount,

@@ -360,9 +360,37 @@ export const deleteInvoice = async (id) => {
 };
 
 
+export const getPayoutStatus = (p) => {
+  if (!p) return 'paid';
+  if (p.status === 'pending' || /^\[PENDING\]/i.test(String(p.notes || ''))) {
+    return 'pending';
+  }
+  return 'paid';
+};
+
+export const getCleanPayoutNotes = (notes) => {
+  return String(notes || '').replace(/^\[PENDING\]\s*/i, '');
+};
+
+const encodeNotesWithStatus = (notes, status) => {
+  const clean = getCleanPayoutNotes(notes);
+  return status === 'pending' ? (clean ? `[PENDING] ${clean}` : '[PENDING]') : clean;
+};
+
+const normalizePayoutRecord = (p) => {
+  if (!p) return p;
+  const status = getPayoutStatus(p);
+  const notes = getCleanPayoutNotes(p.notes);
+  return { ...p, status, notes };
+};
+
 export const getPayouts = async () => {
   try {
-    return await API.get('/personnelPayouts');
+    const res = await API.get('/personnelPayouts');
+    if (res?.data?.data && Array.isArray(res.data.data)) {
+      res.data.data = res.data.data.map(normalizePayoutRecord);
+    }
+    return res;
   } catch (err) {
     console.warn('Backend /personnelPayouts unavailable, using direct Supabase fallback:', err.message);
     const { data: { session } } = await supabase.auth.getSession();
@@ -374,7 +402,7 @@ export const getPayouts = async () => {
     if (userId) query = query.eq('user_id', userId);
     const { data, error } = await query;
     if (error) throw error;
-    return { data: { success: true, data: data || [] } };
+    return { data: { success: true, data: (data || []).map(normalizePayoutRecord) } };
   }
 };
 
@@ -385,15 +413,34 @@ export const createPayout = async (data) => {
     console.warn('Backend /personnelPayouts create unavailable, using direct Supabase fallback:', err.message);
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
-    const payload = Array.isArray(data)
-      ? data.map(p => ({ ...p, user_id: userId }))
-      : { ...data, user_id: userId };
-    const { data: inserted, error } = await supabase
+    const rawArray = Array.isArray(data) ? data : [data];
+    const payload = rawArray.map(p => {
+      const status = p.status === 'pending' ? 'pending' : 'paid';
+      return {
+        ...p,
+        status,
+        notes: encodeNotesWithStatus(p.notes, status),
+        user_id: userId
+      };
+    });
+
+    let { data: inserted, error } = await supabase
       .from('personnel_payouts')
-      .insert(Array.isArray(payload) ? payload : [payload])
+      .insert(payload)
       .select();
+
+    if (error && (error.code === 'PGRST204' || (error.message && (error.message.includes('status') || error.message.includes('column'))))) {
+      const fallbackPayload = payload.map(({ status, ...rest }) => rest);
+      const fallbackRes = await supabase
+        .from('personnel_payouts')
+        .insert(fallbackPayload)
+        .select();
+      inserted = fallbackRes.data;
+      error = fallbackRes.error;
+    }
+
     if (error) throw error;
-    return { data: { success: true, data: inserted } };
+    return { data: { success: true, data: (inserted || []).map(normalizePayoutRecord) } };
   }
 };
 
@@ -420,11 +467,26 @@ export const updatePayout = async (id, data) => {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
     const { user_id, ...updateFields } = data;
+    if (updateFields.status !== undefined) {
+      updateFields.status = updateFields.status === 'pending' ? 'pending' : 'paid';
+      updateFields.notes = encodeNotesWithStatus(updateFields.notes, updateFields.status);
+    }
+
     let query = supabase.from('personnel_payouts').update(updateFields).eq('id', id);
     if (userId) query = query.eq('user_id', userId);
-    const { data: updated, error } = await query.select().single();
+    let { data: updated, error } = await query.select().single();
+
+    if (error && (error.code === 'PGRST204' || (error.message && (error.message.includes('status') || error.message.includes('column'))))) {
+      const { status, ...fallbackFields } = updateFields;
+      let fbQuery = supabase.from('personnel_payouts').update(fallbackFields).eq('id', id);
+      if (userId) fbQuery = fbQuery.eq('user_id', userId);
+      const fbRes = await fbQuery.select().single();
+      updated = fbRes.data;
+      error = fbRes.error;
+    }
+
     if (error) throw error;
-    return { data: { success: true, data: updated } };
+    return { data: { success: true, data: normalizePayoutRecord(updated) } };
   }
 };
 
@@ -590,10 +652,36 @@ export const fetchDashboardSummaryDirect = async () => {
     });
   });
 
-  const totalCrewWages = rawPayouts.reduce(
+  const ordersMap = new Map();
+  rawWorkOrders.forEach(o => ordersMap.set(o.id, o));
+
+  const paidPayouts = rawPayouts.filter(p => getPayoutStatus(p) === 'paid');
+  const pendingPayouts = rawPayouts.filter(p => getPayoutStatus(p) === 'pending');
+
+  const totalCrewWages = paidPayouts.reduce(
     (sum, p) => sum + (Number(p.amount_paid) || 0),
     0
   );
+
+  const pendingCrewAmount = pendingPayouts.reduce(
+    (sum, p) => sum + (Number(p.amount_paid) || 0),
+    0
+  );
+
+  const pendingPayoutsList = pendingPayouts.map(p => {
+    const order = ordersMap.get(p.event_id);
+    return {
+      id: p.id,
+      eventId: p.event_id,
+      entryNumber: p.workOrders?.entryNumber || order?.entryNumber || 'N/A',
+      eventName: order?.workItems?.[0]?.eventName || 'Event',
+      personnelName: p.personnel_name,
+      workName: p.work_name || 'Personnel',
+      duration: p.duration || '',
+      amount: Number(p.amount_paid) || 0,
+      paymentDate: p.payment_date || p.created_at
+    };
+  });
 
   let totalTravelExpense = 0;
   let totalFoodExpense = 0;
@@ -628,7 +716,7 @@ export const fetchDashboardSummaryDirect = async () => {
   const allAssignedPersonnelKeys = new Set();
   const settledPersonnelKeys = new Set();
 
-  rawPayouts.forEach(p => {
+  paidPayouts.forEach(p => {
     if (p.event_id && p.personnel_name) {
       settledPersonnelKeys.add(`${p.event_id}__${p.personnel_name.trim().toLowerCase()}`);
     }
@@ -651,13 +739,19 @@ export const fetchDashboardSummaryDirect = async () => {
     }
   });
 
-  // Calculate pending payouts (personnel assigned in vendor invoices that have no payout record)
-  let pendingPayoutsCount = 0;
+  // Calculate pending payouts (personnel assigned in vendor invoices that have no paid payout record, plus any explicit pending payouts)
+  const unsettledKeys = new Set();
   for (const key of allAssignedPersonnelKeys) {
     if (!settledPersonnelKeys.has(key)) {
-      pendingPayoutsCount += 1;
+      unsettledKeys.add(key);
     }
   }
+  pendingPayouts.forEach(p => {
+    if (p.event_id && p.personnel_name) {
+      unsettledKeys.add(`${p.event_id}__${p.personnel_name.trim().toLowerCase()}`);
+    }
+  });
+  const pendingPayoutsCount = unsettledKeys.size;
 
   const paymentActivities = uniqueInvoices
     .filter(inv => inv.status === 'paid')
@@ -684,14 +778,15 @@ export const fetchDashboardSummaryDirect = async () => {
   const payoutActivities = rawPayouts.slice(0, 12).map(p => {
     const woEntry = p.workOrders?.entryNumber ? `WO #${p.workOrders.entryNumber}` : 'Payout';
     const roleStr = [p.work_name, p.duration].filter(Boolean).join(' • ');
+    const isPending = getPayoutStatus(p) === 'pending';
     return {
       id: `payout-${p.id}`,
       type: 'payout_disbursed',
-      title: 'Crew Payout Disbursed',
+      title: isPending ? 'Crew Payout Pending' : 'Crew Payout Disbursed',
       description: `${p.personnel_name}${roleStr ? ` • ${roleStr}` : ''} (${woEntry})`,
       amount: Number(p.amount_paid) || 0,
       date: p.created_at || p.payment_date,
-      status: 'disbursed',
+      status: isPending ? 'pending' : 'disbursed',
       referenceId: p.workOrders?.entryNumber ? `WO-${p.workOrders.entryNumber}` : (p.id ? p.id.slice(0, 8) : 'PAY')
     };
   });
@@ -735,6 +830,7 @@ export const fetchDashboardSummaryDirect = async () => {
           totalDisbursed: totalCombinedExpenses,
           expenseBreakdown: {
             crew: totalCrewWages,
+            pendingCrew: pendingCrewAmount,
             travel: totalTravelExpense,
             food: totalFoodExpense,
             stay: totalStayExpense,
@@ -753,7 +849,9 @@ export const fetchDashboardSummaryDirect = async () => {
           completedWorkOrders,
           totalPersonnelDeployed,
           pendingPayoutsCount,
-          totalPayoutsCompleted: rawPayouts.length,
+          pendingPayoutsAmount: pendingCrewAmount,
+          pendingPayoutsList,
+          totalPayoutsCompleted: paidPayouts.length,
           eventBreakdown: {
             twoCameraSetup: twoCameraSetupCount,
             threeCameraSetup: threeCameraSetupCount,

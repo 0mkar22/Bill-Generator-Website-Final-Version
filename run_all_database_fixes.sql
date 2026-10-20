@@ -16,3 +16,9 @@ ALTER TABLE public."workOrders" ADD COLUMN IF NOT EXISTS "stay_expense" numeric 
 COMMENT ON COLUMN public."workOrders"."travel_expense" IS 'Event travel / transport expenses';
 COMMENT ON COLUMN public."workOrders"."food_expense" IS 'Event food / meals expenses';
 COMMENT ON COLUMN public."workOrders"."stay_expense" IS 'Event accommodation / lodging expenses';
+
+-- 4. Add Payout Status Column to personnel_payouts table
+ALTER TABLE public.personnel_payouts ADD COLUMN IF NOT EXISTS "status" text DEFAULT 'paid';
+UPDATE public.personnel_payouts SET status = 'paid' WHERE status IS NULL;
+ALTER TABLE public.personnel_payouts DROP CONSTRAINT IF EXISTS chk_payout_status_valid;
+ALTER TABLE public.personnel_payouts ADD CONSTRAINT chk_payout_status_valid CHECK (status IN ('paid', 'pending'));
