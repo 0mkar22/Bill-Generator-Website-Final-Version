@@ -12,7 +12,7 @@ import * as XLSX from 'xlsx-js-style';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import API, { getCompanies, getWorkOrders } from '../services/api';
-import { calculateItemAmount } from '../utils/helpers';
+import { calculateItemAmount, getOrderDateRange } from '../utils/helpers';
 import { supabase } from '../supabase';
 import { TableSkeleton } from '../components/skeletons';
 
@@ -142,6 +142,7 @@ const Reports = () => {
                         id: order.id || order._id,
                         entryNumber: order.entryNumber || 'N/A',
                         date: order.eventDate || '',
+                        dateDisplay: getOrderDateRange(order) || (order.eventDate ? new Date(order.eventDate).toLocaleDateString('en-GB') : ''),
                         vendor: order.vendor || 'N/A',
                         companyName: companyName,
                         eventName: firstItem.eventName || 'N/A',
@@ -237,7 +238,7 @@ const Reports = () => {
             'Entry Number': item.entryNumber,
             'Sr. No': idx + 1,
             'Company': item.companyName,
-            'Event Date': item.date ? new Date(item.date).toLocaleDateString('en-GB') : '',
+            'Event Date': item.dateDisplay || (item.date ? new Date(item.date).toLocaleDateString('en-GB') : ''),
             'Vendor': item.vendor,
             'Event Name': item.eventName,
             'Event Venue': item.eventVenue,
@@ -293,7 +294,7 @@ const Reports = () => {
 
         const data = ongcItems.map((item, idx) => ({
             'Sr. No': idx + 1,
-            'Event Date': item.date ? new Date(item.date).toLocaleDateString('en-GB') : '',
+            'Event Date': item.dateDisplay || (item.date ? new Date(item.date).toLocaleDateString('en-GB') : ''),
             'Event Name': item.eventName,
             'Event Venue': item.eventVenue,
             'Event Time': item.eventTime,
@@ -347,7 +348,7 @@ const Reports = () => {
         filteredItems.forEach((item) => {
             const rowData = [
                 item.entryNumber,
-                item.date ? new Date(item.date).toLocaleDateString('en-GB') : '',
+                item.dateDisplay || (item.date ? new Date(item.date).toLocaleDateString('en-GB') : ''),
                 item.companyName,
                 item.vendor,
                 item.eventName,
@@ -419,7 +420,7 @@ const Reports = () => {
                         {paginatedItems.map((item, idx) => (
                             <TableRow key={`${item.id}-${idx}`} hover sx={{ '&:hover': { bgcolor: 'rgba(39, 39, 42, 0.40)' } }}>
                                 <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace', color: '#818cf8' }}>{item.entryNumber}</TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace' }}>{item.date ? new Date(item.date).toLocaleDateString('en-GB') : '—'}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"JetBrains Mono", monospace' }}>{item.dateDisplay || (item.date ? new Date(item.date).toLocaleDateString('en-GB') : '—')}</TableCell>
                                 <TableCell sx={{ minWidth: 200 }}>{item.companyName}</TableCell>
                                 <TableCell sx={{ minWidth: 150 }}>{item.vendor}</TableCell>
                                 <TableCell sx={{ minWidth: 150 }}>{item.eventName}</TableCell>

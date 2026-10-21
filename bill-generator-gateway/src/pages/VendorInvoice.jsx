@@ -9,7 +9,7 @@ import './VendorInvoice.css';
 import invoiceTheme from '../invoiceTheme';
 import API, { getCompanyById, createInvoice, updateInvoice } from '../services/api';
 import { supabase } from '../supabase';
-import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglishToMarathiNumbers } from '../utils/helpers';
+import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglishToMarathiNumbers, formatEventDateDisplay, getOrderDateRange } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
 import { InvoiceSkeleton } from '../components/skeletons';
 
@@ -510,10 +510,12 @@ function VendorInvoice() {
                                       <TableCell sx={{ fontWeight: 'bold' }}>कामाचा दिनांक :</TableCell>
                                       <TableCell>{
                                           convertEnglishToMarathiNumbers((() => {
-                                              const dates = selectedItems.map(i => i.parent?.eventDate).filter(Boolean).sort();
-                                              if (dates.length === 0) return 'N/A';
-                                              if (dates.length === 1) return new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-');
-                                              return `${new Date(dates[0]).toLocaleDateString('en-GB').replace(/\//g, '-')} ते ${new Date(dates[dates.length - 1]).toLocaleDateString('en-GB').replace(/\//g, '-')}`;
+                                              const allDates = selectedItems.flatMap(i => [
+                                                  i.parent?.eventDate || i.eventStartDate,
+                                                  i.eventEndDate || i.parent?.eventEndDate || i.parent?.workItems?.[0]?.eventEndDate
+                                              ]).filter(Boolean).sort();
+                                              if (allDates.length === 0) return 'N/A';
+                                              return formatEventDateDisplay(allDates[0], allDates[allDates.length - 1], 'ते');
                                           })())
                                       }</TableCell>
                                   </TableRow>
@@ -545,7 +547,7 @@ function VendorInvoice() {
                                   const globalIdx = selectedItems.indexOf(item);
                                   const rate = calculateItemAmount({ ...item, quantity: 1 }, companyDetails);
                                   const amount = calculateItemAmount(item, companyDetails);
-                                  const dateStr = item.parent?.eventDate ? new Date(item.parent?.eventDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '';
+                                  const dateStr = getOrderDateRange(item, 'ते');
                                   const workMainMap = { 'Photography': 'फोटोग्राफी', 'Videography': 'व्हिडीओग्राफी' };
                                   const workStr = workMainMap[item.workMain] || (item.workMain ? item.workMain.replaceAll('_', ' ') : '');
                                   const durationMap = { '8_Hours': '८ तासापर्यन्त', '4_Hours': '४ तासापर्यन्त', '12_Hours': '१२ तासापर्यन्त' };
@@ -878,7 +880,7 @@ function VendorInvoice() {
                                 <TableCell sx={{ ...tableCellStyle, textAlign: 'center', fontSize: '1.15rem' }}>{globalIdx + 1}</TableCell>
                                 <TableCell sx={tableCellStyle}>
                                   <Typography variant="body2" sx={{ fontSize: '1.2rem', color: '#000' }}>
-                                    <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                                    <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचा दिनांक:' : 'Event Date:'}</span> {getOrderDateRange(item, isVidhanMandal ? 'ते' : 'to')}<br />
                                     <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे नांव:' : 'Event Name:'}</span> {item.eventName}<br />
                                     <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्थळ:' : 'Venue:'}</span> {item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}<br />
                                     <span style={{ fontWeight: 'bold' }}>{isVidhanMandal ? 'कामाचे स्वरूप:' : 'Work Type:'}</span> {item.workMain ? item.workMain.replaceAll('_', ' ') : ''}<br />

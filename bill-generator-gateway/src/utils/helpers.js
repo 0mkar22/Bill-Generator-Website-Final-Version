@@ -121,3 +121,57 @@ export const convertEnglishToMarathiNumbers = (input) => {
     const englishDigits = { '0': '०', '1': '१', '2': '२', '3': '३', '4': '४', '5': '५', '6': '६', '7': '७', '8': '८', '9': '९' };
     return String(input).replace(/[0-9]/g, match => englishDigits[match]);
 };
+
+export const parseDateParts = (dateInput) => {
+    if (!dateInput || dateInput === 'N/A') return null;
+    if (typeof dateInput === 'string') {
+        const isoMatch = dateInput.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            return { year: isoMatch[1], month: isoMatch[2], day: isoMatch[3] };
+        }
+    }
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+    return {
+        year: String(d.getFullYear()),
+        month: String(d.getMonth() + 1).padStart(2, '0'),
+        day: String(d.getDate()).padStart(2, '0')
+    };
+};
+
+export const formatEventDateDisplay = (startInput, endInput, separator = 'to') => {
+    const start = parseDateParts(startInput);
+    if (!start) return 'N/A';
+
+    const end = parseDateParts(endInput);
+    if (!end || (start.year === end.year && start.month === end.month && start.day === end.day)) {
+        return `${start.day}-${start.month}-${start.year}`;
+    }
+
+    if (start.year === end.year && start.month === end.month) {
+        return `${start.day} ${separator} ${end.day}-${start.month}-${start.year}`;
+    }
+
+    if (start.year === end.year) {
+        return `${start.day}-${start.month} ${separator} ${end.day}-${end.month}-${start.year}`;
+    }
+
+    return `${start.day}-${start.month}-${start.year} ${separator} ${end.day}-${end.month}-${end.year}`;
+};
+
+export const getOrderDateRange = (orderOrItem, separator = 'to') => {
+    if (!orderOrItem) return 'N/A';
+    const start =
+        orderOrItem.parent?.eventDate ||
+        orderOrItem.eventDate ||
+        orderOrItem.eventStartDate ||
+        orderOrItem.workItems?.[0]?.eventStartDate ||
+        '';
+    const end =
+        orderOrItem.eventEndDate ||
+        orderOrItem.parent?.eventEndDate ||
+        orderOrItem.parent?.workItems?.[0]?.eventEndDate ||
+        orderOrItem.workItems?.[0]?.eventEndDate ||
+        '';
+    return formatEventDateDisplay(start, end, separator);
+};

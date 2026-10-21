@@ -9,7 +9,7 @@ import './WorkOrderInvoice.css';
 import invoiceTheme from '../invoiceTheme';
 import API, { getCompanyById, createInvoice, updateInvoice } from '../services/api';
 import { supabase } from '../supabase';
-import { calculateItemAmount, numberToWords } from '../utils/helpers';
+import { calculateItemAmount, numberToWords, getOrderDateRange } from '../utils/helpers';
 import { bannerSubs } from '../constants/data';
 import { InvoiceSkeleton } from '../components/skeletons';
 
@@ -441,11 +441,12 @@ const WorkOrderInvoice = () => {
   const roundedTotal = Math.round(totalWithGst);
 
   const uniqueEvents = selectedItems.reduce((acc, item) => {
-      const key = `${item.eventName}-${item.parent?.eventDate}`;
+      const dateDisplay = getOrderDateRange(item, isVidhanMandal ? 'ते' : 'to');
+      const key = `${item.eventName}-${dateDisplay}`;
       if (!acc.has(key)) {
           acc.set(key, {
               name: `For ${item.eventName} at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`,
-              date: item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''
+              date: dateDisplay
           });
       }
       return acc;
@@ -641,7 +642,7 @@ const WorkOrderInvoice = () => {
                                       {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : (item.workMain === 'Photo_Print' || item.workMain === 'Storage' ? `Size : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`))}
                                       {dimensionsText}
                                   </Typography>
-                                  <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                                  <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचा दिनांक: ${getOrderDateRange(item, 'ते')}` : `dt. ${getOrderDateRange(item)}`}</Typography>
                                   <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
                                   <Typography variant="body2" component="div" sx={{ color: '#000' }}>{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
                               </>
@@ -831,7 +832,7 @@ const WorkOrderInvoice = () => {
                         {item.workSub && (isVidhanMandal ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}` : (item.workMain === 'Photo_Print' || item.workMain === 'Storage' ? `Size : ${item.workSub.replaceAll('_', ' ')}` : `Duration : ${item.workSub.replaceAll('_', ' ')}`))}
                         {dimensionsText}
                       </Typography>
-                      <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}` : `dt. ${item.parent?.eventDate ? new Date(item.parent.eventDate).toLocaleDateString('en-GB') : ''}`}</Typography>
+                      <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचा दिनांक: ${getOrderDateRange(item, 'ते')}` : `dt. ${getOrderDateRange(item)}`}</Typography>
                       <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे नांव: ${item.eventName}` : `For ${item.eventName}`}</Typography>
                       <Typography variant="body2" component="div">{isVidhanMandal ? `कामाचे स्थळ: ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}` : `at ${item.eventVenue === 'Others' ? item.customVenue : item.eventVenue}`}</Typography>
                     </TableCell>

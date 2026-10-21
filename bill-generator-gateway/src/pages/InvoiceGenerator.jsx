@@ -12,6 +12,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import API, { getWorkOrders, getCompanies, getInvoices, updateInvoiceStatus, deleteInvoice } from '../services/api';
+import { getOrderDateRange } from '../utils/helpers';
 import { supabase } from '../supabase';
 import { TableSkeleton } from '../components/skeletons';
 
@@ -730,10 +731,10 @@ const InvoiceGenerator = () => {
                     <TableCell sx={{ fontWeight: 500 }}>{item.eventName}</TableCell>
                     <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{item.poNpo}</TableCell>
                     <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
-                      {item.parent?.eventDate ? (
+                      {(item.parent?.eventDate || item.eventStartDate) ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
                           <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', color: '#e4e4e7' }}>
-                            {new Date(item.parent.eventDate).toLocaleDateString('en-GB')}
+                            {getOrderDateRange(item)}
                           </Typography>
                           {item.eventTime && (
                             <Typography component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem', color: '#a1a1aa' }}>

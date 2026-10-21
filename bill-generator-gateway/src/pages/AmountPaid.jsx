@@ -14,7 +14,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import API, { getInvoices, getPayouts, createPayout, getWorkOrders, getCompanies, updatePayout, deletePayout, updateInvoiceAmountReceived, updateWorkOrderExpenses, getPayoutStatus, getCleanPayoutNotes } from '../services/api';
-import { calculateItemAmount } from '../utils/helpers';
+import { calculateItemAmount, getOrderDateRange } from '../utils/helpers';
 import { AmountPaidSkeleton } from '../components/skeletons';
 
 const AmountPaid = () => {
@@ -99,7 +99,7 @@ const AmountPaid = () => {
                   const items = order.workItems || [];
                   const eName = items[0]?.eventName || '';
                   const eVenue = items[0]?.eventVenue || '';
-                  const eDate = order.eventDate || order.event_date || 'N/A';
+                  const eDate = getOrderDateRange(order) || order.eventDate || order.event_date || 'N/A';
 
                   const personnelMap = new Map();
 
@@ -347,7 +347,7 @@ const AmountPaid = () => {
           entryNumber: oOrder?.entryNumber || '',
           eventName: oOrder?.workItems?.[0]?.eventName || '',
           eventVenue: oOrder?.workItems?.[0]?.eventVenue || '',
-          eventDate: oOrder?.eventDate ? new Date(oOrder.eventDate).toLocaleDateString('en-GB') : '',
+          eventDate: oOrder ? getOrderDateRange(oOrder) : '',
           travelExpense: existingTravel ? String(existingTravel) : '',
           foodExpense: existingFood ? String(existingFood) : '',
           stayExpense: existingStay ? String(existingStay) : '',
@@ -532,7 +532,7 @@ const AmountPaid = () => {
           entryNumber: order.entryNumber || '',
           eventName: order.workItems?.[0]?.eventName || '',
           eventVenue: order.workItems?.[0]?.eventVenue || '',
-          eventDate: order.eventDate ? new Date(order.eventDate).toLocaleDateString('en-GB') : '',
+          eventDate: getOrderDateRange(order),
           travelExpense: existingTravel ? String(existingTravel) : '',
           foodExpense: existingFood ? String(existingFood) : '',
           stayExpense: existingStay ? String(existingStay) : '',
@@ -630,7 +630,7 @@ const AmountPaid = () => {
                   entryNumber: order.entryNumber,
                   eventName: order.workItems?.[0]?.eventName || `Event #${order.entryNumber}`,
                   eventVenue: order.workItems?.[0]?.eventVenue || '',
-                  eventDate: order.eventDate || order.event_date || '',
+                  eventDate: getOrderDateRange(order) || order.eventDate || order.event_date || '',
                   companyName: comp?.company_name || 'N/A',
                   matchingInvoices,
                   invoiceNumbers,
@@ -1374,7 +1374,7 @@ const AmountPaid = () => {
                                                         Entry {ev.entryNumber}
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ color: '#a1a1aa', fontSize: '0.75rem', display: 'block', whiteSpace: 'nowrap' }}>
-                                                        {ev.eventDate ? (isNaN(new Date(ev.eventDate).getTime()) ? ev.eventDate : new Date(ev.eventDate).toLocaleDateString('en-GB')) : 'N/A'}
+                                                        {ev.eventDate || 'N/A'}
                                                     </Typography>
                                                 </TableCell>
 

@@ -98,6 +98,7 @@ const WorkOrder = () => {
   } = useWorkOrderForm({
     entryNumber: '',
     eventDate: '',
+    eventEndDate: '',
     vendor: 'ICOMP SYSTEMS',
     company_id: '',
     workItems: [
@@ -321,24 +322,28 @@ const WorkOrder = () => {
         });
       }
 
-      let formattedDate = '';
-      if (editData.eventDate) {
-        if (typeof editData.eventDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(editData.eventDate)) {
-          formattedDate = editData.eventDate;
-        } else {
-          try {
-            const dateObj = new Date(editData.eventDate);
-            if (!isNaN(dateObj)) {
-              formattedDate = dateObj.toISOString().split('T')[0];
-            }
-          } catch (e) {}
+      const normalizeDateInput = (rawDate) => {
+        if (!rawDate) return '';
+        if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+          return rawDate;
         }
-      }
+        try {
+          const dateObj = new Date(rawDate);
+          if (!isNaN(dateObj)) {
+            return dateObj.toISOString().split('T')[0];
+          }
+        } catch (e) {}
+        return '';
+      };
+
+      const formattedDate = normalizeDateInput(editData.eventDate);
+      const formattedEndDate = normalizeDateInput(editData.eventEndDate || parsedItems[0]?.eventEndDate || '');
 
       setFormData({
         id: editData.id || editData._id || '',
         entryNumber: editData.entryNumber || '',
         eventDate: formattedDate,
+        eventEndDate: formattedEndDate,
         vendor: editData.vendor || '',
         company_id: editData.company_id || '',
         workItems: parsedItems
@@ -504,6 +509,8 @@ const WorkOrder = () => {
     try {
       
       const payloadToSubmit = JSON.parse(JSON.stringify(formData));
+      const effectiveEndDate = payloadToSubmit.eventEndDate || payloadToSubmit.eventDate || '';
+      delete payloadToSubmit.eventEndDate;
       // Copy common fields to all items
       if (payloadToSubmit.workItems && payloadToSubmit.workItems.length > 0) {
           const commonFields = {
@@ -515,6 +522,8 @@ const WorkOrder = () => {
               poNpo: payloadToSubmit.workItems[0].poNpo,
               customVenue: payloadToSubmit.workItems[0].customVenue,
               roomNumber: payloadToSubmit.workItems[0].roomNumber,
+              eventStartDate: payloadToSubmit.eventDate || '',
+              eventEndDate: effectiveEndDate,
           };
           payloadToSubmit.workItems = payloadToSubmit.workItems.map(item => ({
               ...item,
@@ -574,7 +583,7 @@ const WorkOrder = () => {
         await createWorkOrder(payloadToSubmit);
         setSnackbar({ open: true, message: 'Work Order created successfully!', severity: 'success' });
         setFormData({
-          entryNumber: '', eventDate: '', vendor: 'ICOMP SYSTEMS', company_id: '',
+          entryNumber: '', eventDate: '', eventEndDate: '', vendor: 'ICOMP SYSTEMS', company_id: '',
           workItems: [{ eventName: '', poNpo: '', eventTime: '', eventVenue: '', contactPerson: '', contactNumber: '', roomNumber: '', workMain: '', workSub: '', quantity: 1, customVenue: '', customWorkMain: '', customRate: '', dimensions: [{ length: '', breadth: '', qty: 1 }], assemblyDetails: [{ assemblyType: '', members: [''] }], personnel: [{ name: '', number: '' }] }]
         });
         fetchLatestEntry();
@@ -730,7 +739,30 @@ renderValue={(selected) => selected}
         </MenuItem>
     ))}
 </Select></FormControl></Grid>
-                    <Grid item xs={12} sm={6}><TextField name="eventDate" label={isVidhanMandalSelected ? 'कामाचा दिनांक' : 'Event Date'} type="date" required fullWidth InputLabelProps={{ shrink: true }} value={formData.eventDate} onChange={handleMainChange} /></Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        name="eventDate"
+                        label={isVidhanMandalSelected ? 'कामाचा दिनांक (पासून)' : 'Event Start Date'}
+                        type="date"
+                        required
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        value={formData.eventDate}
+                        onChange={handleMainChange}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        name="eventEndDate"
+                        label={isVidhanMandalSelected ? 'कामाचा दिनांक (पर्यंत)' : 'Event End Date'}
+                        type="date"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ min: formData.eventDate || undefined }}
+                        value={formData.eventEndDate || ''}
+                        onChange={handleMainChange}
+                      />
+                    </Grid>
                     <Grid item xs={12} sm={6}><TextField name="eventTime" label="Event Time" type="time" required fullWidth InputLabelProps={{ shrink: true }} value={formData.workItems[0].eventTime} onChange={(e) => handleWorkItemChange(0, e)} /></Grid>
                     
                     

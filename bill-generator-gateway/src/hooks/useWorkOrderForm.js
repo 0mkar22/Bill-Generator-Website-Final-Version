@@ -7,7 +7,13 @@ export const useWorkOrderForm = (initialData, historicalContacts, historicalPers
 
     const handleMainChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === 'eventDate' && next.eventEndDate && value && next.eventEndDate < value) {
+                next.eventEndDate = value;
+            }
+            return next;
+        });
     };
 
     const handleWorkItemChange = (index, e) => {
