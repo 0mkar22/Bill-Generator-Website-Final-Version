@@ -79,8 +79,6 @@ export const loadImageAsMimePart = async (srcUrl, index, { targetHeightPx = 90, 
 export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invoice.doc', title = 'Invoice') => {
   const boundary = '----=_NextPart_BillGenerator_WordDoc';
   const fullHtml = [
-    '<?xml version="1.0" encoding="utf-8"?>',
-    '<?mso-application progid="Word.Document"?>',
     '<html xmlns:v="urn:schemas-microsoft-com:vml"',
     '      xmlns:o="urn:schemas-microsoft-com:office:office"',
     '      xmlns:w="urn:schemas-microsoft-com:office:word"',
@@ -102,7 +100,6 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '<style>',
     '  @page {',
     '    size: 595.3pt 841.9pt;',
-    '    mso-page-orientation: portrait;',
     '    margin: 22.0pt 26.0pt 22.0pt 26.0pt;',
     '    mso-header-margin: 0pt;',
     '    mso-footer-margin: 0pt;',
@@ -121,7 +118,6 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '  }',
     '  @page WordSection1 {',
     '    size: 595.3pt 841.9pt;',
-    '    mso-page-orientation: portrait;',
     '    margin: 22.0pt 26.0pt 22.0pt 26.0pt;',
     '    mso-header-margin: 0pt;',
     '    mso-footer-margin: 0pt;',
@@ -150,13 +146,6 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '    border-collapse: collapse;',
     '    mso-table-lspace: 0pt;',
     '    mso-table-rspace: 0pt;',
-    '  }',
-    '  thead {',
-    '    display: table-header-group;',
-    '  }',
-    '  tr {',
-    '    page-break-inside: avoid;',
-    '    mso-row-margin-left: 0pt;',
     '  }',
     '  p, div {',
     '    margin: 0;',
@@ -269,27 +258,18 @@ export const exportWorkOrderToWord = async ({
   const ongcLogo = await loadImageAsMimePart('/ONGC logo.png', 1, { targetHeightPx: 88, maxWidthPx: 140 });
   const mimeImages = [ongcLogo].filter(Boolean);
 
+  // Ensure Word pagination never exceeds 6 items on Page 1, 7 on middle pages, 5 on the last page:
   const buildWordSafePages = (items) => {
-    const n = items.length;
-    if (n === 0) return [[]];
-    if (n <= 4) return [items];
-    if (n <= 12) {
-      const p1 = Math.min(6, Math.ceil(n / 2));
-      return [items.slice(0, p1), items.slice(p1)];
-    }
+    if (!items || items.length === 0) return [[]];
+    if (items.length <= 4) return [items];
     const pages = [items.slice(0, 6)];
     let rem = items.slice(6);
     while (rem.length > 0) {
-      if (rem.length <= 8) {
+      if (rem.length <= 5) {
         pages.push(rem);
-        break;
-      }
-      if (rem.length <= 15) {
-        const chunk = Math.ceil(rem.length / 2);
-        pages.push(rem.slice(0, chunk));
-        rem = rem.slice(chunk);
+        rem = [];
       } else {
-        const chunk = Math.min(11, rem.length - 8);
+        const chunk = Math.min(7, rem.length - 1);
         pages.push(rem.slice(0, chunk));
         rem = rem.slice(chunk);
       }
@@ -297,7 +277,13 @@ export const exportWorkOrderToWord = async ({
     return pages;
   };
 
-  const effectivePages = buildWordSafePages(selectedItems);
+  const needsRepagination =
+    !invoicePages ||
+    invoicePages.length === 0 ||
+    invoicePages[0].length > 6 ||
+    invoicePages.some((p, i) => (i === invoicePages.length - 1 ? p.length > 5 : i > 0 && p.length > 7));
+
+  const effectivePages = needsRepagination ? buildWordSafePages(selectedItems) : invoicePages;
   const totalPages = effectivePages.length;
 
   const sameEventAndVenue =
@@ -403,25 +389,25 @@ export const exportWorkOrderToWord = async ({
             : `at ${venueVal || ''}`;
 
           return `
-            <tr style="page-break-inside:avoid; mso-row-margin-left:0pt;">
+            <tr style="page-break-inside:avoid;">
               <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                <p style="margin:0; page-break-inside:avoid;">${globalIdx + 1}</p>
+                ${globalIdx + 1}
               </td>
               <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                <p style="font-weight:bold; margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(workMainLabel)}</p>
-                ${workSubLabel || dimensionsText ? `<p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(workSubLabel + dimensionsText)}</p>` : ''}
-                <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(dateLine)}</p>
-                <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(eventLine)}</p>
-                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(venueLine)}</p>
+                <div style="font-weight:bold; margin:0;">${escapeHtml(workMainLabel)}</div>
+                ${workSubLabel || dimensionsText ? `<div style="margin:0;">${escapeHtml(workSubLabel + dimensionsText)}</div>` : ''}
+                <div style="margin:0;">${escapeHtml(dateLine)}</div>
+                <div style="margin:0;">${escapeHtml(eventLine)}</div>
+                <div style="margin:0;">${escapeHtml(venueLine)}</div>
               </td>
               <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(quantity)}</p>
+                ${escapeHtml(quantity)}
               </td>
               <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+                ${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
               </td>
               <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+                ${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
               </td>
             </tr>
           `;
@@ -437,6 +423,8 @@ export const exportWorkOrderToWord = async ({
           </tr>
         `
         : '';
+
+      const sigMarginTopPt = pageItems.length >= 5 ? 14 : pageItems.length >= 3 ? 28 : 48;
 
       const footerSectionHtml = isLastPage
         ? `
@@ -504,10 +492,10 @@ export const exportWorkOrderToWord = async ({
             </tr>
           </table>
 
-          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:70pt; margin-bottom:12pt;">
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:${sigMarginTopPt}pt; margin-bottom:4pt;">
             <tr style="page-break-inside:avoid;">
               <td width="55%" style="width:55%; border:none;">&nbsp;</td>
-              <td width="45%" align="center" style="width:45%; border:none; text-align:center; font-family:Mangal, Arial, sans-serif; font-size:10pt; line-height:1.55;">
+              <td width="45%" align="center" style="width:45%; border:none; text-align:center; font-family:Mangal, Arial, sans-serif; font-size:10pt; line-height:1.45;">
                 केलिए<br/>
                 निगमित संचार विभाग<br/>
                 पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>
@@ -520,7 +508,7 @@ export const exportWorkOrderToWord = async ({
 
       const pageBreakHtml =
         pageIdx < totalPages - 1
-          ? '<br clear="all" style="page-break-before:always;" /><p style="page-break-before:always; margin:0; padding:0; font-size:1pt; line-height:1pt;">&nbsp;</p>'
+          ? '<br clear="all" style="mso-special-character:line-break; page-break-before:always;" />'
           : '';
 
       return `
