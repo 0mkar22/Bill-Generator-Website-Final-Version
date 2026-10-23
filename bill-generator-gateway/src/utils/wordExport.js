@@ -420,7 +420,7 @@ export const exportWorkOrderToWord = async ({
         `
         : '';
 
-      const sigMarginTopPt = pageItems.length >= 8 ? 14 : pageItems.length >= 5 ? 24 : 36;
+      const sigMarginTopPt = pageItems.length >= 8 ? 52 : pageItems.length >= 5 ? 68 : 88;
 
       const footerSectionHtml = isLastPage
         ? `

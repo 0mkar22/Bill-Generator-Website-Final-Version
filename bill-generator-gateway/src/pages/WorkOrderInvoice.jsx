@@ -98,9 +98,9 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
 
     // Dynamic footer height for final page (compact spacing when more items are present):
     const effectiveFooterHeight = remainingCount >= 8 
-      ? Math.max(260, footerHeight - 64) 
+      ? Math.max(300, footerHeight - 32) 
       : remainingCount >= 5 
-        ? Math.max(290, footerHeight - 32) 
+        ? Math.max(320, footerHeight - 16) 
         : footerHeight;
 
     // Check if ALL remaining items fit on this page with the footer:
@@ -740,7 +740,7 @@ const WorkOrderInvoice = () => {
                         </Table>
                       </TableContainer>
                     </Box>
-                    <Box sx={{ p: 2, pt: 1, mt: pageItems.length >= 8 ? 4 : pageItems.length >= 5 ? 8 : 14, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+                    <Box sx={{ p: 2, pt: 1, mt: pageItems.length >= 8 ? 8 : pageItems.length >= 5 ? 12 : 16, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
                       <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
                         केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
                       </Typography>
@@ -927,7 +927,7 @@ const WorkOrderInvoice = () => {
               </Table>
             </TableContainer>
           </Box>
-          <Box sx={{ p: 2, pt: 1, mt: selectedItems.length >= 8 ? 4 : selectedItems.length >= 5 ? 8 : 14, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+          <Box sx={{ p: 2, pt: 1, mt: selectedItems.length >= 8 ? 8 : selectedItems.length >= 5 ? 12 : 16, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
             <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
               केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
             </Typography>
