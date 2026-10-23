@@ -92,7 +92,7 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
   while (currentIndex < n) {
     const isFirstPage = pages.length === 0;
     const pageItems = [];
-    let currentHeight = isFirstPage ? (headerHeight + tableHeadHeight) : tableHeadHeight;
+    let currentHeight = isFirstPage ? (headerHeight + tableHeadHeight) : (tableHeadHeight + 40);
 
     const remainingCount = n - currentIndex;
 
@@ -405,7 +405,7 @@ const WorkOrderInvoice = () => {
     const rowElements = Array.from(probeRowsRef.current.children);
     const rowHeights = rowElements.map(el => el.offsetHeight || 65);
 
-    const splits = computePageSplits(rowHeights, headerH, tableHeadH, footerH, continuedH, 1230);
+    const splits = computePageSplits(rowHeights, headerH, tableHeadH, footerH, continuedH, 1140);
     
     setMeasuredPageSplits(prev => {
       if (!prev) return splits;
