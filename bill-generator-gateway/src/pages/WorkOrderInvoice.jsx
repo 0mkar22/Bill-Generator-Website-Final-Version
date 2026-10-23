@@ -113,7 +113,7 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
 
     // Otherwise, this page must continue to the next page.
     // Ensure we leave at least 1 item for the subsequent page.
-    const maxItemsThisPage = Math.min(isFirstPage ? 6 : 7, Math.max(1, remainingCount - 1));
+    const maxItemsThisPage = Math.min(isFirstPage ? 6 : 8, Math.max(1, remainingCount - 1));
 
     while (currentIndex < n && pageItems.length < maxItemsThisPage) {
       const nextRowHeight = rowHeights[currentIndex];
@@ -167,7 +167,7 @@ const getInvoicePages = (items) => {
       pages.push(remaining);
       remaining = [];
     } else {
-      const chunk = Math.min(7, remaining.length - 1);
+      const chunk = Math.min(8, remaining.length - 1);
       pages.push(remaining.slice(0, chunk));
       remaining = remaining.slice(chunk);
     }
