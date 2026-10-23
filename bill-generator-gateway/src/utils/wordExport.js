@@ -79,6 +79,8 @@ export const loadImageAsMimePart = async (srcUrl, index, { targetHeightPx = 90, 
 export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invoice.doc', title = 'Invoice') => {
   const boundary = '----=_NextPart_BillGenerator_WordDoc';
   const fullHtml = [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<?mso-application progid="Word.Document"?>',
     '<html xmlns:v="urn:schemas-microsoft-com:vml"',
     '      xmlns:o="urn:schemas-microsoft-com:office:office"',
     '      xmlns:w="urn:schemas-microsoft-com:office:word"',
@@ -89,7 +91,6 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '<meta name="ProgId" content="Word.Document">',
     '<meta name="Generator" content="Microsoft Word 15">',
     '<meta name="Originator" content="Microsoft Word 15">',
-    '<?mso-application progid="Word.Document"?>',
     `<title>${escapeHtml(title)}</title>`,
     '<!--[if gte mso 9]><xml>',
     ' <w:WordDocument>',
@@ -503,7 +504,7 @@ export const exportWorkOrderToWord = async ({
             </tr>
           </table>
 
-          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:60pt; margin-bottom:8pt;">
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:70pt; margin-bottom:12pt;">
             <tr style="page-break-inside:avoid;">
               <td width="55%" style="width:55%; border:none;">&nbsp;</td>
               <td width="45%" align="center" style="width:45%; border:none; text-align:center; font-family:Mangal, Arial, sans-serif; font-size:10pt; line-height:1.55;">
@@ -519,7 +520,7 @@ export const exportWorkOrderToWord = async ({
 
       const pageBreakHtml =
         pageIdx < totalPages - 1
-          ? '<br clear="all" style="mso-special-character:line-break; page-break-before:always;" />'
+          ? '<br clear="all" style="page-break-before:always;" /><p style="page-break-before:always; margin:0; padding:0; font-size:1pt; line-height:1pt;">&nbsp;</p>'
           : '';
 
       return `
