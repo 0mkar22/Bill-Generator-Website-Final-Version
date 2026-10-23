@@ -10,6 +10,7 @@ import invoiceTheme from '../invoiceTheme';
 import API, { getCompanyById, createInvoice, updateInvoice } from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords, getOrderDateRange } from '../utils/helpers';
+import { exportWorkOrderToWord } from '../utils/wordExport';
 import { bannerSubs } from '../constants/data';
 import { InvoiceSkeleton } from '../components/skeletons';
 
@@ -455,6 +456,24 @@ const WorkOrderInvoice = () => {
   const eventDateDetails = Array.from(uniqueEvents.values());
   const uniqueDates = [...new Set(eventDateDetails.map(detail => detail.date))];
 
+  const onDownloadWord = async () => {
+    await exportWorkOrderToWord({
+      invoicePages,
+      selectedItems,
+      companyDetails,
+      parentOrder,
+      invoiceNumber,
+      invoiceDate,
+      isPO,
+      poNumber,
+      isVidhanMandal,
+      totalAmount,
+      totalWithGst,
+      roundedTotal,
+      uniqueDates
+    });
+  };
+
   return (
     <Container>
       <Box sx={{ my: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -468,7 +487,7 @@ const WorkOrderInvoice = () => {
             {saveSuccess && (
                 <>
                     <Button variant="contained" onClick={handleDownload}>Download PDF</Button>
-                    <Button variant="contained" color="info" onClick={handleDownloadWord}>Download Word</Button>
+                    <Button variant="contained" color="info" onClick={onDownloadWord}>Download Word</Button>
                 </>
             )}
         </Box>

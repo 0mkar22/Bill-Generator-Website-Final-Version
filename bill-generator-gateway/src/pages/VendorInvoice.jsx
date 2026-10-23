@@ -10,6 +10,7 @@ import invoiceTheme from '../invoiceTheme';
 import API, { getCompanyById, createInvoice, updateInvoice } from '../services/api';
 import { supabase } from '../supabase';
 import { calculateItemAmount, numberToWords, numberToMarathiWords, convertEnglishToMarathiNumbers, formatEventDateDisplay, getOrderDateRange } from '../utils/helpers';
+import { exportVendorInvoiceToWord } from '../utils/wordExport';
 import { bannerSubs } from '../constants/data';
 import { InvoiceSkeleton } from '../components/skeletons';
 
@@ -249,52 +250,31 @@ function VendorInvoice() {
     }
   };
 
-  const handleDownloadWord = () => {
-    const pageElements = invoiceRef.current 
-      ? invoiceRef.current.querySelectorAll('.invoice-page') 
-      : document.querySelectorAll('#generated-bill .invoice-page');
-    if (!pageElements || pageElements.length === 0) return;
-
-    let combinedHtml = '';
-    pageElements.forEach((pageEl, idx) => {
-      combinedHtml += `<div class="word-page">${pageEl.innerHTML}</div>`;
-      if (idx < pageElements.length - 1) {
-        combinedHtml += '<br clear="all" style="page-break-before: always; mso-break-type: section-break;" />';
-      }
+  const handleDownloadWord = async () => {
+    await exportVendorInvoiceToWord({
+      invoicePages,
+      selectedItems,
+      companyDetails,
+      parentOrder,
+      invoiceNumber,
+      invoiceDate,
+      dealingOfficer,
+      emailId,
+      vendorCode,
+      poNumber,
+      poDate,
+      serviceDescription,
+      gstNo,
+      isVidhanMandal,
+      isONGC,
+      isIGST,
+      amountBeforeTax,
+      cgst,
+      sgst,
+      igst,
+      total,
+      rounded
     });
-
-    const html = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset='utf-8'>
-        <title>IcompSystem Invoice</title>
-        <style>
-          body { font-family: Arial, sans-serif; }
-          table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-          th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
-          .word-flex-fallback { display: block; width: 100%; clear: both; }
-          .word-float-left { float: left; width: 50%; }
-          .word-float-right { float: right; width: 50%; text-align: right; }
-          .word-page { width: 100%; page-break-after: always; }
-        </style>
-      </head>
-      <body>
-        ${combinedHtml}
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `IcompSystemInvoice_${invoiceNumber || 'preview'}.doc`;
-    
-    document.body.appendChild(link);
-    link.click();
-    
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const handleSaveToDatabase = async () => {
