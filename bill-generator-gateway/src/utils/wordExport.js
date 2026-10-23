@@ -258,18 +258,17 @@ export const exportWorkOrderToWord = async ({
   const ongcLogo = await loadImageAsMimePart('/ONGC logo.png', 1, { targetHeightPx: 88, maxWidthPx: 140 });
   const mimeImages = [ongcLogo].filter(Boolean);
 
-  // Ensure Word pagination never exceeds 6 items on Page 1, 7 on middle pages, 5 on the last page:
   const buildWordSafePages = (items) => {
     if (!items || items.length === 0) return [[]];
     if (items.length <= 4) return [items];
     const pages = [items.slice(0, 6)];
     let rem = items.slice(6);
     while (rem.length > 0) {
-      if (rem.length <= 5) {
+      if (rem.length <= 8) {
         pages.push(rem);
         rem = [];
       } else {
-        const chunk = Math.min(7, rem.length - 1);
+        const chunk = Math.min(12, rem.length - 1);
         pages.push(rem.slice(0, chunk));
         rem = rem.slice(chunk);
       }
@@ -277,13 +276,10 @@ export const exportWorkOrderToWord = async ({
     return pages;
   };
 
-  const needsRepagination =
-    !invoicePages ||
-    invoicePages.length === 0 ||
-    invoicePages[0].length > 6 ||
-    invoicePages.some((p, i) => (i === invoicePages.length - 1 ? p.length > 5 : i > 0 && p.length > 7));
-
-  const effectivePages = needsRepagination ? buildWordSafePages(selectedItems) : invoicePages;
+  const effectivePages =
+    Array.isArray(invoicePages) && invoicePages.length > 0
+      ? invoicePages
+      : buildWordSafePages(selectedItems);
   const totalPages = effectivePages.length;
 
   const sameEventAndVenue =
@@ -424,7 +420,7 @@ export const exportWorkOrderToWord = async ({
         `
         : '';
 
-      const sigMarginTopPt = pageItems.length >= 5 ? 14 : pageItems.length >= 3 ? 28 : 48;
+      const sigMarginTopPt = pageItems.length >= 8 ? 14 : pageItems.length >= 5 ? 24 : 36;
 
       const footerSectionHtml = isLastPage
         ? `
@@ -508,7 +504,7 @@ export const exportWorkOrderToWord = async ({
 
       const pageBreakHtml =
         pageIdx < totalPages - 1
-          ? '<br clear="all" style="mso-special-character:line-break; page-break-before:always;" />'
+          ? '<p style="page-break-before:always; margin:0; padding:0; font-size:1pt; line-height:1pt;"><span style="mso-special-character:page-break;">&nbsp;</span></p>'
           : '';
 
       return `

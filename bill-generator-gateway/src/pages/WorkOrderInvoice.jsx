@@ -76,7 +76,7 @@ const EditableField = ({
   );
 };
 
-const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeight, continuedHeight, maxPageHeight = 1240) => {
+const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeight, continuedHeight, maxPageHeight = 1140) => {
   const n = rowHeights.length;
   if (n === 0) return [[]];
 
@@ -92,18 +92,25 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
   while (currentIndex < n) {
     const isFirstPage = pages.length === 0;
     const pageItems = [];
-    let currentHeight = isFirstPage ? (headerHeight + tableHeadHeight) : (tableHeadHeight + 40);
+    let currentHeight = isFirstPage ? (headerHeight + tableHeadHeight) : (tableHeadHeight + 20);
 
     const remainingCount = n - currentIndex;
 
+    // Dynamic footer height for final page (compact spacing when more items are present):
+    const effectiveFooterHeight = remainingCount >= 8 
+      ? Math.max(260, footerHeight - 64) 
+      : remainingCount >= 5 
+        ? Math.max(290, footerHeight - 32) 
+        : footerHeight;
+
     // Check if ALL remaining items fit on this page with the footer:
-    let remainingTotalHeight = footerHeight;
+    let remainingItemsHeight = 0;
     for (let r = currentIndex; r < n; r++) {
-      remainingTotalHeight += rowHeights[r];
+      remainingItemsHeight += rowHeights[r];
     }
 
-    if (remainingCount <= (isFirstPage ? 4 : 5) && currentHeight + remainingTotalHeight <= maxPageHeight) {
-      // All remaining items fit on this page!
+    if (currentHeight + remainingItemsHeight + effectiveFooterHeight <= maxPageHeight) {
+      // All remaining items fit on this page with amounts + signature on the same page!
       for (let r = currentIndex; r < n; r++) {
         pageItems.push(r);
       }
@@ -112,8 +119,9 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
     }
 
     // Otherwise, this page must continue to the next page.
-    // Ensure we leave at least 1 item for the subsequent page.
-    const maxItemsThisPage = Math.min(isFirstPage ? 6 : 7, Math.max(1, remainingCount - 1));
+    // Page 1 gets up to 6 items to comfortably fit with the ONGC header.
+    // Subsequent pages fill with as many items as fit, ensuring at least 1 item is left for the final page.
+    const maxItemsThisPage = isFirstPage ? 6 : Math.max(1, remainingCount - 1);
 
     while (currentIndex < n && pageItems.length < maxItemsThisPage) {
       const nextRowHeight = rowHeights[currentIndex];
@@ -148,29 +156,21 @@ const getInvoicePages = (items) => {
     return [items];
   }
 
-  // If 5 to 24 items, standard items can fit cleanly across 2 pages:
-  if (total <= 11) {
-    const page1Count = Math.min(6, Math.ceil(total / 2));
-    return [
-      items.slice(0, page1Count),
-      items.slice(page1Count)
-    ];
-  }
-
-  // For 25 or more items:
-  // Page 1 gets up to 13 items
+  // Multi-page: Page 1 gets up to 6 items to fit cleanly with the ONGC header
   const pages = [items.slice(0, 6)];
   let remaining = items.slice(6);
 
   while (remaining.length > 0) {
-    if (remaining.length <= 5) {
+    // If remaining items can fit on the final page together with footer (up to 8 items):
+    if (remaining.length <= 8) {
       pages.push(remaining);
-      remaining = [];
-    } else {
-      const chunk = Math.min(7, remaining.length - 1);
-      pages.push(remaining.slice(0, chunk));
-      remaining = remaining.slice(chunk);
+      break;
     }
+
+    // Otherwise, fill this continuation page (up to 12 items, leaving at least 1 for the final page)
+    const chunk = Math.min(12, remaining.length - 1);
+    pages.push(remaining.slice(0, chunk));
+    remaining = remaining.slice(chunk);
   }
 
   return pages;
@@ -740,7 +740,7 @@ const WorkOrderInvoice = () => {
                         </Table>
                       </TableContainer>
                     </Box>
-                    <Box sx={{ p: 2, pt: 1, mt: 16, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+                    <Box sx={{ p: 2, pt: 1, mt: pageItems.length >= 8 ? 4 : pageItems.length >= 5 ? 8 : 14, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
                       <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
                         केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
                       </Typography>
@@ -927,7 +927,7 @@ const WorkOrderInvoice = () => {
               </Table>
             </TableContainer>
           </Box>
-          <Box sx={{ p: 2, pt: 1, mt: 16, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
+          <Box sx={{ p: 2, pt: 1, mt: selectedItems.length >= 8 ? 4 : selectedItems.length >= 5 ? 8 : 14, mb: 4, pr: 4, textAlign: 'center', paddingLeft: '55%' }}>
             <Typography variant="body2" sx={{ fontFamily: 'Mangal, Arial, sans-serif', fontSize: '1.05rem', lineHeight: 1.6, color: '#000' }}>
               केलिए<br/>निगमित संचार विभाग<br/>पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>बीकेसी-बांद्रा-ईस्ट-मुंबई
             </Typography>
