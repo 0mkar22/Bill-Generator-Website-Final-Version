@@ -89,6 +89,7 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '<meta name="ProgId" content="Word.Document">',
     '<meta name="Generator" content="Microsoft Word 15">',
     '<meta name="Originator" content="Microsoft Word 15">',
+    '<?mso-application progid="Word.Document"?>',
     `<title>${escapeHtml(title)}</title>`,
     '<!--[if gte mso 9]><xml>',
     ' <w:WordDocument>',
@@ -100,6 +101,7 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '<style>',
     '  @page {',
     '    size: 595.3pt 841.9pt;',
+    '    mso-page-orientation: portrait;',
     '    margin: 22.0pt 26.0pt 22.0pt 26.0pt;',
     '    mso-header-margin: 0pt;',
     '    mso-footer-margin: 0pt;',
@@ -118,6 +120,7 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     '  }',
     '  @page WordSection1 {',
     '    size: 595.3pt 841.9pt;',
+    '    mso-page-orientation: portrait;',
     '    margin: 22.0pt 26.0pt 22.0pt 26.0pt;',
     '    mso-header-margin: 0pt;',
     '    mso-footer-margin: 0pt;',
@@ -248,6 +251,7 @@ const getItemRate = (item, companyDetails) => {
 };
 
 export const exportWorkOrderToWord = async ({
+  invoicePages,
   selectedItems,
   companyDetails,
   parentOrder,
@@ -263,6 +267,37 @@ export const exportWorkOrderToWord = async ({
 }) => {
   const ongcLogo = await loadImageAsMimePart('/ONGC logo.png', 1, { targetHeightPx: 88, maxWidthPx: 140 });
   const mimeImages = [ongcLogo].filter(Boolean);
+
+  const buildWordSafePages = (items) => {
+    const n = items.length;
+    if (n === 0) return [[]];
+    if (n <= 4) return [items];
+    if (n <= 12) {
+      const p1 = Math.min(6, Math.ceil(n / 2));
+      return [items.slice(0, p1), items.slice(p1)];
+    }
+    const pages = [items.slice(0, 6)];
+    let rem = items.slice(6);
+    while (rem.length > 0) {
+      if (rem.length <= 8) {
+        pages.push(rem);
+        break;
+      }
+      if (rem.length <= 15) {
+        const chunk = Math.ceil(rem.length / 2);
+        pages.push(rem.slice(0, chunk));
+        rem = rem.slice(chunk);
+      } else {
+        const chunk = Math.min(11, rem.length - 8);
+        pages.push(rem.slice(0, chunk));
+        rem = rem.slice(chunk);
+      }
+    }
+    return pages;
+  };
+
+  const effectivePages = buildWordSafePages(selectedItems);
+  const totalPages = effectivePages.length;
 
   const sameEventAndVenue =
     selectedItems.length > 0 &&
@@ -281,207 +316,238 @@ export const exportWorkOrderToWord = async ({
       ? 'विविध ठिकाणी विविध कार्यक्रमांसाठी.'
       : 'For Various events at various places.';
 
-  const headerBlockHtml = `
-    <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-bottom:6pt;">
-      <tr style="page-break-inside:avoid;">
-        <td align="center" style="border:none; border-bottom:1pt solid #000000; padding:4pt 8pt 6pt 8pt; text-align:center;">
-          ${
-            ongcLogo
-              ? `<div align="center" style="text-align:center; margin-bottom:4pt;"><img src="${ongcLogo.contentLocation}" width="${ongcLogo.width}" height="${ongcLogo.height}" alt="ONGC Logo" style="width:${ongcLogo.width}px; height:${ongcLogo.height}px;" /></div>`
-              : ''
-          }
-          <div style="font-weight:bold; font-size:11pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">निगमित संचार विभाग</div>
-          <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</div>
-          <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</div>
-          <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">बांद्रा (ईस्ट) , मुंबई - ४०००५१</div>
-          <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">दूरभाष: 022-26274105 /4134 &nbsp;email : ongcmumbaice@ongc.co.in</div>
-        </td>
-      </tr>
-    </table>
-  `;
+  const pagesHtml = effectivePages
+    .map((pageItems, pageIdx) => {
+      const isFirstPage = pageIdx === 0;
+      const isLastPage = pageIdx === totalPages - 1;
 
-  const introBlockHtml = `
-    <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-bottom:6pt;">
-      <tr style="page-break-inside:avoid;">
-        <td align="left" style="border:none; padding:0; font-size:9.5pt; font-weight:bold; text-align:left; font-family:Mangal, Arial, sans-serif;">
-          सं. प.अ.क्षे.का./नि.सं./ ${escapeHtml(invoiceNumber || '')}
-        </td>
-        <td align="right" style="border:none; padding:0; font-size:9.5pt; text-align:right; font-family:Arial, sans-serif;">
-          DT: ${escapeHtml(invoiceDate || '')}
-        </td>
-      </tr>
-    </table>
-
-    <div style="font-size:9.5pt; line-height:1.3; margin-bottom:8pt; font-family:Arial, sans-serif;">
-      To,<br/>
-      ${escapeHtml(parentOrder?.vendor || '')}<br/>
-      21, Nilkanth Apartment, Samata Nagar,<br/>
-      Pokharan Road No. 1, Thane (W) 400606
-    </div>
-
-    <div align="center" style="text-align:center; margin-top:6pt; margin-bottom:8pt;">
-      <span style="font-size:12.5pt; font-weight:bold; text-decoration:underline; font-family:Arial, sans-serif;">
-        Work Order${isPO ? ` PO No. ${escapeHtml(poNumber || '')}` : ''}
-      </span>
-    </div>
-
-    <div style="font-size:9pt; margin-bottom:5pt; font-family:Arial, sans-serif;">
-      The Following Photography Assignment Is Assigned To Your Agency.
-    </div>
-  `;
-
-  const itemRowsHtml = selectedItems
-    .map((item, globalIdx) => {
-      const amount = calculateItemAmount(item, companyDetails);
-      const rate = getItemRate(item, companyDetails);
-      const quantity = item.quantity || 1;
-      const dimensionsText = getItemDimensionsText(item, quantity);
-
-      const workMainLabel = item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A';
-      const workSubLabel = item.workSub
-        ? isVidhanMandal
-          ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}`
-          : item.workMain === 'Photo_Print' || item.workMain === 'Storage'
-            ? `Size : ${item.workSub.replaceAll('_', ' ')}`
-            : `Duration : ${item.workSub.replaceAll('_', ' ')}`
+      const headerBlockHtml = isFirstPage
+        ? `
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-bottom:6pt;">
+            <tr style="page-break-inside:avoid;">
+              <td align="center" style="border:none; border-bottom:1pt solid #000000; padding:4pt 8pt 6pt 8pt; text-align:center;">
+                ${
+                  ongcLogo
+                    ? `<div align="center" style="text-align:center; margin-bottom:4pt;"><img src="${ongcLogo.contentLocation}" width="${ongcLogo.width}" height="${ongcLogo.height}" alt="ONGC Logo" style="width:${ongcLogo.width}px; height:${ongcLogo.height}px;" /></div>`
+                    : ''
+                }
+                <div style="font-weight:bold; font-size:11pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">निगमित संचार विभाग</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">बांद्रा (ईस्ट) , मुंबई - ४०००५१</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">दूरभाष: 022-26274105 /4134 &nbsp;email : ongcmumbaice@ongc.co.in</div>
+              </td>
+            </tr>
+          </table>
+        `
         : '';
-      const dateLine = isVidhanMandal
-        ? `कामाचा दिनांक: ${getOrderDateRange(item, 'ते')}`
-        : `dt. ${getOrderDateRange(item)}`;
-      const eventLine = isVidhanMandal
-        ? `कामाचे नांव: ${item.eventName || ''}`
-        : `For ${item.eventName || ''}`;
-      const venueVal = item.eventVenue === 'Others' ? item.customVenue : item.eventVenue;
-      const venueLine = isVidhanMandal
-        ? `कामाचे स्थळ: ${venueVal || ''}`
-        : `at ${venueVal || ''}`;
+
+      const introBlockHtml = isFirstPage
+        ? `
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-bottom:6pt;">
+            <tr style="page-break-inside:avoid;">
+              <td align="left" style="border:none; padding:0; font-size:9.5pt; font-weight:bold; text-align:left; font-family:Mangal, Arial, sans-serif;">
+                सं. प.अ.क्षे.का./नि.सं./ ${escapeHtml(invoiceNumber || '')}
+              </td>
+              <td align="right" style="border:none; padding:0; font-size:9.5pt; text-align:right; font-family:Arial, sans-serif;">
+                DT: ${escapeHtml(invoiceDate || '')}
+              </td>
+            </tr>
+          </table>
+
+          <div style="font-size:9.5pt; line-height:1.3; margin-bottom:8pt; font-family:Arial, sans-serif;">
+            To,<br/>
+            ${escapeHtml(parentOrder?.vendor || '')}<br/>
+            21, Nilkanth Apartment, Samata Nagar,<br/>
+            Pokharan Road No. 1, Thane (W) 400606
+          </div>
+
+          <div align="center" style="text-align:center; margin-top:6pt; margin-bottom:8pt;">
+            <span style="font-size:12.5pt; font-weight:bold; text-decoration:underline; font-family:Arial, sans-serif;">
+              Work Order${isPO ? ` PO No. ${escapeHtml(poNumber || '')}` : ''}
+            </span>
+          </div>
+
+          <div style="font-size:9pt; margin-bottom:5pt; font-family:Arial, sans-serif;">
+            The Following Photography Assignment Is Assigned To Your Agency.
+          </div>
+        `
+        : '';
+
+      const itemRowsHtml = pageItems
+        .map((item) => {
+          const globalIdx = selectedItems.indexOf(item);
+          const amount = calculateItemAmount(item, companyDetails);
+          const rate = getItemRate(item, companyDetails);
+          const quantity = item.quantity || 1;
+          const dimensionsText = getItemDimensionsText(item, quantity);
+
+          const workMainLabel = item.workMain ? item.workMain.replaceAll('_', ' ') : 'N/A';
+          const workSubLabel = item.workSub
+            ? isVidhanMandal
+              ? `कामाचे प्रकार : ${item.workSub.replaceAll('_', ' ')}`
+              : item.workMain === 'Photo_Print' || item.workMain === 'Storage'
+                ? `Size : ${item.workSub.replaceAll('_', ' ')}`
+                : `Duration : ${item.workSub.replaceAll('_', ' ')}`
+            : '';
+          const dateLine = isVidhanMandal
+            ? `कामाचा दिनांक: ${getOrderDateRange(item, 'ते')}`
+            : `dt. ${getOrderDateRange(item)}`;
+          const eventLine = isVidhanMandal
+            ? `कामाचे नांव: ${item.eventName || ''}`
+            : `For ${item.eventName || ''}`;
+          const venueVal = item.eventVenue === 'Others' ? item.customVenue : item.eventVenue;
+          const venueLine = isVidhanMandal
+            ? `कामाचे स्थळ: ${venueVal || ''}`
+            : `at ${venueVal || ''}`;
+
+          return `
+            <tr style="page-break-inside:avoid; mso-row-margin-left:0pt;">
+              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; page-break-inside:avoid;">${globalIdx + 1}</p>
+              </td>
+              <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="font-weight:bold; margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(workMainLabel)}</p>
+                ${workSubLabel || dimensionsText ? `<p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(workSubLabel + dimensionsText)}</p>` : ''}
+                <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(dateLine)}</p>
+                <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(eventLine)}</p>
+                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(venueLine)}</p>
+              </td>
+              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(quantity)}</p>
+              </td>
+              <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; page-break-inside:avoid;">${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      const continuedRowHtml = !isLastPage
+        ? `
+          <tr style="page-break-inside:avoid;">
+            <td colspan="5" align="right" style="border:1pt solid #000000; padding:4pt 6pt; text-align:right; font-style:italic; font-weight:bold; background-color:#fcfcfc; font-size:9pt;">
+              ${isVidhanMandal ? `(पुढे चालू - पान ${pageIdx + 2})` : `(Continued on Page ${pageIdx + 2}...)`}
+            </td>
+          </tr>
+        `
+        : '';
+
+      const footerSectionHtml = isLastPage
+        ? `
+          <p style="margin:0; font-size:5pt; line-height:5pt;">&nbsp;</p>
+          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+            <tr style="page-break-inside:avoid;">
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
+                Total Cost
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
+                ${escapeHtml(totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              </td>
+            </tr>
+            <tr style="page-break-inside:avoid;">
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
+                CGST 9%
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
+                ${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              </td>
+            </tr>
+            <tr style="page-break-inside:avoid;">
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
+                SGST 9%
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
+                ${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              </td>
+            </tr>
+            <tr style="page-break-inside:avoid;">
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
+                Total
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
+                ${escapeHtml(totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              </td>
+            </tr>
+            <tr style="page-break-inside:avoid;">
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
+                ${escapeHtml(`Round Up Rs. (${numberToWords(roundedTotal)})`)}
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
+                ${escapeHtml(roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              </td>
+            </tr>
+          </table>
+
+          <p style="margin:0; font-size:5pt; line-height:5pt;">&nbsp;</p>
+          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+            <tr style="page-break-inside:avoid;">
+              <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
+                ${isVidhanMandal ? 'कामाचे नांव' : 'Event'}
+              </td>
+              <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:3pt 5pt; text-align:left;">
+                ${escapeHtml(eventSummaryText)}
+              </td>
+            </tr>
+            <tr style="page-break-inside:avoid;">
+              <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
+                ${isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}
+              </td>
+              <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:3pt 5pt; text-align:left;">
+                ${escapeHtml(uniqueDates.join(', '))}
+              </td>
+            </tr>
+          </table>
+
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:60pt; margin-bottom:8pt;">
+            <tr style="page-break-inside:avoid;">
+              <td width="55%" style="width:55%; border:none;">&nbsp;</td>
+              <td width="45%" align="center" style="width:45%; border:none; text-align:center; font-family:Mangal, Arial, sans-serif; font-size:10pt; line-height:1.55;">
+                केलिए<br/>
+                निगमित संचार विभाग<br/>
+                पहिली मंजिल, एनबीपी ग्रीन हाइट्स,<br/>
+                बीकेसी-बांद्रा-ईस्ट-मुंबई
+              </td>
+            </tr>
+          </table>
+        `
+        : '';
+
+      const pageBreakHtml =
+        pageIdx < totalPages - 1
+          ? '<br clear="all" style="mso-special-character:line-break; page-break-before:always;" />'
+          : '';
 
       return `
-        <tr style="page-break-inside:avoid; mso-row-margin-left:0pt;">
-          <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-            <p style="margin:0; page-break-inside:avoid;">${globalIdx + 1}</p>
-          </td>
-          <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-            <p style="font-weight:bold; margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(workMainLabel)}</p>
-            ${workSubLabel || dimensionsText ? `<p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(workSubLabel + dimensionsText)}</p>` : ''}
-            <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(dateLine)}</p>
-            <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(eventLine)}</p>
-            <p style="margin:0; page-break-inside:avoid;">${escapeHtml(venueLine)}</p>
-          </td>
-          <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-            <p style="margin:0; page-break-inside:avoid;">${escapeHtml(quantity)}</p>
-          </td>
-          <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-            <p style="margin:0; page-break-inside:avoid;">${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-          </td>
-          <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-            <p style="margin:0; page-break-inside:avoid;">${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-          </td>
-        </tr>
+        ${headerBlockHtml}
+        ${introBlockHtml}
+        <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+          <thead>
+            <tr style="page-break-inside:avoid;">
+              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">SR.<br/>NO.</th>
+              <th width="56%" align="center" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'कामाचे स्वरूप' : 'WORK'}</th>
+              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'नग' : 'QTY.'}</th>
+              <th width="13%" align="center" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">RATE</th>
+              <th width="17%" align="center" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'रकम' : 'AMOUNT'}<br/>(RS.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRowsHtml}
+            ${continuedRowHtml}
+          </tbody>
+        </table>
+        ${footerSectionHtml}
+        ${pageBreakHtml}
       `;
     })
-    .join('');
-
-  const footerSectionHtml = `
-    <p style="margin:0; font-size:5pt; line-height:5pt; page-break-after:avoid;">&nbsp;</p>
-    <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
-      <tr style="page-break-inside:avoid;">
-        <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">Total Cost</p>
-        </td>
-        <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-        </td>
-      </tr>
-      <tr style="page-break-inside:avoid;">
-        <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">CGST 9%</p>
-        </td>
-        <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-        </td>
-      </tr>
-      <tr style="page-break-inside:avoid;">
-        <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">SGST 9%</p>
-        </td>
-        <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-        </td>
-      </tr>
-      <tr style="page-break-inside:avoid;">
-        <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">Total</p>
-        </td>
-        <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-        </td>
-      </tr>
-      <tr style="page-break-inside:avoid;">
-        <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid;">${escapeHtml(`Round Up Rs. (${numberToWords(roundedTotal)})`)}</p>
-        </td>
-        <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid;">${escapeHtml(roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
-        </td>
-      </tr>
-    </table>
-
-    <p style="margin:0; font-size:5pt; line-height:5pt; page-break-after:avoid;">&nbsp;</p>
-    <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
-      <tr style="page-break-inside:avoid;">
-        <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${isVidhanMandal ? 'कामाचे नांव' : 'Event'}</p>
-        </td>
-        <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:3pt 5pt; text-align:left;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(eventSummaryText)}</p>
-        </td>
-      </tr>
-      <tr style="page-break-inside:avoid;">
-        <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</p>
-        </td>
-        <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:3pt 5pt; text-align:left;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">${escapeHtml(uniqueDates.join(', '))}</p>
-        </td>
-      </tr>
-    </table>
-
-    <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:28pt; margin-bottom:4pt;">
-      <tr style="page-break-inside:avoid;">
-        <td width="55%" style="width:55%; border:none;">&nbsp;</td>
-        <td width="45%" align="center" style="width:45%; border:none; text-align:center; font-family:Mangal, Arial, sans-serif; font-size:10pt; line-height:1.45;">
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">केलिए</p>
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">निगमित संचार विभाग</p>
-          <p style="margin:0; page-break-inside:avoid; page-break-after:avoid;">पहिली मंजिल, एनबीपी ग्रीन हाइट्स,</p>
-          <p style="margin:0; page-break-inside:avoid;">बीकेसी-बांद्रा-ईस्ट-मुंबई</p>
-        </td>
-      </tr>
-    </table>
-  `;
-
-  const documentHtml = `
-    ${headerBlockHtml}
-    ${introBlockHtml}
-    <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
-      <thead style="display:table-header-group;">
-        <tr style="page-break-inside:avoid;">
-          <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">SR.<br/>NO.</th>
-          <th width="56%" align="center" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'कामाचे स्वरूप' : 'WORK'}</th>
-          <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'नग' : 'QTY.'}</th>
-          <th width="13%" align="center" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">RATE</th>
-          <th width="17%" align="center" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'रकम' : 'AMOUNT'}<br/>(RS.)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemRowsHtml}
-      </tbody>
-    </table>
-    ${footerSectionHtml}
-  `;
+    .join('\r\n');
 
   const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
-  downloadMhtmlWordDoc(documentHtml, mimeImages, `WorkOrder_${safeInvoiceNumber}.doc`, 'Work Order Invoice');
+  downloadMhtmlWordDoc(pagesHtml, mimeImages, `WorkOrder_${safeInvoiceNumber}.doc`, 'Work Order Invoice');
 };
 
 export const exportVendorInvoiceToWord = async ({
