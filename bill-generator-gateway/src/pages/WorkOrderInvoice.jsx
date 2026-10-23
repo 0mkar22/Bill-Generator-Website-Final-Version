@@ -82,7 +82,7 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
 
   // 1. Check if everything fits cleanly on a single page:
   const singlePageNeeded = headerHeight + tableHeadHeight + rowHeights.reduce((a, b) => a + b, 0) + footerHeight;
-  if (singlePageNeeded <= maxPageHeight) {
+  if (n <= 4 && singlePageNeeded <= maxPageHeight) {
     return [Array.from({ length: n }, (_, i) => i)];
   }
 
@@ -102,7 +102,7 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
       remainingTotalHeight += rowHeights[r];
     }
 
-    if (currentHeight + remainingTotalHeight <= maxPageHeight) {
+    if (remainingCount <= (isFirstPage ? 4 : 5) && currentHeight + remainingTotalHeight <= maxPageHeight) {
       // All remaining items fit on this page!
       for (let r = currentIndex; r < n; r++) {
         pageItems.push(r);
@@ -113,7 +113,7 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
 
     // Otherwise, this page must continue to the next page.
     // Ensure we leave at least 1 item for the subsequent page.
-    const maxItemsThisPage = Math.max(1, remainingCount - 1);
+    const maxItemsThisPage = Math.min(isFirstPage ? 6 : 7, Math.max(1, remainingCount - 1));
 
     while (currentIndex < n && pageItems.length < maxItemsThisPage) {
       const nextRowHeight = rowHeights[currentIndex];
@@ -149,8 +149,8 @@ const getInvoicePages = (items) => {
   }
 
   // If 5 to 24 items, standard items can fit cleanly across 2 pages:
-  if (total <= 24) {
-    const page1Count = Math.min(13, Math.ceil(total / 2));
+  if (total <= 11) {
+    const page1Count = Math.min(6, Math.ceil(total / 2));
     return [
       items.slice(0, page1Count),
       items.slice(page1Count)
@@ -159,15 +159,15 @@ const getInvoicePages = (items) => {
 
   // For 25 or more items:
   // Page 1 gets up to 13 items
-  const pages = [items.slice(0, 13)];
-  let remaining = items.slice(13);
+  const pages = [items.slice(0, 6)];
+  let remaining = items.slice(6);
 
   while (remaining.length > 0) {
-    if (remaining.length <= 13) {
+    if (remaining.length <= 5) {
       pages.push(remaining);
       remaining = [];
     } else {
-      const chunk = Math.min(15, remaining.length - 2);
+      const chunk = Math.min(7, remaining.length - 1);
       pages.push(remaining.slice(0, chunk));
       remaining = remaining.slice(chunk);
     }

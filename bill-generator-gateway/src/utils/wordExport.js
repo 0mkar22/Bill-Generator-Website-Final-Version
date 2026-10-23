@@ -98,11 +98,41 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
     ' </w:WordDocument>',
     '</xml><![endif]-->',
     '<style>',
-    '  @page WordSection1 {',
+    '  @page {',
     '    size: 595.3pt 841.9pt;',
-    '    margin: 14.0pt 18.0pt 14.0pt 18.0pt;',
+    '    margin: 22.0pt 26.0pt 22.0pt 26.0pt;',
     '    mso-header-margin: 0pt;',
     '    mso-footer-margin: 0pt;',
+    '    border: 1.5pt solid #000000;',
+    '    mso-border-top-alt: solid black 1.5pt;',
+    '    mso-border-bottom-alt: solid black 1.5pt;',
+    '    mso-border-left-alt: solid black 1.5pt;',
+    '    mso-border-right-alt: solid black 1.5pt;',
+    '    mso-page-border-surround-header: yes;',
+    '    mso-page-border-surround-footer: yes;',
+    '    mso-page-border-offset-from: page;',
+    '    mso-page-border-top-distance: 14.0pt;',
+    '    mso-page-border-left-distance: 16.0pt;',
+    '    mso-page-border-bottom-distance: 14.0pt;',
+    '    mso-page-border-right-distance: 16.0pt;',
+    '  }',
+    '  @page WordSection1 {',
+    '    size: 595.3pt 841.9pt;',
+    '    margin: 22.0pt 26.0pt 22.0pt 26.0pt;',
+    '    mso-header-margin: 0pt;',
+    '    mso-footer-margin: 0pt;',
+    '    border: 1.5pt solid #000000;',
+    '    mso-border-top-alt: solid black 1.5pt;',
+    '    mso-border-bottom-alt: solid black 1.5pt;',
+    '    mso-border-left-alt: solid black 1.5pt;',
+    '    mso-border-right-alt: solid black 1.5pt;',
+    '    mso-page-border-surround-header: yes;',
+    '    mso-page-border-surround-footer: yes;',
+    '    mso-page-border-offset-from: page;',
+    '    mso-page-border-top-distance: 14.0pt;',
+    '    mso-page-border-left-distance: 16.0pt;',
+    '    mso-page-border-bottom-distance: 14.0pt;',
+    '    mso-page-border-right-distance: 16.0pt;',
     '  }',
     '  div.WordSection1 { page: WordSection1; }',
     '  body {',
@@ -227,7 +257,34 @@ export const exportWorkOrderToWord = async ({
 }) => {
   const ongcLogo = await loadImageAsMimePart('/ONGC logo.png', 1, { targetHeightPx: 88, maxWidthPx: 140 });
   const mimeImages = [ongcLogo].filter(Boolean);
-  const totalPages = invoicePages.length;
+
+  // Ensure Word pagination never exceeds 6 items on Page 1, 7 on middle pages, 5 on the last page:
+  const buildWordSafePages = (items) => {
+    if (!items || items.length === 0) return [[]];
+    if (items.length <= 4) return [items];
+    const pages = [items.slice(0, 6)];
+    let rem = items.slice(6);
+    while (rem.length > 0) {
+      if (rem.length <= 5) {
+        pages.push(rem);
+        rem = [];
+      } else {
+        const chunk = Math.min(7, rem.length - 1);
+        pages.push(rem.slice(0, chunk));
+        rem = rem.slice(chunk);
+      }
+    }
+    return pages;
+  };
+
+  const needsRepagination =
+    !invoicePages ||
+    invoicePages.length === 0 ||
+    invoicePages[0].length > 6 ||
+    invoicePages.some((p, i) => (i === invoicePages.length - 1 ? p.length > 5 : i > 0 && p.length > 7));
+
+  const effectivePages = needsRepagination ? buildWordSafePages(selectedItems) : invoicePages;
+  const totalPages = effectivePages.length;
 
   const sameEventAndVenue =
     selectedItems.length > 0 &&
@@ -246,27 +303,29 @@ export const exportWorkOrderToWord = async ({
       ? 'विविध ठिकाणी विविध कार्यक्रमांसाठी.'
       : 'For Various events at various places.';
 
-  const pagesHtml = invoicePages
+  const pagesHtml = effectivePages
     .map((pageItems, pageIdx) => {
       const isFirstPage = pageIdx === 0;
       const isLastPage = pageIdx === totalPages - 1;
 
-      const headerRowHtml = isFirstPage
+      const headerBlockHtml = isFirstPage
         ? `
-          <tr style="page-break-inside:avoid;">
-            <td align="center" style="border-top:1.5pt solid #000000; border-left:1.5pt solid #000000; border-right:1.5pt solid #000000; border-bottom:1pt solid #000000; padding:6pt 10pt; text-align:center;">
-              ${
-                ongcLogo
-                  ? `<div align="center" style="text-align:center; margin-bottom:4pt;"><img src="${ongcLogo.contentLocation}" width="${ongcLogo.width}" height="${ongcLogo.height}" alt="ONGC Logo" style="width:${ongcLogo.width}px; height:${ongcLogo.height}px;" /></div>`
-                  : ''
-              }
-              <div style="font-weight:bold; font-size:11pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">निगमित संचार विभाग</div>
-              <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</div>
-              <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</div>
-              <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">बांद्रा (ईस्ट) , मुंबई - ४०००५१</div>
-              <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">दूरभाष: 022-26274105 /4134 &nbsp;email : ongcmumbaice@ongc.co.in</div>
-            </td>
-          </tr>
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-bottom:6pt;">
+            <tr style="page-break-inside:avoid;">
+              <td align="center" style="border:none; border-bottom:1pt solid #000000; padding:4pt 8pt 6pt 8pt; text-align:center;">
+                ${
+                  ongcLogo
+                    ? `<div align="center" style="text-align:center; margin-bottom:4pt;"><img src="${ongcLogo.contentLocation}" width="${ongcLogo.width}" height="${ongcLogo.height}" alt="ONGC Logo" style="width:${ongcLogo.width}px; height:${ongcLogo.height}px;" /></div>`
+                    : ''
+                }
+                <div style="font-weight:bold; font-size:11pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">निगमित संचार विभाग</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">बांद्रा (ईस्ट) , मुंबई - ४०००५१</div>
+                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">दूरभाष: 022-26274105 /4134 &nbsp;email : ongcmumbaice@ongc.co.in</div>
+              </td>
+            </tr>
+          </table>
         `
         : '';
 
@@ -331,23 +390,23 @@ export const exportWorkOrderToWord = async ({
 
           return `
             <tr style="page-break-inside:avoid;">
-              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt; mso-line-height-rule:exactly;">
+              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
                 ${globalIdx + 1}
               </td>
-              <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt; mso-line-height-rule:exactly;">
-                <span style="font-weight:bold;">${escapeHtml(workMainLabel)}</span><br/>
-                ${workSubLabel || dimensionsText ? `${escapeHtml(workSubLabel + dimensionsText)}<br/>` : ''}
-                ${escapeHtml(dateLine)}<br/>
-                ${escapeHtml(eventLine)}<br/>
-                ${escapeHtml(venueLine)}
+              <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <div style="font-weight:bold; margin:0;">${escapeHtml(workMainLabel)}</div>
+                ${workSubLabel || dimensionsText ? `<div style="margin:0;">${escapeHtml(workSubLabel + dimensionsText)}</div>` : ''}
+                <div style="margin:0;">${escapeHtml(dateLine)}</div>
+                <div style="margin:0;">${escapeHtml(eventLine)}</div>
+                <div style="margin:0;">${escapeHtml(venueLine)}</div>
               </td>
-              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt; mso-line-height-rule:exactly;">
+              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
                 ${escapeHtml(quantity)}
               </td>
-              <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt; mso-line-height-rule:exactly;">
+              <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
                 ${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
               </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt; mso-line-height-rule:exactly;">
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
                 ${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
               </td>
             </tr>
@@ -365,10 +424,12 @@ export const exportWorkOrderToWord = async ({
         `
         : '';
 
+      const sigMarginTopPt = pageItems.length >= 5 ? 14 : pageItems.length >= 3 ? 28 : 48;
+
       const footerSectionHtml = isLastPage
         ? `
           <p style="margin:0; font-size:5pt; line-height:5pt;">&nbsp;</p>
-          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
             <tr style="page-break-inside:avoid;">
               <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
                 Total Cost
@@ -412,7 +473,7 @@ export const exportWorkOrderToWord = async ({
           </table>
 
           <p style="margin:0; font-size:5pt; line-height:5pt;">&nbsp;</p>
-          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
             <tr style="page-break-inside:avoid;">
               <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
                 ${isVidhanMandal ? 'कामाचे नांव' : 'Event'}
@@ -431,7 +492,7 @@ export const exportWorkOrderToWord = async ({
             </tr>
           </table>
 
-          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:55pt; margin-bottom:10pt;">
+          <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:none; margin-top:${sigMarginTopPt}pt; margin-bottom:4pt;">
             <tr style="page-break-inside:avoid;">
               <td width="55%" style="width:55%; border:none;">&nbsp;</td>
               <td width="45%" align="center" style="width:45%; border:none; text-align:center; font-family:Mangal, Arial, sans-serif; font-size:10pt; line-height:1.45;">
@@ -447,38 +508,28 @@ export const exportWorkOrderToWord = async ({
 
       const pageBreakHtml =
         pageIdx < totalPages - 1
-          ? '<p style="page-break-before:always; margin:0; padding:0; font-size:1pt; line-height:1pt;">&nbsp;</p>'
+          ? '<br clear="all" style="mso-special-character:line-break; page-break-before:always;" />'
           : '';
 
-      const outerBodyCellBorders = isFirstPage
-        ? 'border-top:none; border-left:1.5pt solid #000000; border-right:1.5pt solid #000000; border-bottom:1.5pt solid #000000;'
-        : 'border:1.5pt solid #000000;';
-
       return `
-        <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1.5pt solid #000000; background-color:#ffffff;">
-          ${headerRowHtml}
-          <tr>
-            <td valign="top" style="${outerBodyCellBorders} padding:8pt 10pt 10pt 10pt; vertical-align:top;">
-              ${introBlockHtml}
-              <table width="100%" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
-                <thead>
-                  <tr style="page-break-inside:avoid;">
-                    <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">SR.<br/>NO.</th>
-                    <th width="56%" align="center" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'कामाचे स्वरूप' : 'WORK'}</th>
-                    <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'नग' : 'QTY.'}</th>
-                    <th width="13%" align="center" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">RATE</th>
-                    <th width="17%" align="center" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'रकम' : 'AMOUNT'}<br/>(RS.)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${itemRowsHtml}
-                  ${continuedRowHtml}
-                </tbody>
-              </table>
-              ${footerSectionHtml}
-            </td>
-          </tr>
+        ${headerBlockHtml}
+        ${introBlockHtml}
+        <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+          <thead>
+            <tr style="page-break-inside:avoid;">
+              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">SR.<br/>NO.</th>
+              <th width="56%" align="center" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'कामाचे स्वरूप' : 'WORK'}</th>
+              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'नग' : 'QTY.'}</th>
+              <th width="13%" align="center" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">RATE</th>
+              <th width="17%" align="center" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'रकम' : 'AMOUNT'}<br/>(RS.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRowsHtml}
+            ${continuedRowHtml}
+          </tbody>
         </table>
+        ${footerSectionHtml}
         ${pageBreakHtml}
       `;
     })
@@ -522,11 +573,12 @@ export const exportVendorInvoiceToWord = async ({
     : null;
 
   const mimeImages = [companyLogo, signatureImg, stampImg].filter(Boolean);
-  const totalPages = invoicePages.length;
+  const effectivePages = invoicePages;
+  const totalPages = effectivePages.length;
   const addressText = companyDetails?.address || parentOrder?.companyDetails?.address || '';
   const addressHtml = escapeHtml(addressText).replace(/\r?\n/g, '<br/>');
 
-  const pagesHtml = invoicePages
+  const pagesHtml = effectivePages
     .map((pageItems, pageIdx) => {
       const isFirstPage = pageIdx === 0;
       const isLastPage = pageIdx === totalPages - 1;
