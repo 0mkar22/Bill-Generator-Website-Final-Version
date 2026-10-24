@@ -1,3 +1,4 @@
+import JSZip from 'jszip';
 import {
   calculateItemAmount,
   numberToWords,
@@ -76,7 +77,7 @@ export const loadImageAsMimePart = async (srcUrl, index, { targetHeightPx = 90, 
   }
 };
 
-export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invoice.doc', title = 'Invoice') => {
+export const downloadMhtmlWordDoc = async (bodyHtml, mimeImages = [], filename = 'Invoice.docx', title = 'Invoice') => {
   const boundary = '----=_NextPart_BillGenerator_WordDoc';
   const fullHtml = [
     '<html xmlns:v="urn:schemas-microsoft-com:vml"',
@@ -190,11 +191,64 @@ export const downloadMhtmlWordDoc = (bodyHtml, mimeImages = [], filename = 'Invo
   mhtmlParts.push(`--${boundary}--`, '');
 
   const mhtmlContent = mhtmlParts.join('\r\n');
-  const blob = new Blob([mhtmlContent], { type: 'application/msword;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
+
+  // Package as a native OpenXML .docx archive with altChunk to guarantee Print Layout on save:
+  const zip = new JSZip();
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="mht" ContentType="message/rfc822"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+</Types>`;
+
+  const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const documentXmlRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rChunk1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk" Target="afchunk.mht"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+</Relationships>`;
+
+  const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:view w:val="print"/>
+  <w:zoom w:percent="100"/>
+  <w:doNotShredHTML/>
+</w:settings>`;
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:altChunk r:id="rChunk1"/>
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="440" w:right="520" w:bottom="440" w:left="520" w:header="0" w:footer="0" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+  zip.file('[Content_Types].xml', contentTypesXml);
+  zip.file('_rels/.rels', rootRelsXml);
+  zip.folder('word').file('document.xml', documentXml);
+  zip.folder('word').file('settings.xml', settingsXml);
+  zip.folder('word').folder('_rels').file('document.xml.rels', documentXmlRels);
+  zip.folder('word').file('afchunk.mht', mhtmlContent);
+
+  const docxBlob = await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+
+  const url = URL.createObjectURL(docxBlob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = filename.endsWith('.docx') ? filename : filename.replace(/\.doc$/, '.docx');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -314,11 +368,13 @@ export const exportWorkOrderToWord = async ({
                     ? `<div align="center" style="text-align:center; margin-bottom:4pt;"><img src="${ongcLogo.contentLocation}" width="${ongcLogo.width}" height="${ongcLogo.height}" alt="ONGC Logo" style="width:${ongcLogo.width}px; height:${ongcLogo.height}px;" /></div>`
                     : ''
                 }
-                <div style="font-weight:bold; font-size:11pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">निगमित संचार विभाग</div>
-                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</div>
-                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</div>
-                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">बांद्रा (ईस्ट) , मुंबई - ४०००५१</div>
-                <div style="font-size:9.5pt; line-height:1.25; font-family:Mangal, Arial, sans-serif;">दूरभाष: 022-26274105 /4134 &nbsp;email : ongcmumbaice@ongc.co.in</div>
+                <p style="margin:0; padding:0; margin-top:0pt; margin-bottom:0pt; mso-para-margin-top:0pt; mso-para-margin-bottom:0pt; line-height:13pt; mso-line-height-rule:exactly; font-family:Mangal, Arial, sans-serif; text-align:center;">
+                  <span style="font-weight:bold; font-size:11pt;">निगमित संचार विभाग</span><br/>
+                  <span style="font-size:9.5pt;">पहिली मंजिल, एनबीपी ग्रीन हाईट्स,</span><br/>
+                  <span style="font-size:9.5pt;">क्षेत्रीय कार्यालय, ओएनजीसी बांद्रा कुर्ला कॉम्प्लेक्स</span><br/>
+                  <span style="font-size:9.5pt;">बांद्रा (ईस्ट) , मुंबई - ४०००५१</span><br/>
+                  <span style="font-size:9.5pt;">दूरभाष: 022-26274105 /4134 &nbsp;email : ongcmumbaice@ongc.co.in</span>
+                </p>
               </td>
             </tr>
           </table>
@@ -532,7 +588,7 @@ export const exportWorkOrderToWord = async ({
     .join('\r\n');
 
   const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
-  downloadMhtmlWordDoc(pagesHtml, mimeImages, `WorkOrder_${safeInvoiceNumber}.doc`, 'Work Order Invoice');
+  downloadMhtmlWordDoc(pagesHtml, mimeImages, `WorkOrder_${safeInvoiceNumber}.docx`, 'Work Order Invoice');
 };
 
 export const exportVendorInvoiceToWord = async ({
@@ -1006,5 +1062,5 @@ export const exportVendorInvoiceToWord = async ({
     .join('\r\n');
 
   const safeInvoiceNumber = (invoiceNumber || 'preview').toString().replace(/[\/\\?%*:|"<>]/g, '-');
-  downloadMhtmlWordDoc(pagesHtml, mimeImages, `IcompSystemInvoice_${safeInvoiceNumber}.doc`, 'IcompSystem Invoice');
+  downloadMhtmlWordDoc(pagesHtml, mimeImages, `IcompSystemInvoice_${safeInvoiceNumber}.docx`, 'IcompSystem Invoice');
 };
