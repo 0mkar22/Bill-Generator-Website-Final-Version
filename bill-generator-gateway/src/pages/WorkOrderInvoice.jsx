@@ -121,7 +121,7 @@ const computePageSplits = (rowHeights, headerHeight, tableHeadHeight, footerHeig
     // Otherwise, this page must continue to the next page.
     // Page 1 gets up to 6 items to comfortably fit with the ONGC header.
     // Subsequent pages fill with as many items as fit, ensuring at least 1 item is left for the final page.
-    const maxItemsThisPage = isFirstPage ? 6 : Math.max(1, remainingCount - 1);
+    const maxItemsThisPage = isFirstPage ? 5 : Math.max(1, remainingCount - 1);
 
     while (currentIndex < n && pageItems.length < maxItemsThisPage) {
       const nextRowHeight = rowHeights[currentIndex];
@@ -156,9 +156,9 @@ const getInvoicePages = (items) => {
     return [items];
   }
 
-  // Multi-page: Page 1 gets up to 6 items to fit cleanly with the ONGC header
-  const pages = [items.slice(0, 6)];
-  let remaining = items.slice(6);
+  // Multi-page: Page 1 gets up to 5 items to fit cleanly with the ONGC header
+  const pages = [items.slice(0, 5)];
+  let remaining = items.slice(5);
 
   while (remaining.length > 0) {
     // If remaining items can fit on the final page together with footer (up to 8 items):

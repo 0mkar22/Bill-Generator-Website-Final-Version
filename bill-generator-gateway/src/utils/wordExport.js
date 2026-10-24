@@ -202,6 +202,7 @@ export const downloadMhtmlWordDoc = async (bodyHtml, mimeImages = [], filename =
   <Default Extension="mht" ContentType="message/rfc822"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>`;
 
   const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -213,6 +214,7 @@ export const downloadMhtmlWordDoc = async (bodyHtml, mimeImages = [], filename =
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rChunk1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk" Target="afchunk.mht"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
 
   const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -222,6 +224,23 @@ export const downloadMhtmlWordDoc = async (bodyHtml, mimeImages = [], filename =
   <w:doNotShredHTML/>
 </w:settings>`;
 
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+        <w:sz w:val="18"/>
+      </w:rPr>
+    </w:rPrDefault>
+    <w:pPrDefault>
+      <w:pPr>
+        <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+      </w:pPr>
+    </w:pPrDefault>
+  </w:docDefaults>
+</w:styles>`;
+
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <w:body>
@@ -229,6 +248,12 @@ export const downloadMhtmlWordDoc = async (bodyHtml, mimeImages = [], filename =
     <w:sectPr>
       <w:pgSz w:w="11906" w:h="16838"/>
       <w:pgMar w:top="440" w:right="520" w:bottom="440" w:left="520" w:header="0" w:footer="0" w:gutter="0"/>
+      <w:pgBorders w:offsetFrom="page">
+        <w:top w:val="single" w:sz="12" w:space="14" w:color="000000"/>
+        <w:left w:val="single" w:sz="12" w:space="16" w:color="000000"/>
+        <w:bottom w:val="single" w:sz="12" w:space="14" w:color="000000"/>
+        <w:right w:val="single" w:sz="12" w:space="16" w:color="000000"/>
+      </w:pgBorders>
     </w:sectPr>
   </w:body>
 </w:document>`;
@@ -237,6 +262,7 @@ export const downloadMhtmlWordDoc = async (bodyHtml, mimeImages = [], filename =
   zip.file('_rels/.rels', rootRelsXml);
   zip.folder('word').file('document.xml', documentXml);
   zip.folder('word').file('settings.xml', settingsXml);
+  zip.folder('word').file('styles.xml', stylesXml);
   zip.folder('word').folder('_rels').file('document.xml.rels', documentXmlRels);
   zip.folder('word').file('afchunk.mht', mhtmlContent);
 
@@ -315,8 +341,8 @@ export const exportWorkOrderToWord = async ({
   const buildWordSafePages = (items) => {
     if (!items || items.length === 0) return [[]];
     if (items.length <= 4) return [items];
-    const pages = [items.slice(0, 6)];
-    let rem = items.slice(6);
+    const pages = [items.slice(0, 5)];
+    let rem = items.slice(5);
     while (rem.length > 0) {
       if (rem.length <= 8) {
         pages.push(rem);
@@ -442,24 +468,24 @@ export const exportWorkOrderToWord = async ({
 
           return `
             <tr style="page-break-inside:avoid;">
-              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                ${globalIdx + 1}
+              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:2.5pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-size:9pt; line-height:11.5pt;">${globalIdx + 1}</p>
               </td>
-              <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                <div style="font-weight:bold; margin:0;">${escapeHtml(workMainLabel)}</div>
-                ${workSubLabel || dimensionsText ? `<div style="margin:0;">${escapeHtml(workSubLabel + dimensionsText)}</div>` : ''}
-                <div style="margin:0;">${escapeHtml(dateLine)}</div>
-                <div style="margin:0;">${escapeHtml(eventLine)}</div>
-                <div style="margin:0;">${escapeHtml(venueLine)}</div>
+              <td width="56%" align="left" valign="middle" style="width:56%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:left; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-weight:bold; font-size:9pt; line-height:11.5pt;">${escapeHtml(workMainLabel)}</p>
+                ${workSubLabel || dimensionsText ? `<p style="margin:0; padding:0; mso-para-margin:0pt; font-size:9pt; line-height:11.5pt;">${escapeHtml(workSubLabel + dimensionsText)}</p>` : ''}
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-size:9pt; line-height:11.5pt;">${escapeHtml(dateLine)}</p>
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-size:9pt; line-height:11.5pt;">${escapeHtml(eventLine)}</p>
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-size:9pt; line-height:11.5pt;">${escapeHtml(venueLine)}</p>
               </td>
-              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                ${escapeHtml(quantity)}
+              <td width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:2.5pt 3pt; text-align:center; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-size:9pt; line-height:11.5pt;">${escapeHtml(quantity)}</p>
               </td>
-              <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                ${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              <td width="13%" align="right" valign="middle" style="width:13%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt; line-height:11.5pt;">${escapeHtml(rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
               </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
-                ${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; vertical-align:middle; font-size:9pt; line-height:11.5pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt; line-height:11.5pt;">${escapeHtml(amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
               </td>
             </tr>
           `;
@@ -469,8 +495,8 @@ export const exportWorkOrderToWord = async ({
       const continuedRowHtml = !isLastPage
         ? `
           <tr style="page-break-inside:avoid;">
-            <td colspan="5" align="right" style="border:1pt solid #000000; padding:4pt 6pt; text-align:right; font-style:italic; font-weight:bold; background-color:#fcfcfc; font-size:9pt;">
-              ${isVidhanMandal ? `(पुढे चालू - पान ${pageIdx + 2})` : `(Continued on Page ${pageIdx + 2}...)`}
+            <td colspan="5" align="right" style="border:1pt solid #000000; padding:3pt 6pt; text-align:right; font-style:italic; font-weight:bold; background-color:#fcfcfc; font-size:9pt;">
+              <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-style:italic; font-weight:bold; font-size:9pt;">${isVidhanMandal ? `(पुढे चालू - पान ${pageIdx + 2})` : `(Continued on Page ${pageIdx + 2}...)`}</p>
             </td>
           </tr>
         `
@@ -481,65 +507,65 @@ export const exportWorkOrderToWord = async ({
       const footerSectionHtml = isLastPage
         ? `
           <p style="margin:0; font-size:5pt; line-height:5pt;">&nbsp;</p>
-          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt; font-family:Arial, sans-serif; mso-table-lspace:0pt; mso-table-rspace:0pt; mso-padding-alt:2.0pt 4.0pt 2.0pt 4.0pt;">
             <tr style="page-break-inside:avoid;">
-              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-                Total Cost
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-weight:bold; font-size:9pt;">Total Cost</p>
               </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-                ${escapeHtml(totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt;">${escapeHtml(totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
               </td>
             </tr>
             <tr style="page-break-inside:avoid;">
-              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-                CGST 9%
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt;">CGST 9%</p>
               </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-                ${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
-              </td>
-            </tr>
-            <tr style="page-break-inside:avoid;">
-              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-                SGST 9%
-              </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right;">
-                ${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt;">${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
               </td>
             </tr>
             <tr style="page-break-inside:avoid;">
-              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-                Total
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt;">SGST 9%</p>
               </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-                ${escapeHtml(totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-size:9pt;">${escapeHtml((totalAmount * 0.09).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
               </td>
             </tr>
             <tr style="page-break-inside:avoid;">
-              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-                ${escapeHtml(`Round Up Rs. (${numberToWords(roundedTotal)})`)}
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-weight:bold; font-size:9pt;">Total</p>
               </td>
-              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:right; font-weight:bold;">
-                ${escapeHtml(roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-weight:bold; font-size:9pt;">${escapeHtml(totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+              </td>
+            </tr>
+            <tr style="page-break-inside:avoid;">
+              <td width="83%" align="right" valign="middle" style="width:83%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-weight:bold; font-size:9pt;">${escapeHtml(`Round Up Rs. (${numberToWords(roundedTotal)})`)}</p>
+              </td>
+              <td width="17%" align="right" valign="middle" style="width:17%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:right; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:right; font-weight:bold; font-size:9pt;">${escapeHtml(roundedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
               </td>
             </tr>
           </table>
 
           <p style="margin:0; font-size:5pt; line-height:5pt;">&nbsp;</p>
-          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+          <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt; font-family:Arial, sans-serif; mso-table-lspace:0pt; mso-table-rspace:0pt; mso-padding-alt:2.0pt 4.0pt 2.0pt 4.0pt;">
             <tr style="page-break-inside:avoid;">
-              <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
-                ${isVidhanMandal ? 'कामाचे नांव' : 'Event'}
+              <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:left; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-weight:bold; font-size:9pt;">${isVidhanMandal ? 'कामाचे नांव' : 'Event'}</p>
               </td>
-              <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:3pt 5pt; text-align:left;">
-                ${escapeHtml(eventSummaryText)}
+              <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:left;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-size:9pt;">${escapeHtml(eventSummaryText)}</p>
               </td>
             </tr>
             <tr style="page-break-inside:avoid;">
-              <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:3pt 5pt; text-align:left; font-weight:bold;">
-                ${isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}
+              <td width="12%" align="left" valign="middle" style="width:12%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:left; font-weight:bold;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-weight:bold; font-size:9pt;">${isVidhanMandal ? 'कामाचा दिनांक' : 'Date'}</p>
               </td>
-              <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:3pt 5pt; text-align:left;">
-                ${escapeHtml(uniqueDates.join(', '))}
+              <td width="88%" align="left" valign="middle" style="width:88%; border:1pt solid #000000; padding:2.5pt 5pt; text-align:left;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; font-size:9pt;">${escapeHtml(uniqueDates.join(', '))}</p>
               </td>
             </tr>
           </table>
@@ -566,14 +592,24 @@ export const exportWorkOrderToWord = async ({
       return `
         ${headerBlockHtml}
         ${introBlockHtml}
-        <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-size:9pt;">
+        <table width="100%" border="1" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1pt solid #000000; font-family:Arial, sans-serif; mso-table-lspace:0pt; mso-table-rspace:0pt; mso-padding-alt:2.0pt 4.0pt 2.0pt 4.0pt;">
           <thead>
-            <tr style="page-break-inside:avoid;">
-              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">SR.<br/>NO.</th>
-              <th width="56%" align="center" valign="middle" style="width:56%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'कामाचे स्वरूप' : 'WORK'}</th>
-              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3pt 3pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'नग' : 'QTY.'}</th>
-              <th width="13%" align="center" valign="middle" style="width:13%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">RATE</th>
-              <th width="17%" align="center" valign="middle" style="width:17%; border:1pt solid #000000; padding:3pt 5pt; text-align:center; vertical-align:middle; font-weight:bold;">${isVidhanMandal ? 'रकम' : 'AMOUNT'}<br/>(RS.)</th>
+            <tr style="page-break-inside:avoid; background-color:#ffffff;">
+              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3.5pt 3pt; font-weight:bold; text-align:center; vertical-align:middle; font-size:9pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-weight:bold; font-size:9pt;">SR.<br/>NO.</p>
+              </th>
+              <th width="56%" align="center" valign="middle" style="width:56%; border:1pt solid #000000; padding:3.5pt 5pt; font-weight:bold; text-align:center; vertical-align:middle; font-size:9pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-weight:bold; font-size:9pt;">${isVidhanMandal ? 'कामाचे स्वरूप' : 'WORK'}</p>
+              </th>
+              <th width="7%" align="center" valign="middle" style="width:7%; border:1pt solid #000000; padding:3.5pt 3pt; font-weight:bold; text-align:center; vertical-align:middle; font-size:9pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-weight:bold; font-size:9pt;">${isVidhanMandal ? 'नग' : 'QTY.'}</p>
+              </th>
+              <th width="13%" align="center" valign="middle" style="width:13%; border:1pt solid #000000; padding:3.5pt 5pt; font-weight:bold; text-align:center; vertical-align:middle; font-size:9pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-weight:bold; font-size:9pt;">RATE</p>
+              </th>
+              <th width="17%" align="center" valign="middle" style="width:17%; border:1pt solid #000000; padding:3.5pt 5pt; font-weight:bold; text-align:center; vertical-align:middle; font-size:9pt;">
+                <p style="margin:0; padding:0; mso-para-margin:0pt; text-align:center; font-weight:bold; font-size:9pt;">${isVidhanMandal ? 'रकम' : 'AMOUNT'}<br/>(RS.)</p>
+              </th>
             </tr>
           </thead>
           <tbody>
